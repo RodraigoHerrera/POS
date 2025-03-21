@@ -45,18 +45,19 @@ layer(base);
   --color-white: #ffffff;
   --color-black: #101828;
 
+  --color-brand-20: #FF1E00;
   --color-brand-25: #f2f7ff;
-  --color-brand-50: #ecf3ff;
-  --color-brand-100: #dde9ff;
-  --color-brand-200: #c2d6ff;
-  --color-brand-300: #9cb9ff;
-  --color-brand-400: #7592ff;
-  --color-brand-500: #465fff;
-  --color-brand-600: #3641f5;
-  --color-brand-700: #2a31d8;
-  --color-brand-800: #252dae;
-  --color-brand-900: #262e89;
-  --color-brand-950: #161950;
+  --color-brand-50: #101828; /* Background botones sidebar */
+  --color-brand-100: #dde9ff; /* */
+  --color-brand-200: #c2d6ff; /* */
+  --color-brand-300: #9cb9ff; /* border hover color inputs modo claro */
+  --color-brand-400: #7592ff; /* Texto modo oscuro */
+  --color-brand-500: #FF1E00; /* Seleccionado sidebar y botones comunes y background sidebar modo oscuro 465fff*/
+  --color-brand-600: #FFD700; /* background hover botones */
+  --color-brand-700: #2a31d8; /* */
+  --color-brand-800: #252dae; /* border hover color inputs modo oscuro*/
+  --color-brand-900: #262e89; /* */
+  --color-brand-950: #161950; /* sign in modo claro*/
 
   --color-blue-light-25: #f5fbff;
   --color-blue-light-50: #f0f9ff;
@@ -72,18 +73,18 @@ layer(base);
   --color-blue-light-950: #062c41;
 
   --color-gray-25: #fcfcfd;
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f2f4f7;
+  --color-gray-50: #f9fafb; /* background contenido app modo claro*/
+  --color-gray-100: #f2f4f7; /* background hover de redirecciones y backgrpund de algunos f2f4f7*/
   --color-gray-200: #e4e7ec;
-  --color-gray-300: #d0d5dd;
-  --color-gray-400: #98a2b3;
-  --color-gray-500: #667085;
+  --color-gray-300: #d0d5dd; /* text color de redirecciones y color hover de sus iconos modo oscuro d0d5dd*/
+  --color-gray-400: #98a2b3; /* icons color modo oscuro y textos secundarios modo oscuro*/
+  --color-gray-500: #101828; /* icons color modo claro y textos secundarios modo claro 667085*/
   --color-gray-600: #475467;
-  --color-gray-700: #344054;
-  --color-gray-800: #1d2939;
-  --color-gray-900: #101828;
+  --color-gray-700: #101828; /* border de algunos 344054*/
+  --color-gray-800: #1d2939; /* textos importantes en general y border de todo en modo oscuro y botones x*/
+  --color-gray-900: #101828; /*  modo oscuro total*/
   --color-gray-950: #0c111d;
-  --color-gray-dark: #1a2231;
+  --color-gray-dark: #1a2231; /* Tarjeta de usuario y notificaciones */
 
   --color-orange-25: #fffaf5;
   --color-orange-50: #fff6ed;
