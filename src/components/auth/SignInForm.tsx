@@ -5,10 +5,35 @@ import Button from "@/components/ui/button/Button";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const [correo, setCorreo] = useState("");
+  const [contraseña, setContraseña] = useState("");
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ correo, contraseña }),
+    });
+
+    if (res.ok) {
+      console.log("Inicio de sesión exitoso");
+      router.push("/admin");
+    } else {
+      const error = await res.json();
+      console.error("Error al iniciar sesión:", error.message);
+    }
+  };
+
   return (
     <div className="bg-[#0C0C0F]/95 p-6 rounded shadow w-full max-w-lg">
       <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
@@ -27,18 +52,22 @@ export default function SignInForm() {
               SMASH POS
             </h1>
             <p className="text-sm text-brand-25 text-center">
-            ¡Hoy es un gran día para marcar la diferencia!
+              ¡Hoy es un gran día para marcar la diferencia!
             </p>
           </div>
           <div>
-            
-            <form>
+            <form onSubmit={handleSubmit}>
               <div className="space-y-6">
                 <div>
                   <Label>
                     Correo <span className="text-error-500">*</span>{" "}
                   </Label>
-                  <Input placeholder="info@gmail.com" type="email" />
+                  <Input
+                    placeholder="info@gmail.com"
+                    type="email"
+                    value={correo}
+                    onChange={(e) => setCorreo(e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label>
@@ -48,6 +77,8 @@ export default function SignInForm() {
                     <Input
                       type={showPassword ? "text" : "password"}
                       placeholder="Ingrese su contraseña"
+                      value={contraseña}
+                      onChange={(e) => setContraseña(e.target.value)}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}

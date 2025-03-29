@@ -1,0 +1,147 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Sucursal {
+  id         BigInt     @id @default(autoincrement())
+  nombre     String     @unique
+  correo     String     @unique
+  contraseña String     @db.VarChar(255) @map("contraseña") // hash
+  direccion  String?
+  telefono   String?
+
+  empleados   Empleado[]
+  inventarios Inventario[]
+}
+
+model Empleado {
+  id         BigInt     @id @default(autoincrement())
+  sucursal   Sucursal   @relation(fields: [sucursal_id], references: [id])
+  sucursal_id BigInt
+  rol        String     @db.VarChar(50) // admin, cajero, etc.
+  correo     String     @unique
+  nombre     String
+  contraseña String     @db.VarChar(255) @map("contraseña") // hash
+  celular    String?
+  creado     DateTime
+
+  turnos     Turno[]
+  cajas      Caja[]     @relation("Cajero")
+  entradas   Entrada[]
+  salidas    Salida[]
+}
+
+model Turno {
+  id           BigInt   @id @default(autoincrement())
+  empleado     Empleado @relation(fields: [id_empleado], references: [id])
+  id_empleado  BigInt
+  fecha        DateTime @db.Date
+  hora_entrada DateTime @db.Time
+  hora_salida  DateTime? @db.Time
+}
+
+model Caja {
+  id           BigInt     @id @default(autoincrement())
+  cajero       Empleado   @relation("Cajero", fields: [id_cajero], references: [id])
+  id_cajero    BigInt
+  creada       DateTime
+  fecha_cierre DateTime?  @map("fecha_cierre") // opcional
+  estado       String     @db.VarChar(20) // abierta, cerrada, en conciliacion
+
+  facturas     Factura[]
+}
+
+model Cliente {
+  id       BigInt   @id @default(autoincrement())
+  nit      String   @unique
+  razon    String
+  creado   DateTime
+  telefono String?
+  direccion String?
+  correo   String   @unique
+
+  facturas Factura[]
+}
+
+model Factura {
+  id           BigInt     @id @default(autoincrement())
+  caja         Caja       @relation(fields: [id_caja], references: [id])
+  id_caja      BigInt
+  cliente      Cliente?   @relation(fields: [id_cliente], references: [id])
+  id_cliente   BigInt?
+  creada       DateTime
+  total        Decimal    @db.Decimal(10, 2)
+  metodo_pago  String     @db.VarChar(50)
+  descuento    Int?
+
+  detalles     DetalleFactura[]
+}
+
+model Producto {
+  id          BigInt     @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  categoria   String?
+  precio      Decimal    @db.Decimal(10,2)
+  estado      String     @db.VarChar(50) // activo, inactivo
+  imagen      String?
+
+  detalles    DetalleFactura[]
+}
+
+model DetalleFactura {
+  id             BigInt    @id @default(autoincrement())
+  factura        Factura   @relation(fields: [id_factura], references: [id])
+  id_factura     BigInt
+  producto       Producto  @relation(fields: [id_producto], references: [id])
+  id_producto    BigInt
+  cantidad       Int
+  precio_unitario Decimal   @db.Decimal(10,2)
+  detalle        String?
+}
+
+model Inventario {
+  id         BigInt     @id @default(autoincrement())
+  sucursal   Sucursal   @relation(fields: [id_sucursal], references: [id])
+  id_sucursal BigInt
+  codigo     String     @unique @db.VarChar(15)
+  articulo   String
+  entradas   BigInt
+  salidas    BigInt
+  stock      BigInt
+
+  entradaRegistros Entrada[]
+  salidaRegistros  Salida[]
+}
+
+model Entrada {
+  id           BigInt     @id @default(autoincrement())
+  inventario   Inventario @relation(fields: [codigo], references: [codigo])
+  codigo       String     @db.VarChar(15)
+  fecha        DateTime
+  cantidad     BigInt
+  empleado     Empleado?  @relation(fields: [id_empleado], references: [id])
+  id_empleado  BigInt?
+}
+
+model Salida {
+  id           BigInt     @id @default(autoincrement())
+  inventario   Inventario @relation(fields: [codigo], references: [codigo])
+  codigo       String     @db.VarChar(15)
+  fecha        DateTime
+  cantidad     BigInt
+  motivo       String?
+  empleado     Empleado?  @relation(fields: [id_empleado], references: [id])
+  id_empleado  BigInt?
+}
