@@ -9,7 +9,7 @@ export default function NotFound() {
       <GridShape />
       <div className="mx-auto w-full max-w-[242px] text-center sm:max-w-[472px]">
         <h1 className="mb-8 font-bold text-gray-800 text-title-md dark:text-white/90 xl:text-title-2xl">
-          ERROR
+          ERRORaaa
         </h1>
 
         <Image

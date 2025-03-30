@@ -12,10 +12,35 @@ export default function SignInForm() {
   const [isChecked, setIsChecked] = useState(false);
   const [correo, setCorreo] = useState("");
   const [contraseña, setContraseña] = useState("");
+  const [errorCorreo, setErrorCorreo] = useState("");
+  const [errorContraseña, setErrorContraseña] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    setErrorCorreo("");
+    setErrorContraseña("");
+    setAuthError("");
+    setIsLoading(true);
+
+    let hasError = false;
+
+    if (!correo) {
+      setErrorCorreo("Debe rellenar este campo");
+      hasError = true;
+    }
+    if (!contraseña) {
+      setErrorContraseña("Debe rellenar este campo");
+      hasError = true;
+    }
+
+    if (hasError) {
+      setIsLoading(false);
+      return;
+    }
 
     const res = await fetch("/api/auth/login", {
       method: "POST",
@@ -26,11 +51,11 @@ export default function SignInForm() {
     });
 
     if (res.ok) {
-      console.log("Inicio de sesión exitoso");
       router.push("/admin");
     } else {
       const error = await res.json();
-      console.error("Error al iniciar sesión:", error.message);
+      setAuthError(error.message || "Error al iniciar sesión");
+      setIsLoading(false);
     }
   };
 
@@ -68,6 +93,9 @@ export default function SignInForm() {
                     value={correo}
                     onChange={(e) => setCorreo(e.target.value)}
                   />
+                  {errorCorreo && (
+                    <p className="mt-1 text-sm text-error-500">{errorCorreo}</p>
+                  )}
                 </div>
                 <div>
                   <Label>
@@ -91,10 +119,16 @@ export default function SignInForm() {
                       )}
                     </span>
                   </div>
+                  {errorContraseña && (
+                    <p className="mt-1 text-sm text-error-500">{errorContraseña}</p>
+                  )}
                 </div>
+                {authError && (
+                  <p className="text-sm text-error-500 text-center">{authError}</p>
+                )}
                 <div>
-                  <Button className="w-full" size="sm">
-                    Iniciar Sesión
+                  <Button className="w-full" size="sm" disabled={isLoading}>
+                    {isLoading ? "Verificando..." : "Iniciar Sesión"}
                   </Button>
                 </div>
               </div>
