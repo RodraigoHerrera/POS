@@ -16,7 +16,9 @@ async function verifyJWT(token: string) {
 
 export async function middleware(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
-  const isProtected = request.nextUrl.pathname.startsWith("/admin");
+  const pathname = request.nextUrl.pathname;
+  const protectedPaths = ["/admin", "/cajero"];
+  const isProtected = protectedPaths.some((path) => pathname.startsWith(path));
 
   if (isProtected) {
     if (!token) {
@@ -37,5 +39,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/admin"],
+  matcher: [
+    "/admin/:path*",
+    "/admin",
+    "/cajero/:path*",
+    "/cajero",
+  ],
 };
