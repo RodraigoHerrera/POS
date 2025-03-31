@@ -9,7 +9,6 @@ import { useRouter } from "next/navigation";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const [isChecked, setIsChecked] = useState(false);
   const [correo, setCorreo] = useState("");
   const [contraseña, setContraseña] = useState("");
   const [errorCorreo, setErrorCorreo] = useState("");
@@ -51,7 +50,7 @@ export default function SignInForm() {
     });
 
     if (res.ok) {
-      router.push("/admin");
+      router.push("/usuarios");
     } else {
       const error = await res.json();
       setAuthError(error.message || "Error al iniciar sesión");
