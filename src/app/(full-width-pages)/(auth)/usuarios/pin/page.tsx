@@ -32,7 +32,7 @@ export default function EmpleadoPin() {
     setError("");
 
     try {
-        const res = await fetch("/api/usuarios/pin", {
+        const res = await fetch("/api/usuarios/id", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include", // 👈 importante si usas JWT con cookies
@@ -46,9 +46,10 @@ export default function EmpleadoPin() {
         if (data.rol === "ADMIN") router.push("/admin");
         else if (data.rol === "CAJERO") router.push("/cajero");
       } else {
-        setError(data.message || "PIN incorrecto");
+        setError(data.message || "PIN incorrectooo");
       }
     } catch (error) {
+      console.error("Error en login:", error);
       setError("Error en el servidor");
     } finally {
       setIsLoading(false);

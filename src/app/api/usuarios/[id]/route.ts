@@ -1,25 +1,30 @@
-import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+// /app/api/usuarios/[id]/route.ts
+import { PrismaClient } from '@prisma/client';
+import { NextResponse } from 'next/server';
 
 const prisma = new PrismaClient();
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  request: Request,
+  context: { params: { id: string } | Promise<{ id: string }> }
+) {
   try {
+    // Esperar a que se resuelvan los parámetros dinámicos
+    const { id } = await context.params;
+    // Convertir el id a BigInt para la consulta en Prisma
+    const empleadoId = BigInt(id);
     const empleado = await prisma.empleado.findUnique({
-      where: { id: Number(params.id) },
-      select: { nombre: true, id: true },
+      where: { id: empleadoId },
+      select: { nombre: true },
     });
 
     if (!empleado) {
-      return NextResponse.json({ message: "Empleado no encontrado" }, { status: 404 });
+      return NextResponse.json({ error: 'Empleado no encontrado' }, { status: 404 });
     }
 
-    return NextResponse.json({
-      nombre: empleado.nombre,
-      id: empleado.id.toString(),
-    });
+    return NextResponse.json({ nombre: empleado.nombre });
   } catch (error) {
-    console.error("Error al obtener empleado:", error);
-    return NextResponse.json({ message: "Error interno del servidor" }, { status: 500 });
+    console.error(error);
+    return NextResponse.json({ error: 'Error al obtener el empleado' }, { status: 500 });
   }
 }
