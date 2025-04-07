@@ -9,12 +9,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { nombre, direccion, correo, telefono, contraseña } = body;
 
-    if (!nombre || !direccion || !correo || !telefono || !contraseña) {
-      return NextResponse.json(
-        { message: "Todos los campos son obligatorios" },
-        { status: 400 }
-      );
-    }
+    
 
     const existingSucursal = await prisma.sucursal.findUnique({
       where: { correo },
