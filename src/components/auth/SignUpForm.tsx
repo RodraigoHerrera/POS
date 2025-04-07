@@ -1,14 +1,16 @@
-"use client";
-import Checkbox from "@/components/form/input/Checkbox";
-import Input from "@/components/form/input/InputField";
-import Label from "@/components/form/Label";
-import Button from "@/components/ui/button/Button";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
-import Link from "next/link";
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+"use client"; // Indica que este componente se ejecutará en el cliente (importante en aplicaciones Next.js con renderizado híbrido)
 
+import Input from "@/components/form/input/InputField"; // Componente de campo de entrada personalizado
+import Label from "@/components/form/Label"; // Componente para etiquetas de formulario
+import Button from "@/components/ui/button/Button"; // Componente de botón personalizado
+import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons"; // Importación de iconos usados en la UI
+import Link from "next/link"; // Componente de navegación de Next.js para enlaces internos
+import React, { useState } from "react"; // Importación de React y hook useState para manejo de estados
+import { useRouter } from "next/navigation"; // Hook de Next.js para manejar la navegación programática
+
+// Componente funcional que representa el formulario de registro de sucursal
 export default function SignUpForm() {
+  // Declaración de estados para gestionar la visibilidad de la contraseña y los valores de cada campo del formulario
   const [showPassword, setShowPassword] = useState(false);
   const [nombre, setNombre] = useState("");
   const [direccion, setDireccion] = useState("");
@@ -17,70 +19,94 @@ export default function SignUpForm() {
   const [contraseña, setContraseña] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+  const router = useRouter(); // Obtenemos el objeto router para redireccionar después de la operación
 
-  // Agregamos las validaciones solicitadas dentro de handleSubmit
-// Validación por campo con errores individuales
-const [erroresCampo, setErroresCampo] = useState<{ [key: string]: string }>({});
+  // Estado para almacenar errores específicos de cada campo
+  const [erroresCampo, setErroresCampo] = useState<{ [key: string]: string }>({});
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError("");
-  setIsLoading(true);
+  // Función auxiliar para capitalizar la primera letra de un texto y convertir el resto a minúsculas
+  const capitalizar = (texto: string) => {
+    if (!texto) return "";
+    return texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase();
+  };
 
-  const nuevosErrores: { [key: string]: string } = {};
+  // Función manejadora del evento submit del formulario
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); // Previene el comportamiento por defecto del formulario (recarga de página)
+    setError(""); // Reinicia cualquier error previo
+    setIsLoading(true); // Indica que se ha iniciado el proceso de registro
 
-  if (!nombre) nuevosErrores.nombre = "El nombre es obligatorio";
-  if (!direccion) nuevosErrores.direccion = "La dirección es obligatoria";
+    // Objeto para acumular los errores de validación de cada campo
+    const nuevosErrores: { [key: string]: string } = {};
 
-  if (!correo) {
-    nuevosErrores.correo = "El correo es obligatorio";
-  } else if (!correo.endsWith("@gmail.com")) {
-    nuevosErrores.correo = "El correo debe terminar en @gmail.com";
-  }
+    // Validaciones de cada campo del formulario
+    if (!nombre) nuevosErrores.nombre = "El nombre es obligatorio";
+    if (!direccion) nuevosErrores.direccion = "La dirección es obligatoria";
 
-  if (!telefono) {
-    nuevosErrores.telefono = "El teléfono es obligatorio";
-  } else if (!/^\d+$/.test(telefono)) {
-    nuevosErrores.telefono = "El teléfono debe contener solo números";
-  }
+    if (!correo) {
+      nuevosErrores.correo = "El correo es obligatorio";
+    } else if (!correo.endsWith("@gmail.com")) {
+      nuevosErrores.correo = "El correo debe terminar en @gmail.com";
+    }
 
-  const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-  if (!contraseña) {
-    nuevosErrores.contraseña = "La contraseña es obligatoria";
-  } else if (!strongPasswordRegex.test(contraseña)) {
-    nuevosErrores.contraseña = "Debe tener mínimo 8 caracteres, mayúscula, minúscula, número y símbolo";
-  }
+    if (!telefono) {
+      nuevosErrores.telefono = "El teléfono es obligatorio";
+    } else if (!/^\d+$/.test(telefono)) {
+      nuevosErrores.telefono = "El teléfono debe contener solo números";
+    }
 
-  if (Object.keys(nuevosErrores).length > 0) {
-    setErroresCampo(nuevosErrores);
-    setIsLoading(false);
-    return;
-  }
+    if (!contraseña) {
+      nuevosErrores.contraseña = "La contraseña es obligatoria";
+    } else if (contraseña.length < 8) {
+      nuevosErrores.contraseña = "La contraseña debe tener al menos 8 caracteres";
+    }
 
-  setErroresCampo({});
+    // Si existen errores de validación, se actualiza el estado y se detiene el proceso de envío
+    if (Object.keys(nuevosErrores).length > 0) {
+      setErroresCampo(nuevosErrores);
+      setIsLoading(false);
+      return;
+    }
 
-  const res = await fetch("/api/auth/register", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ nombre, direccion, correo, telefono, contraseña }),
-  });
+    // Si no hay errores, se limpia el objeto de errores
+    setErroresCampo({});
 
-  const data = await res.json();
+    // Normalizamos el nombre y la dirección utilizando la función capitalizar
+    const nombreFormateado = capitalizar(nombre);
+    const direccionFormateada = capitalizar(direccion);
 
-  if (res.ok) {
-    router.push("/");
-  } else {
-    setError(data.message || "Ocurrió un error al registrar la sucursal");
-    setIsLoading(false);
-  }
-};
+    // Realizamos una petición POST a la API para registrar la nueva sucursal
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        nombre: nombreFormateado,
+        direccion: direccionFormateada,
+        correo,
+        telefono,
+        contraseña,
+      }),
+    });
 
+    // Se procesa la respuesta de la API
+    const data = await res.json();
 
+    if (res.ok) {
+      // Si la respuesta es exitosa, se redirige a la página principal
+      router.push("/");
+    } else {
+      // En caso de error, se muestra el mensaje recibido o un mensaje por defecto
+      setError(data.message || "Ocurrió un error al registrar la sucursal");
+      setIsLoading(false);
+    }
+  };
+
+  // Renderizado del componente: se muestra el formulario con sus respectivos campos y validaciones
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar bg-[#0C0C0F]/95 p-6 rounded shadow max-w-lg">
+      {/* Enlace para volver al dashboard */}
       <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
         <Link
           href="/"
@@ -92,6 +118,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
+          {/* Encabezado del formulario */}
           <div className="mb-5 sm:mb-8">
             <h1 className="mb-2 font-semibold text-gray-25 text-title-sm sm:text-title-md text-center">
               Registrar Sucursal
@@ -101,8 +128,10 @@ const handleSubmit = async (e: React.FormEvent) => {
             </p>
           </div>
           <div>
+            {/* Formulario con manejo del evento onSubmit */}
             <form onSubmit={handleSubmit}>
               <div className="space-y-5">
+                {/* Primera fila: campos Nombre y Dirección */}
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   <div className="sm:col-span-1">
                     <Label>
@@ -114,8 +143,9 @@ const handleSubmit = async (e: React.FormEvent) => {
                       value={nombre}
                       onChange={(e) => setNombre(e.target.value)}
                     />
-                    {erroresCampo.nombre && <p className="text-sm text-error-500">{erroresCampo.nombre}</p>}
-
+                    {erroresCampo.nombre && (
+                      <p className="text-sm text-error-500">{erroresCampo.nombre}</p>
+                    )}
                   </div>
                   <div className="sm:col-span-1">
                     <Label>
@@ -127,11 +157,13 @@ const handleSubmit = async (e: React.FormEvent) => {
                       value={direccion}
                       onChange={(e) => setDireccion(e.target.value)}
                     />
-                    {erroresCampo.direccion && <p className="text-sm text-error-500">{erroresCampo.direccion}</p>}
-
+                    {erroresCampo.direccion && (
+                      <p className="text-sm text-error-500">{erroresCampo.direccion}</p>
+                    )}
                   </div>
                 </div>
 
+                {/* Segunda fila: campos Correo y Teléfono */}
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   <div className="sm:col-span-1">
                     <Label>
@@ -143,8 +175,9 @@ const handleSubmit = async (e: React.FormEvent) => {
                       value={correo}
                       onChange={(e) => setCorreo(e.target.value)}
                     />
-                    {erroresCampo.correo && <p className="text-sm text-error-500">{erroresCampo.correo}</p>}
-
+                    {erroresCampo.correo && (
+                      <p className="text-sm text-error-500">{erroresCampo.correo}</p>
+                    )}
                   </div>
                   <div className="sm:col-span-1">
                     <Label>
@@ -156,11 +189,13 @@ const handleSubmit = async (e: React.FormEvent) => {
                       value={telefono}
                       onChange={(e) => setTelefono(e.target.value)}
                     />
-                    {erroresCampo.telefono && <p className="text-sm text-error-500">{erroresCampo.telefono}</p>}
-
+                    {erroresCampo.telefono && (
+                      <p className="text-sm text-error-500">{erroresCampo.telefono}</p>
+                    )}
                   </div>
                 </div>
 
+                {/* Campo para la contraseña, con opción para mostrar/ocultar el valor */}
                 <div>
                   <Label>
                     Contraseña<span className="text-error-500">*</span>
@@ -172,6 +207,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                       value={contraseña}
                       onChange={(e) => setContraseña(e.target.value)}
                     />
+                    {/* Ícono para alternar la visibilidad de la contraseña */}
                     <span
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
@@ -183,14 +219,12 @@ const handleSubmit = async (e: React.FormEvent) => {
                       )}
                     </span>
                   </div>
-                  {erroresCampo.telefono && <p className="text-sm text-error-500">{erroresCampo.telefono}</p>}
-
+                  {erroresCampo.contraseña && (
+                    <p className="text-sm text-error-500">{erroresCampo.contraseña}</p>
+                  )}
                 </div>
 
-                {error && (
-                  <p className="text-sm text-error-500 text-center">{error}</p>
-                )}
-
+                {/* Botón de envío del formulario */}
                 <div>
                   <Button className="w-full" size="sm" disabled={isLoading}>
                     {isLoading ? "Registrando..." : "Registrarse"}
@@ -199,9 +233,10 @@ const handleSubmit = async (e: React.FormEvent) => {
               </div>
             </form>
 
+            {/* Enlace para redireccionar a la página de inicio de sesión en caso de tener cuenta */}
             <div className="mt-5">
               <p className="text-sm font-normal text-center text-gray-300  sm:text-start">
-                ¿Tienes una cuenta? {""}
+                ¿Tienes una cuenta?{" "}
                 <Link
                   href="/"
                   className="text-brand-600 hover:text-brand-500"
