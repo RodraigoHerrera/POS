@@ -95,7 +95,7 @@ export default function SignUpForm() {
 
     if (res.ok) {
       // Si la respuesta es exitosa, se redirige a la página principal
-      router.push("/");
+      router.push(`/signup/newadmin?sucursalId=${data.sucursal.id}`);
     } else {
       // En caso de error, se muestra el mensaje recibido o un mensaje por defecto
       setError(data.message || "Ocurrió un error al registrar la sucursal");
