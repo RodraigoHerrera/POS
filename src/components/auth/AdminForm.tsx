@@ -11,7 +11,7 @@ import { useSearchParams } from "next/navigation";
 
 export default function AdminForm() {
 
-    const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
   const [celular, setCelular] = useState("");

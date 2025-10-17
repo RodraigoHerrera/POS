@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/db";
 import { jwtVerify } from "jose";
 
-const prisma = new PrismaClient();
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
 async function getSucursalIdFromToken(token: string) {
@@ -33,6 +32,11 @@ export async function GET(req: Request) {
       select: {
         id: true,
         nombre: true,
+        rol: true,
+        estado: true, // Si necesitas el estado, descomenta esta línea
+        correo: true,
+        celular: true, 
+        creado: true,
       },
     });
 
@@ -41,6 +45,11 @@ export async function GET(req: Request) {
       id: e.id.toString(),
       nombre: e.nombre,
       fotoUrl: "/default-user.jpg",
+      rol: e.rol,
+      estado: e.estado, // Si necesitas el estado, descomenta esta línea
+      correo: e.correo,
+      celular: e.celular,
+      creado: e.creado,
     }));
 
     return NextResponse.json(empleadosConFoto);

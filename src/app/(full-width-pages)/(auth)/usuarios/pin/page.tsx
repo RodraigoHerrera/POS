@@ -43,8 +43,8 @@ export default function EmpleadoPin() {
       const data = await res.json();
 
       if (res.ok) {
-        if (data.rol === "admin") router.push("/admin");
-        else if (data.rol === "cajero") router.push("/cajero");
+        if (data.rol === "admin") router.push("/admin?id=" + id);
+        else if (data.rol === "cajero") router.push("/cajero?id=" + id);
       } else {
         setError(data.message || "PIN incorrectooo");
       }
@@ -60,7 +60,7 @@ export default function EmpleadoPin() {
     <div className="min-h-screen flex items-center justify-center bg-[#0C0C0F]/98 p-6">
       <div className="bg-white/10 p-6 rounded-lg max-w-sm w-full text-center">
         <h2 className="text-xl font-semibold text-white mb-4">
-          Hola, {nombre || "Empleado"}
+          Hola, {nombre}
         </h2>
         <p className="text-white mb-4">Ingresa tu PIN para continuar</p>
         <form onSubmit={handleSubmit} className="space-y-4">

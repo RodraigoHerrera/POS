@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/db";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-const prisma = new PrismaClient();
+
 
 export async function POST(req: Request) {
   try {
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const passwordMatch = await bcrypt.compare(contraseña, sucursal.contraseña);
+    const passwordMatch = await bcrypt.compare(contraseña, sucursal.contrase_a);
     if (!passwordMatch) {
       return NextResponse.json(
         { message: "Credenciales inválidas" },

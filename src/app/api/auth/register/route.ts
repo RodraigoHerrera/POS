@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/db";
 
 export async function POST(req: Request) {
   try {
@@ -30,7 +28,7 @@ export async function POST(req: Request) {
         direccion,
         correo,
         telefono,
-        contraseña: hashedPassword,
+        contrase_a: hashedPassword,
       },
     });
 

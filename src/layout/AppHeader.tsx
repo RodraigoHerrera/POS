@@ -5,7 +5,9 @@ import UserDropdown from "@/components/header/UserDropdown";
 import { useSidebar } from "@/context/SidebarContext";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState ,useEffect,useRef} from "react";
+import React, { useState ,useEffect,useRef, use} from "react";
+
+
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
@@ -39,6 +41,9 @@ const AppHeader: React.FC = () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
+
+    
+
 
   return (
     <header className="sticky top-0 flex w-full bg-white border-gray-200 z-99999 dark:border-gray-800 dark:bg-gray-900 lg:border-b">
@@ -100,6 +105,7 @@ const AppHeader: React.FC = () => {
             />
           </Link>
 
+          {/* <!--left AppSidebar button --> */}
           <button
             onClick={toggleApplicationMenu}
             className="flex items-center justify-center w-10 h-10 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
@@ -121,6 +127,7 @@ const AppHeader: React.FC = () => {
           </button>
 
           <div className="hidden lg:block">
+            {/* <!-- Search Form --> */}
             <form>
               <div className="relative">
                 
@@ -154,6 +161,7 @@ const AppHeader: React.FC = () => {
             </form>
           </div>
         </div>
+        
         <div
           className={`${
             isApplicationMenuOpen ? "flex" : "hidden"
@@ -168,8 +176,10 @@ const AppHeader: React.FC = () => {
             {/* <!-- Notification Menu Area --> */}
           </div>
           {/* <!-- User Area --> */}
-          <UserDropdown /> 
-    
+          <UserDropdown
+            //userData={userData}
+          />
+
         </div>
       </div>
     </header>

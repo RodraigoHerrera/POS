@@ -1,9 +1,7 @@
 // /app/api/usuarios/id/route.ts
-import { PrismaClient } from '@prisma/client';
+import { prisma } from "@/lib/db";
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
