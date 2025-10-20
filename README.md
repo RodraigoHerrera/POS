@@ -167,3 +167,13 @@ TailAdmin Next.js Free Version is released under the MIT License.
 ## Support
 
 If you find this project helpful, please consider giving it a star on GitHub. Your support helps us continue developing and maintaining this template.
+
+## Comandos Prisma
+
+npx prisma init
+
+npx prisma migrate dev --name init
+
+Si se edita
+npx prisma migrate dev --name add_estado_a_empleado 
+

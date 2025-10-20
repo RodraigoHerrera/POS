@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     const { sucursal_id, nombre, correo, celular, contraseña } = body;
 
     // Verificar si ya existe un administrador con el correo proporcionado
-    const existingAdmin = await prisma.empleado.findUnique({
+    const existingAdmin = await prisma.empleados.findUnique({
       where: { correo },
     });
 
@@ -23,14 +23,14 @@ export async function POST(req: Request) {
     const hashedPassword = await bcrypt.hash(contraseña, 10);
 
     // Crear el nuevo administrador en la base de datos
-    const nuevoAdmin = await prisma.empleado.create({
+    const nuevoAdmin = await prisma.empleados.create({
       data: {
         sucursal_id: BigInt(sucursal_id), // Cambia esto según tu lógica de negocio
         rol: "admin",
         nombre,
         correo,
         celular,
-        contraseña: hashedPassword,
+        contrasena: hashedPassword,
         creado: new Date(),
         estado: "activo", // Ajusta el valor según tu lógica de negocio
       },

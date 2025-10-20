@@ -11,7 +11,7 @@ export async function GET(
     const { id } = await context.params;
     // Convertir el id a BigInt para la consulta en Prisma
     const empleadoId = BigInt(id);
-    const empleado = await prisma.empleado.findUnique({
+    const empleado = await prisma.empleados.findUnique({
       where: { id: empleadoId },
       select: { nombre: true },
     });

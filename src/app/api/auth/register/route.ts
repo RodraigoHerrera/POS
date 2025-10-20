@@ -9,7 +9,7 @@ export async function POST(req: Request) {
 
     
 
-    const existingSucursal = await prisma.sucursal.findUnique({
+    const existingSucursal = await prisma.sucursales.findUnique({
       where: { correo },
     });
 
@@ -22,13 +22,13 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(contraseña, 10);
 
-    const nuevaSucursal = await prisma.sucursal.create({
+    const nuevaSucursal = await prisma.sucursales.create({
       data: {
         nombre,
         direccion,
         correo,
         telefono,
-        contrase_a: hashedPassword,
+        contrasena: hashedPassword,
       },
     });
 

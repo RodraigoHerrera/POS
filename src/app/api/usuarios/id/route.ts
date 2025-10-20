@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
     // Convertir el id a BigInt
     const empleadoId = BigInt(id);
-    const empleado = await prisma.empleado.findUnique({
+    const empleado = await prisma.empleados.findUnique({
       where: { id: empleadoId },
     });
 
@@ -24,10 +24,10 @@ export async function POST(request: Request) {
 
     // Log de depuración: valores recibidos
     console.log("DEBUG: PIN recibido:", pin);
-    console.log("DEBUG: Hash almacenado:", empleado.contraseña);
+    console.log("DEBUG: Hash almacenado:", empleado.contrasena);
 
     // Comparar el PIN recibido con el hash de la contraseña almacenada
-    const isValid = await bcrypt.compare(String(pin), empleado.contraseña);
+    const isValid = await bcrypt.compare(String(pin), empleado.contrasena);
     console.log("DEBUG: Resultado de bcrypt.compare:", isValid);
 
     if (!isValid) {

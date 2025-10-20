@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const sucursal = await prisma.sucursal.findUnique({
+    const sucursal = await prisma.sucursales.findUnique({
       where: { correo },
     });
 
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const passwordMatch = await bcrypt.compare(contraseña, sucursal.contrase_a);
+    const passwordMatch = await bcrypt.compare(contraseña, sucursal.contrasena);
     if (!passwordMatch) {
       return NextResponse.json(
         { message: "Credenciales inválidas" },

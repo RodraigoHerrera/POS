@@ -7,149 +7,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model caja {
-  id           BigInt    @id @default(autoincrement())
-  id_cajero    BigInt
-  creada       DateTime
-  fecha_cierre DateTime?
-  estado       String    @db.VarChar(20)
-  empleado     empleado  @relation(fields: [id_cajero], references: [id], map: "Caja_id_cajero_fkey")
-  factura      factura[]
 
-  @@index([id_cajero], map: "Caja_id_cajero_fkey")
-}
 
-model cliente {
-  id        BigInt    @id @default(autoincrement())
-  nit       String    @unique(map: "Cliente_nit_key")
-  razon     String
-  creado    DateTime
-  telefono  String?
-  direccion String?
-  correo    String    @unique(map: "Cliente_correo_key")
-  factura   factura[]
-}
-
-model detallefactura {
-  id              BigInt   @id @default(autoincrement())
-  id_factura      BigInt
-  id_producto     BigInt
-  cantidad        Int
-  precio_unitario Decimal  @db.Decimal(10, 2)
-  detalle         String?
-  factura         factura  @relation(fields: [id_factura], references: [id], map: "DetalleFactura_id_factura_fkey")
-  producto        producto @relation(fields: [id_producto], references: [id], map: "DetalleFactura_id_producto_fkey")
-
-  @@index([id_factura], map: "DetalleFactura_id_factura_fkey")
-  @@index([id_producto], map: "DetalleFactura_id_producto_fkey")
-}
-
-model empleado {
-  id          BigInt    @id @default(autoincrement())
+model empleados {
+  id          BigInt      @id @default(autoincrement())
   sucursal_id BigInt
-  rol         String    @db.VarChar(50)
-  correo      String    @unique(map: "Empleado_correo_key")
+  rol         String      @db.VarChar(50)
+  correo      String      @unique
   nombre      String
-  contraseña  String    @map("contraseña") @db.VarChar(255)
-  celular     String?
-  creado      DateTime
-  estado      String
-  caja        caja[]
-  sucursal    sucursal  @relation(fields: [sucursal_id], references: [id], map: "Empleado_sucursal_id_fkey")
-  entrada     entrada[]
-  salida      salida[]
-  turno       turno[]
-
-  @@index([sucursal_id], map: "Empleado_sucursal_id_fkey")
+  contrasena  String      @db.VarChar(255)
+  celular     String?     @db.VarChar(20)
+  creado      DateTime    @default(now())
+  estado      String      @default("activo")
+  
+  sucursal    sucursales  @relation(fields: [sucursal_id], references: [id])
+  
+  @@index([sucursal_id])
+  @@index([correo])
+  @@index([estado])
 }
 
-model entrada {
-  id          BigInt     @id @default(autoincrement())
-  codigo      String     @db.VarChar(15)
-  fecha       DateTime
-  cantidad    BigInt
-  id_empleado BigInt?
-  inventario  inventario @relation(fields: [codigo], references: [codigo], map: "Entrada_codigo_fkey")
-  empleado    empleado?  @relation(fields: [id_empleado], references: [id], map: "Entrada_id_empleado_fkey")
-
-  @@index([codigo], map: "Entrada_codigo_fkey")
-  @@index([id_empleado], map: "Entrada_id_empleado_fkey")
-}
-
-model factura {
-  id             BigInt           @id @default(autoincrement())
-  id_caja        BigInt
-  id_cliente     BigInt?
-  creada         DateTime
-  total          Decimal          @db.Decimal(10, 2)
-  metodo_pago    String           @db.VarChar(50)
-  descuento      Int?
-  detallefactura detallefactura[]
-  caja           caja             @relation(fields: [id_caja], references: [id], map: "Factura_id_caja_fkey")
-  cliente        cliente?         @relation(fields: [id_cliente], references: [id], map: "Factura_id_cliente_fkey")
-
-  @@index([id_caja], map: "Factura_id_caja_fkey")
-  @@index([id_cliente], map: "Factura_id_cliente_fkey")
-}
-
-model inventario {
-  id          BigInt    @id @default(autoincrement())
-  id_sucursal BigInt
-  codigo      String    @unique(map: "Inventario_codigo_key") @db.VarChar(15)
-  articulo    String
-  entradas    BigInt
-  salidas     BigInt
-  stock       BigInt
-  entrada     entrada[]
-  sucursal    sucursal  @relation(fields: [id_sucursal], references: [id], map: "Inventario_id_sucursal_fkey")
-  salida      salida[]
-
-  @@index([id_sucursal], map: "Inventario_id_sucursal_fkey")
-}
-
-model producto {
-  id             BigInt           @id @default(autoincrement())
-  nombre         String
-  descripcion    String?
-  categoria      String?
-  precio         Decimal          @db.Decimal(10, 2)
-  estado         String           @db.VarChar(50)
-  imagen         String?
-  detallefactura detallefactura[]
-}
-
-model salida {
-  id          BigInt     @id @default(autoincrement())
-  codigo      String     @db.VarChar(15)
-  fecha       DateTime
-  cantidad    BigInt
-  motivo      String?
-  id_empleado BigInt?
-  inventario  inventario @relation(fields: [codigo], references: [codigo], map: "Salida_codigo_fkey")
-  empleado    empleado?  @relation(fields: [id_empleado], references: [id], map: "Salida_id_empleado_fkey")
-
-  @@index([codigo], map: "Salida_codigo_fkey")
-  @@index([id_empleado], map: "Salida_id_empleado_fkey")
-}
-
-model sucursal {
+model sucursales {
   id         BigInt       @id @default(autoincrement())
-  nombre     String       @unique(map: "Sucursal_nombre_key")
-  correo     String       @unique(map: "Sucursal_correo_key")
-  contrase_a String       @map("contraseña") @db.VarChar(255)
+  nombre     String       @unique
+  correo     String       @unique
+  contrasena String       @db.VarChar(255)
   direccion  String?
-  telefono   String?
-  empleado   empleado[]
-  inventario inventario[]
+  telefono   String?      @db.VarChar(20)
+  creado     DateTime     @default(now())
+  
+  empleados  empleados[]
 }
 
-model turno {
-  id           BigInt    @id @default(autoincrement())
-  id_empleado  BigInt
-  fecha        DateTime  @db.Date
-  hora_entrada DateTime  @db.Time(0)
-  hora_salida  DateTime? @db.Time(0)
-  empleado     empleado  @relation(fields: [id_empleado], references: [id], map: "Turno_id_empleado_fkey")
-
-  @@index([id_empleado], map: "Turno_id_empleado_fkey")
-}
