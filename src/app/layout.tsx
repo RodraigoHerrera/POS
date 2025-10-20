@@ -1,3 +1,5 @@
+'use client'
+import { SessionProvider } from 'next-auth/react'
 import { Outfit } from "next/font/google";
 import "./globals.css";
 
@@ -18,7 +20,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${outfit.variable} dark:bg-gray-900`}>
         <ThemeProvider>
-          <SidebarProvider>{children}</SidebarProvider>
+          <SessionProvider>{children}</SessionProvider>
         </ThemeProvider>
       </body>
     </html>

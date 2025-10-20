@@ -6,6 +6,7 @@ import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react"; // ← Importar signIn de NextAuth
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -41,23 +42,29 @@ export default function SignInForm() {
       return;
     }
 
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ correo, contraseña }),
-    });
+    try {
+      // Usar NextAuth en lugar de fetch directo
+      const result = await signIn("credentials", {
+        correo,
+        contraseña,
+        redirect: false, // Important: manejar redirección manualmente
+      });
 
-    if (res.ok) {
-      router.push("/usuarios");
-    } else {
-      const error = await res.json();
-      setAuthError(error.message || "Error al iniciar sesión");
+      if (result?.error) {
+        setAuthError("Credenciales inválidas");
+        setIsLoading(false);
+      } else {
+        // Login exitoso - NextAuth maneja la sesión automáticamente
+        router.push("/usuarios");
+        router.refresh(); // Asegurar que los datos de sesión se actualicen
+      }
+    } catch (error) {
+      setAuthError("Error al iniciar sesión");
       setIsLoading(false);
     }
   };
 
+  // El resto de tu componente permanece igual...
   return (
     <div className="bg-[#0C0C0F]/95 p-6 rounded shadow w-full max-w-lg">
       <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">

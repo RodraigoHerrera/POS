@@ -1,9 +1,7 @@
+// app/api/auth/login/route.ts - Versión actualizada
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-
-
 
 export async function POST(req: Request) {
   try {
@@ -17,6 +15,7 @@ export async function POST(req: Request) {
       );
     }
 
+    // Reutilizamos tu lógica de validación
     const sucursal = await prisma.sucursales.findUnique({
       where: { correo },
     });
@@ -36,29 +35,19 @@ export async function POST(req: Request) {
       );
     }
 
-    const token = jwt.sign(
-        {
-          sucursalId: sucursal.id.toString(), // 👈 Esto resuelve el error
-          correo: sucursal.correo,
-        },
-        process.env.JWT_SECRET!,
-        { expiresIn: "1h" }
-      );
-
-    const response = NextResponse.json(
-      { message: "Inicio de sesión exitoso" },
+    // En lugar de crear JWT manualmente, NextAuth manejará la sesión
+    return NextResponse.json(
+      { 
+        message: "Inicio de sesión exitoso",
+        user: {
+          id: sucursal.id,
+          email: sucursal.correo,
+          name: sucursal.nombre
+        }
+      },
       { status: 200 }
     );
 
-    response.cookies.set("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/",
-      maxAge: 60 * 60, // 1 hora
-    });
-
-    return response;
   } catch (error) {
     console.error("Error en login:", error);
     return NextResponse.json(
