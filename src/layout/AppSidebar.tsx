@@ -16,6 +16,7 @@ import {
   PlugInIcon,
   TableIcon,
   UserCircleIcon,
+  DocsIcon,
 } from "../icons/index";
 
 type NavItem = {
@@ -33,19 +34,19 @@ const navItems: NavItem[] = [
     path: "/admin",
   },
   {
-    icon: <CalenderIcon />,
-    name: "Calendario",
-    path: "/calendar",
+    icon: <ListIcon />,
+    name: "Inventario",
+    path: "/admin/inventario",
   },
   {
     icon: <UserCircleIcon />,
     name: "Usuarios",
-    path: "/profile",
+    path: "/admin/usuarios",
   },
 
   {
     name: "Informes",
-    icon: <ListIcon />,
+    icon: <DocsIcon />,
     subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
   },
   {
@@ -321,10 +322,10 @@ const AppSidebar: React.FC = () => {
               />
               <Image
                 className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
+                src="/images/logo/logo-smash.svg"
                 alt="Logo"
-                width={150}
-                height={40}
+                width={80}
+                height={10}
               />
             </>
           ) : (

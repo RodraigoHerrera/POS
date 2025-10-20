@@ -11,11 +11,11 @@ const ReactApexChart = dynamic(() => import("react-apexcharts"), {
 
 export default function BarChartOne() {
   const options: ApexOptions = {
-    colors: ["#465fff"],
+    colors: ["#FF1E00"],
     chart: {
       fontFamily: "Outfit, sans-serif",
       type: "bar",
-      height: 180,
+      height: 280,
       toolbar: {
         show: false,
       },
@@ -38,18 +38,13 @@ export default function BarChartOne() {
     },
     xaxis: {
       categories: [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
+        "Carne",
+        "Queso",
+        "Pan",
+        "Papas",
+        "Tocino",
+        "Bebidas",
+        "Vegetales",
       ],
       axisBorder: {
         show: false,
@@ -91,18 +86,19 @@ export default function BarChartOne() {
   };
   const series = [
     {
-      name: "Sales",
-      data: [168, 385, 201, 298, 187, 195, 291, 110, 215, 390, 280, 112],
+      name: "Unidades en Inventario",
+      data: [168, 385, 201, 298, 187, 195, 291],
     },
   ];
   return (
-    <div className="max-w-full overflow-x-auto custom-scrollbar">
-      <div id="chartOne" className="min-w-[1000px]">
+    <div className="max-w-full overflow-x-auto custom-scrollbar h-11/12">
+      
+      <div id="chartOne" className="min-w-[420px]">
         <ReactApexChart
           options={options}
           series={series}
           type="bar"
-          height={180}
+          height={309}
         />
       </div>
     </div>

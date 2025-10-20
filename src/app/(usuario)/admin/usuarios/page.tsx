@@ -30,8 +30,8 @@ export default function usuariosSucursal() {
       fetchEmpleados();
     }, []);
   return (
-      <div className="min-h-screen w-full bg-[#E5E1E1]/90 p-6 rounded-2xl">
-        <h1 className="text-center text-4xl font-bold text-brand-20 mb-10">
+      <div className="rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03] space-y-10 sm:space-y-6">
+        <h1 className="text-center mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
           USUARIOS DE LA SUCURSAL
         </h1>
         <div>
