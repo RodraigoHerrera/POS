@@ -3,6 +3,7 @@ CREATE TABLE `empleados` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
     `sucursal_id` BIGINT NOT NULL,
     `rol` VARCHAR(50) NOT NULL,
+    `usuario` VARCHAR(191) NOT NULL,
     `correo` VARCHAR(191) NOT NULL,
     `nombre` VARCHAR(191) NOT NULL,
     `contrasena` VARCHAR(255) NOT NULL,
@@ -10,6 +11,7 @@ CREATE TABLE `empleados` (
     `creado` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `estado` VARCHAR(191) NOT NULL DEFAULT 'activo',
 
+    UNIQUE INDEX `empleados_usuario_key`(`usuario`),
     UNIQUE INDEX `empleados_correo_key`(`correo`),
     INDEX `empleados_sucursal_id_idx`(`sucursal_id`),
     INDEX `empleados_correo_idx`(`correo`),

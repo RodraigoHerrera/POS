@@ -49,6 +49,7 @@ export default function SignInForm() {
       body: JSON.stringify({ correo, contraseña }),
     });
 
+
     if (res.ok) {
       router.push("/usuarios");
     } else {
@@ -60,7 +61,7 @@ export default function SignInForm() {
 
   return (
     <div className="bg-[#0C0C0F]/95 p-6 rounded shadow w-full max-w-lg">
-      <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
+      {/* <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
         <Link
           href="/admin"
           className="inline-flex items-center text-sm text-gray-25 transition-colors hover:text-gray-400 dark:text-gray-400 dark:hover:text-gray-300"
@@ -68,7 +69,7 @@ export default function SignInForm() {
           <ChevronLeftIcon />
           Back to dashboard
         </Link>
-      </div>
+      </div> */}
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
           <div className="mb-5 sm:mb-8">
@@ -135,7 +136,7 @@ export default function SignInForm() {
 
             <div className="mt-5">
               <p className="text-sm font-normal text-center text-gray-25 dark:text-gray-400 sm:text-start">
-                ¿No tienes una cuenta? {""}
+                ¿Sucursal nueva? {""}
                 <Link
                   href="/signup"
                   className="text-brand-600 hover:text-brand-500 dark:text-brand-400"

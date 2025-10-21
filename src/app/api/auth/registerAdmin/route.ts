@@ -5,7 +5,7 @@ import bcrypt from "bcrypt";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { sucursal_id, nombre, correo, celular, contraseña } = body;
+    const { sucursal_id, nombre, correo, celular, contraseña, usuario } = body;
 
     // Verificar si ya existe un administrador con el correo proporcionado
     const existingAdmin = await prisma.empleados.findUnique({
@@ -26,13 +26,14 @@ export async function POST(req: Request) {
     const nuevoAdmin = await prisma.empleados.create({
       data: {
         sucursal_id: BigInt(sucursal_id), // Cambia esto según tu lógica de negocio
-        rol: "admin",
+        rol: "Administrador",
         nombre,
         correo,
         celular,
         contrasena: hashedPassword,
         creado: new Date(),
-        estado: "activo", // Ajusta el valor según tu lógica de negocio
+        estado: "Activo", // Ajusta el valor según tu lógica de negocio
+        usuario,
       },
     });
 
@@ -54,6 +55,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { message: "Error interno del servidor" },
       { status: 500 }
+      
     );
   }
 }

@@ -93,13 +93,13 @@ export default function usuariosSucursal() {
 
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div className="col-span-2 lg:col-span-1">
-                    <Label className="text-black">Nombre</Label>
-                    <Input className=" text-gray-500  dark:border-gray-800 dark:text-gray-400" type="text" placeholder="Juan" />
+                    <Label className="text-black">Nombre Completo</Label>
+                    <Input className=" text-gray-500  dark:border-gray-800 dark:text-gray-400" type="text" placeholder="Juan Pérez" />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
-                    <Label className="text-black">Apellido</Label>
-                    <Input className=" text-gray-500  dark:border-gray-800 dark:text-gray-400" type="text" placeholder="Pérez" />
+                    <Label className="text-black">Nombre de Usuario</Label>
+                    <Input className=" text-gray-500  dark:border-gray-800 dark:text-gray-400" type="text" placeholder="juanperez" />
                   </div>
 
                   <div className="col-span-2 lg:col-span-2">

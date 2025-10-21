@@ -28,7 +28,7 @@ export async function GET(req: Request) {
 
   try {
     const empleados = await prisma.empleados.findMany({
-      where: { sucursal_id: sucursalId },
+      where: { sucursal_id: 1 },
       select: {
         id: true,
         nombre: true,
@@ -37,6 +37,7 @@ export async function GET(req: Request) {
         correo: true,
         celular: true, 
         creado: true,
+        usuario: true,
       },
     });
 
@@ -50,6 +51,7 @@ export async function GET(req: Request) {
       correo: e.correo,
       celular: e.celular,
       creado: e.creado,
+      usuario: e.usuario,
     }));
 
     return NextResponse.json(empleadosConFoto);

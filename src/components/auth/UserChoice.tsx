@@ -23,6 +23,7 @@ export default function EmpleadoSelector() {
         });
         const data = await res.json();
         setEmpleados(data);
+        console.log(data);
       } catch (error) {
         console.error("Error al obtener empleados:", error);
       }
@@ -33,7 +34,7 @@ export default function EmpleadoSelector() {
   const colores = ["bg-brand-20", "bg-brand-600"];
 
   // Filtrar solo empleados activos
-  const empleadosActivos = empleados.filter(empleado => empleado.estado === "activo");
+  const empleadosActivos = empleados.filter(empleado => empleado.estado === "Activo");
 
   return (
     
