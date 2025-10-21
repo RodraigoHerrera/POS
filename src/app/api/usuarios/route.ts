@@ -28,7 +28,7 @@ export async function GET(req: Request) {
 
   try {
     const empleados = await prisma.empleados.findMany({
-      where: { sucursal_id: 1 },
+      where: { sucursal_id: sucursalId },
       select: {
         id: true,
         nombre: true,

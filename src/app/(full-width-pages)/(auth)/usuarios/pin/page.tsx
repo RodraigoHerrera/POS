@@ -44,7 +44,7 @@ export default function EmpleadoPin() {
 
       if (res.ok) {
         if (data.rol === "Administrador") router.push("/admin?id=" + id);
-        else if (data.rol === "cajero") router.push("/cajero?id=" + id);
+        else if (data.rol === "Cajero") router.push("/cajero?id=" + id);
       } else {
         setError(data.message || "PIN incorrectooo");
       }
