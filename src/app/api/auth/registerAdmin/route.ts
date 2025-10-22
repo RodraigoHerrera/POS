@@ -5,7 +5,7 @@ import bcrypt from "bcrypt";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { sucursal_id, nombre, correo, celular, contraseña, usuario } = body;
+    const { sucursal_id, nombre, correo, celular, contraseña, usuario, rol } = body;
 
     // Verificar si ya existe un administrador con el correo proporcionado
     const existingAdmin = await prisma.empleados.findUnique({
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     const nuevoAdmin = await prisma.empleados.create({
       data: {
         sucursal_id: BigInt(sucursal_id), // Cambia esto según tu lógica de negocio
-        rol: "Administrador",
+        rol,
         nombre,
         correo,
         celular,

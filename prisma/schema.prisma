@@ -1,3 +1,8 @@
+// -------------------------------------------------------
+// Prisma Schema — Smash POS (Inventario con Lotes + FEFO)
+// Versión simplificada: SIN tabla Unidad ni Variantes
+// -------------------------------------------------------
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,22 +12,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
-
+// ==========================================
+// Modelos existentes (TAL CUAL nos diste)
+// ==========================================
 model empleados {
   id          BigInt      @id @default(autoincrement())
   sucursal_id BigInt
   rol         String      @db.VarChar(50)
-  usuario     String      @unique 
+  usuario     String      @unique
   correo      String      @unique
   nombre      String
   contrasena  String      @db.VarChar(255)
   celular     String?     @db.VarChar(20)
   creado      DateTime    @default(now())
   estado      String      @default("activo")
-  
+
   sucursal    sucursales  @relation(fields: [sucursal_id], references: [id])
-  
+
   @@index([sucursal_id])
   @@index([correo])
   @@index([estado])
@@ -36,7 +42,245 @@ model sucursales {
   direccion  String?
   telefono   String?      @db.VarChar(20)
   creado     DateTime     @default(now())
-  
+
   empleados  empleados[]
+
+  inventarios   inventarioSucursal[]
+  stocks_lote   stockLoteSucursal[]
+  movimientos   movimientoInventario[]
+  ordenes       ordenCompra[]
+  producciones  produccion[]
 }
 
+// ==========================================
+// Enums (pueden quedarse en PascalCase)
+// ==========================================
+enum TipoItem {
+  vendible
+  insumo
+  prep
+}
+
+enum TipoMovimiento {
+  Entrada
+  Salida
+  Ajuste
+}
+
+enum MotivoMovimiento {
+  Compra
+  Venta
+  Merma
+  Produccion
+  Ajuste
+  Traslado
+}
+
+// ==========================================
+// Catálogo y recetas (modelos en minúscula)
+// ==========================================
+model item {
+  id            BigInt   @id @default(autoincrement())
+  tipo          TipoItem
+  nombre        String
+  sku           String?  @unique
+  unidad_code   String   @db.VarChar(16) // "u", "g", "kg", "ml", "L", etc.
+  activo        Boolean  @default(true)
+
+  // Relaciones
+  receta_vendible   receta?
+  receta_items      recetaItem[]
+  inventarios       inventarioSucursal[]
+  lotes             lote[]
+  movimientos       movimientoInventario[]
+  oc_items          ordenCompraItem[]
+  prod_prep         produccion[]        @relation("ProduccionPrep")
+  prod_items        produccionItem[]    @relation("ProduccionItemInsumo")
+  mods_as_vendible  modificadorProducto[] @relation("ModVendible")
+  mods_as_insumo    modificadorProducto[] @relation("ModInsumo")
+
+  @@index([tipo])
+}
+
+model receta {
+  id               BigInt @id @default(autoincrement())
+  item_vendible    item   @relation(fields: [item_vendible_id], references: [id])
+  item_vendible_id BigInt
+  rendimiento      Decimal @db.Decimal(18, 6)
+  merma_pct        Decimal? @db.Decimal(5, 2)
+
+  items recetaItem[]
+
+  @@unique([item_vendible_id])
+}
+
+model recetaItem {
+  id             BigInt @id @default(autoincrement())
+  receta         receta @relation(fields: [receta_id], references: [id])
+  receta_id      BigInt
+  item_insumo    item   @relation(fields: [item_insumo_id], references: [id])
+  item_insumo_id BigInt
+  cantidad       Decimal @db.Decimal(18, 6)
+  merma_pct      Decimal? @db.Decimal(5, 2)
+
+  @@index([receta_id])
+}
+
+// ==========================================
+// Inventario por sucursal (rápido + FEFO)
+// ==========================================
+model inventarioSucursal {
+  id             BigInt     @id @default(autoincrement())
+  sucursal       sucursales @relation(fields: [sucursal_id], references: [id])
+  sucursal_id    BigInt
+  item           item       @relation(fields: [item_id], references: [id])
+  item_id        BigInt
+  stock          Decimal    @db.Decimal(18, 3)
+  costo_promedio Decimal    @db.Decimal(18, 4)
+  stock_min      Decimal    @default(0) @db.Decimal(18, 3)
+  stock_max      Decimal    @default(0) @db.Decimal(18, 3)
+
+  @@unique([sucursal_id, item_id])
+  @@index([sucursal_id])
+}
+
+// ==========================================
+// Lotes y stock por lote/sucursal
+// ==========================================
+model lote {
+  id               BigInt  @id @default(autoincrement())
+  item             item    @relation(fields: [item_id], references: [id])
+  item_id          BigInt
+  codigo_lote      String  @db.VarChar(64)
+  fecha_caducidad  DateTime?
+  costo_unit       Decimal @db.Decimal(18, 4)
+  creado_en        DateTime @default(now())
+
+  stocks_por_sucursal stockLoteSucursal[]
+  movimientos         movimientoInventario[]
+  prod_consumos       produccionItem[]      @relation("ProduccionLoteConsumido")
+  prod_generado       produccion[]          @relation("ProduccionLoteGenerado")
+
+  @@index([item_id, fecha_caducidad])
+  @@unique([item_id, codigo_lote])
+}
+
+model stockLoteSucursal {
+  id          BigInt     @id @default(autoincrement())
+  sucursal    sucursales @relation(fields: [sucursal_id], references: [id])
+  sucursal_id BigInt
+  lote        lote       @relation(fields: [lote_id], references: [id])
+  lote_id     BigInt
+  cantidad    Decimal    @db.Decimal(18, 3)
+
+  @@unique([sucursal_id, lote_id])
+}
+
+// ==========================================
+// Movimientos (kardex)
+// ==========================================
+model movimientoInventario {
+  id          BigInt     @id @default(autoincrement())
+  sucursal    sucursales @relation(fields: [sucursal_id], references: [id])
+  sucursal_id BigInt
+  item        item       @relation(fields: [item_id], references: [id])
+  item_id     BigInt
+  lote        lote?      @relation(fields: [lote_id], references: [id])
+  lote_id     BigInt?
+  tipo        TipoMovimiento
+  motivo      MotivoMovimiento
+  cantidad    Decimal    @db.Decimal(18, 3)
+  costo_unit  Decimal?   @db.Decimal(18, 4)
+  referencia  String?    @db.VarChar(64)
+  creado_en   DateTime   @default(now())
+
+  @@index([sucursal_id, item_id, creado_en])
+  @@index([lote_id])
+  @@index([tipo, creado_en])
+}
+
+// ==========================================
+// Compras (opcional recomendado)
+// ==========================================
+model proveedor {
+  id       BigInt  @id @default(autoincrement())
+  nombre   String
+  nit      String? @db.VarChar(50)
+  contacto String?
+  telefono String? @db.VarChar(50)
+  email    String?
+
+  ordenes  ordenCompra[]
+}
+
+model ordenCompra {
+  id           BigInt      @id @default(autoincrement())
+  sucursal     sucursales  @relation(fields: [sucursal_id], references: [id])
+  sucursal_id  BigInt
+  proveedor    proveedor   @relation(fields: [proveedor_id], references: [id])
+  proveedor_id BigInt
+  estado       String      @db.VarChar(20) // Borrador|Enviada|Recibida|Cerrada|Anulada
+  total        Decimal     @db.Decimal(18, 2)
+  creado_en    DateTime    @default(now())
+
+  items ordenCompraItem[]
+
+  @@index([proveedor_id])
+  @@index([creado_en])
+}
+
+model ordenCompraItem {
+  id               BigInt      @id @default(autoincrement())
+  orden_compra     ordenCompra @relation(fields: [orden_compra_id], references: [id])
+  orden_compra_id  BigInt
+  item             item        @relation(fields: [item_id], references: [id])
+  item_id          BigInt
+  cantidad         Decimal     @db.Decimal(18, 3)
+  costo_unit       Decimal     @db.Decimal(18, 4)
+
+  @@index([orden_compra_id])
+}
+
+// ==========================================
+// Producción (mise en place)
+// ==========================================
+model produccion {
+  id               BigInt     @id @default(autoincrement())
+  sucursal         sucursales @relation(fields: [sucursal_id], references: [id])
+  sucursal_id      BigInt
+  prep_item        item       @relation("ProduccionPrep", fields: [prep_item_id], references: [id])
+  prep_item_id     BigInt
+  cantidad         Decimal    @db.Decimal(18, 3)
+  lote_generado    lote       @relation("ProduccionLoteGenerado", fields: [lote_generado_id], references: [id])
+  lote_generado_id BigInt
+  creado_en        DateTime   @default(now())
+
+  insumos          produccionItem[]
+}
+
+model produccionItem {
+  id                 BigInt     @id @default(autoincrement())
+  produccion         produccion @relation(fields: [produccion_id], references: [id])
+  produccion_id      BigInt
+  item_insumo        item       @relation("ProduccionItemInsumo", fields: [item_insumo_id], references: [id])
+  item_insumo_id     BigInt
+  cantidad           Decimal    @db.Decimal(18, 3)
+  lote_consumido     lote?      @relation("ProduccionLoteConsumido", fields: [lote_consumido_id], references: [id])
+  lote_consumido_id  BigInt?
+
+  @@index([produccion_id])
+}
+
+// ==========================================
+// Modificadores (extras/sin X)
+// ==========================================
+model modificadorProducto {
+  id               BigInt @id @default(autoincrement())
+  item_vendible    item   @relation("ModVendible", fields: [item_vendible_id], references: [id])
+  item_vendible_id BigInt
+  item_insumo      item   @relation("ModInsumo", fields: [item_insumo_id], references: [id])
+  item_insumo_id   BigInt
+  delta_cantidad   Decimal @db.Decimal(18, 6)
+
+  @@index([item_vendible_id])
+}
