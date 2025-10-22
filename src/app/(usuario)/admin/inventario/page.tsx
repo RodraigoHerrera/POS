@@ -3,7 +3,7 @@
 import BarChartOne from "@/components/charts/bar/BarChartOne";
 import LineChartOne from "@/components/charts/line/LineChartOne";
 import Button from "@/components/ui/button/Button";
-import { PlusIcon, TrashBinIcon, ListIcon, AlertIcon } from "@/icons";
+import { PlusIcon, TrashBinIcon, ListIcon, AlertIcon, CalenderIcon } from "@/icons";
 import { useModal } from "@/hooks/useModal";
 import { Modal } from "@/components/ui/modal";
 import Input from "@/components/form/input/InputField";
@@ -16,8 +16,8 @@ export default function Inventario() {
   const entradaModal = useModal();
   const mermasModal = useModal();
   const kardexModal = useModal();
-  const nuevoInsumoModal = useModal();
-  const listaInsumosModal = useModal();
+  const nuevoItemModal = useModal();
+  const listaItemsModal = useModal();
   const alertasModal = useModal();
 
   const handleSave = (modalType: string) => {
@@ -33,11 +33,11 @@ export default function Inventario() {
       case 'kardex':
         kardexModal.closeModal();
         break;
-      case 'nuevoInsumo':
-        nuevoInsumoModal.closeModal();
+      case 'nuevoItem':
+        nuevoItemModal.closeModal();
         break;
-      case 'listaInsumos':
-        listaInsumosModal.closeModal();
+      case 'listaItems':
+        listaItemsModal.closeModal();
         break;
       case 'alertas':
         alertasModal.closeModal();
@@ -50,9 +50,9 @@ export default function Inventario() {
   };
 
   const options = [
-    { value: "insumo1", label: "Insumo A" },
-    { value: "insumo2", label: "Insumo B" },
-    { value: "insumo3", label: "Insumo C" },
+    { value: "item1", label: "Item A" },
+    { value: "item2", label: "Item B" },
+    { value: "item3", label: "Item C" },
   ];
 
   const categoriasOptions = [
@@ -84,12 +84,12 @@ export default function Inventario() {
         </h1>
 
         <h2 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
-          Gestión de Insumos
+          Gestión de Items
         </h2>
         <div className="grid grid-cols-2 space-x-6">
           <div className="rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03]">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-              Disponibilidad de Insumos criticos
+              Disponibilidad de Items criticos
             </h3>
             <BarChartOne />
           </div>
@@ -108,7 +108,7 @@ export default function Inventario() {
 
         <div className="grid grid-cols-3 space-x-10">
           <Button size="md" variant="outline" startIcon={<PlusIcon />} onClick={entradaModal.openModal}>
-            Registrar entrada de insumos
+            Registrar entrada de items
           </Button>
           <Button size="md" variant="outline" startIcon={<TrashBinIcon />} onClick={mermasModal.openModal}>
             Registrar mermas
@@ -119,11 +119,11 @@ export default function Inventario() {
         </div>
 
         <div className="grid grid-cols-3 space-x-10">
-          <Button size="md" variant="outline" startIcon={<PlusIcon />} onClick={nuevoInsumoModal.openModal}>
-            Registrar nuevo de insumo
+          <Button size="md" variant="outline" startIcon={<PlusIcon />} onClick={nuevoItemModal.openModal}>
+            Registrar nuevo de item
           </Button>
-          <Button size="md" variant="outline" startIcon={<ListIcon />} onClick={listaInsumosModal.openModal}>
-            Lista de insumos
+          <Button size="md" variant="outline" startIcon={<ListIcon />} onClick={listaItemsModal.openModal}>
+            Lista de items
           </Button>
           <Button size="md" variant="outline" startIcon={<AlertIcon />} onClick={alertasModal.openModal}>
             Configurar alertas de stock
@@ -131,15 +131,15 @@ export default function Inventario() {
         </div>
       </div>
 
-      {/* Modal para Entrada de Insumos */}
+      {/* Modal para Entrada de Items */}
       <Modal isOpen={entradaModal.isOpen} onClose={entradaModal.closeModal} className="max-w-[700px] m-4">
         <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
           <div className="px-2 pr-14">
             <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-              Registrar entrada de insumos
+              Registrar entrada de items
             </h4>
             <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-              Formulario para registrar nueva entrada de insumos al inventario.
+              Formulario para registrar nueva entrada de items al inventario.
             </p>
           </div>
           <form className="flex flex-col">
@@ -150,10 +150,10 @@ export default function Inventario() {
                 </h5>
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div className="col-span-2 lg:col-span-1">
-                    <Label className="text-black">Insumo</Label>
+                    <Label className="text-black">Item</Label>
                     <Select
                       options={options}
-                      placeholder="Seleccionar Insumo"
+                      placeholder="Seleccionar Item"
                       onChange={handleSelectChange}
                       className="dark:bg-dark-900"
                     />
@@ -168,7 +168,18 @@ export default function Inventario() {
                   </div>
                   <div className="col-span-2 lg:col-span-1">
                     <Label className="text-black">Fecha de Vencimiento</Label>
-                    <Input className="text-gray-dark" type="date" />
+                    <div className="relative">
+                      <Input
+                        type="date"
+                        id="datePicker"
+                        name="datePicker"
+                        onChange={(e) => console.log(e.target.value)}
+                      />
+                      <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
+                        <CalenderIcon />
+                      </span>
+                    </div>
+
                   </div>
                   <div className="col-span-2 lg:col-span-2">
                     <Label className="text-black">Proveedor</Label>
@@ -201,7 +212,7 @@ export default function Inventario() {
               Registrar mermas
             </h4>
             <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-              Formulario para registrar pérdidas o mermas de insumos.
+              Formulario para registrar pérdidas o mermas de items.
             </p>
           </div>
           <form className="flex flex-col">
@@ -212,10 +223,10 @@ export default function Inventario() {
                 </h5>
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div className="col-span-2 lg:col-span-1">
-                    <Label className="text-black">Insumo</Label>
+                    <Label className="text-black">Item</Label>
                     <Select
                       options={options}
-                      placeholder="Seleccionar Insumo"
+                      placeholder="Seleccionar Item"
                       onChange={handleSelectChange}
                       className="dark:bg-dark-900"
                     />
@@ -279,10 +290,10 @@ export default function Inventario() {
           
           <div className="grid grid-cols-1 gap-6 mb-6 lg:grid-cols-3">
             <div>
-              <Label className="text-black">Seleccionar Insumo</Label>
+              <Label className="text-black">Seleccionar Item</Label>
               <Select
                 options={options}
-                placeholder="Todos los insumos"
+                placeholder="Todos los items"
                 onChange={handleSelectChange}
                 className="dark:bg-dark-900"
               />
@@ -309,7 +320,7 @@ export default function Inventario() {
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Fecha</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Insumo</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Item</th>
                       <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Tipo</th>
                       <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Cantidad</th>
                       <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Stock</th>
@@ -318,7 +329,7 @@ export default function Inventario() {
                   <tbody>
                     <tr className="border-b border-gray-100 dark:border-gray-800">
                       <td className="px-4 py-3 text-sm">15/01/2024</td>
-                      <td className="px-4 py-3 text-sm">Insumo A</td>
+                      <td className="px-4 py-3 text-sm">Item A</td>
                       <td className="px-4 py-3 text-sm">
                         <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full dark:bg-green-900 dark:text-green-200">
                           Entrada
@@ -329,7 +340,7 @@ export default function Inventario() {
                     </tr>
                     <tr className="border-b border-gray-100 dark:border-gray-800">
                       <td className="px-4 py-3 text-sm">18/01/2024</td>
-                      <td className="px-4 py-3 text-sm">Insumo A</td>
+                      <td className="px-4 py-3 text-sm">Item A</td>
                       <td className="px-4 py-3 text-sm">
                         <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full dark:bg-red-900 dark:text-red-200">
                           Salida
@@ -355,26 +366,26 @@ export default function Inventario() {
         </div>
       </Modal>
 
-      {/* Modal para Registrar Nuevo Insumo */}
-      <Modal isOpen={nuevoInsumoModal.isOpen} onClose={nuevoInsumoModal.closeModal} className="max-w-[800px] m-4">
+      {/* Modal para Registrar Nuevo Item */}
+      <Modal isOpen={nuevoItemModal.isOpen} onClose={nuevoItemModal.closeModal} className="max-w-[800px] m-4">
         <div className="no-scrollbar relative w-full max-w-[800px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
           <div className="px-2 pr-14">
             <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-              Registrar Nuevo Insumo
+              Registrar Nuevo Item
             </h4>
             <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-              Complete la información para agregar un nuevo insumo al inventario.
+              Complete la información para agregar un nuevo item al inventario.
             </p>
           </div>
           <form className="flex flex-col">
             <div className="custom-scrollbar h-[550px] overflow-y-auto px-2 pb-3">
               <div className="mt-7">
                 <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                  Información del Insumo
+                  Información del Item
                 </h5>
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div className="col-span-2 lg:col-span-2">
-                    <Label className="text-black">Nombre del Insumo</Label>
+                    <Label className="text-black">Nombre del Item</Label>
                     <Input className="text-gray-dark" type="text" placeholder="Ingrese nombre completo" />
                   </div>
                   <div className="col-span-2 lg:col-span-1">
@@ -407,52 +418,36 @@ export default function Inventario() {
                     <Label className="text-black">Stock Mínimo</Label>
                     <Input className="text-gray-dark" type="number" placeholder="Stock mínimo alerta" />
                   </div>
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label className="text-black">Stock Máximo</Label>
-                    <Input className="text-gray-dark" type="number" placeholder="Stock máximo permitido" />
-                  </div>
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label className="text-black">Precio Unitario</Label>
-                    <Input className="text-gray-dark" type="number" placeholder="0.00" />
-                  </div>
-                  <div className="col-span-2 lg:col-span-2">
-                    <Label className="text-black">Descripción</Label>
-                    {/* <Textarea className="text-gray-dark" placeholder="Descripción detallada del insumo..." rows={3} /> */}
-                  </div>
-                  <div className="col-span-2 lg:col-span-2">
-                    <Label className="text-black">Proveedor Principal</Label>
-                    <Input className="text-gray-dark" type="text" placeholder="Nombre del proveedor" />
-                  </div>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-              <Button size="sm" variant="outline" onClick={nuevoInsumoModal.closeModal}>
+              <Button size="sm" variant="outline" onClick={nuevoItemModal.closeModal}>
                 Cancelar
               </Button>
-              <Button size="sm" onClick={() => handleSave('nuevoInsumo')}>
-                Registrar Insumo
+              <Button size="sm" onClick={() => handleSave('nuevoItem')}>
+                Registrar Item
               </Button>
             </div>
           </form>
         </div>
       </Modal>
 
-      {/* Modal para Lista de Insumos */}
-      <Modal isOpen={listaInsumosModal.isOpen} onClose={listaInsumosModal.closeModal} className="max-w-[1200px] m-4">
+      {/* Modal para Lista de Items */}
+      <Modal isOpen={listaItemsModal.isOpen} onClose={listaItemsModal.closeModal} className="max-w-[1200px] m-4">
         <div className="no-scrollbar relative w-full max-w-[1200px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
           <div className="px-2 pr-14">
             <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-              Lista de Insumos
+              Lista de Items
             </h4>
             <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-              Vista completa de todos los insumos en inventario.
+              Vista completa de todos los items en inventario.
             </p>
           </div>
 
           <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex gap-4">
-              <Input className="text-gray-dark w-full lg:w-64" type="text" placeholder="Buscar insumo..." />
+              <Input className="text-gray-dark w-full lg:w-64" type="text" placeholder="Buscar item..." />
               <Select
                 options={categoriasOptions}
                 placeholder="Todas las categorías"
@@ -477,7 +472,7 @@ export default function Inventario() {
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Código</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Insumo</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Item</th>
                       <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Categoría</th>
                       <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Stock Actual</th>
                       <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 dark:text-gray-300">Stock Mínimo</th>
@@ -488,7 +483,7 @@ export default function Inventario() {
                   <tbody>
                     <tr className="border-b border-gray-100 dark:border-gray-800">
                       <td className="px-4 py-3 text-sm">MED-001</td>
-                      <td className="px-4 py-3 text-sm">Insumo A</td>
+                      <td className="px-4 py-3 text-sm">Item A</td>
                       <td className="px-4 py-3 text-sm">Medicamento</td>
                       <td className="px-4 py-3 text-sm">125</td>
                       <td className="px-4 py-3 text-sm">20</td>
@@ -505,7 +500,7 @@ export default function Inventario() {
                     </tr>
                     <tr className="border-b border-gray-100 dark:border-gray-800">
                       <td className="px-4 py-3 text-sm">MAT-002</td>
-                      <td className="px-4 py-3 text-sm">Insumo B</td>
+                      <td className="px-4 py-3 text-sm">Item B</td>
                       <td className="px-4 py-3 text-sm">Material Médico</td>
                       <td className="px-4 py-3 text-sm">15</td>
                       <td className="px-4 py-3 text-sm">25</td>
@@ -528,13 +523,13 @@ export default function Inventario() {
 
           <div className="flex items-center justify-between px-2 mt-6">
             <div className="text-sm text-gray-500 dark:text-gray-400">
-              Mostrando 2 de 45 insumos
+              Mostrando 2 de 45 items
             </div>
             <div className="flex gap-3">
-              <Button size="sm" variant="outline" onClick={listaInsumosModal.closeModal}>
+              <Button size="sm" variant="outline" onClick={listaItemsModal.closeModal}>
                 Cerrar
               </Button>
-              <Button size="sm" onClick={() => handleSave('listaInsumos')}>
+              <Button size="sm" onClick={() => handleSave('listaItems')}>
                 Actualizar Lista
               </Button>
             </div>
@@ -574,12 +569,12 @@ export default function Inventario() {
                     <Input className="text-gray-dark" type="number" placeholder="20" />
                   </div>
                   <div className="col-span-2 lg:col-span-2">
-                    <Label className="text-black">Insumos Aplicables</Label>
+                    <Label className="text-black">Items Aplicables</Label>
                     <Select
                       options={[
-                        { value: "todos", label: "Todos los insumos" },
+                        { value: "todos", label: "Todos los items" },
                         { value: "categoria", label: "Por categoría" },
-                        { value: "especificos", label: "Insumos específicos" },
+                        { value: "especificos", label: "Items específicos" },
                       ]}
                       placeholder="Seleccionar alcance"
                       onChange={handleSelectChange}
@@ -635,7 +630,7 @@ export default function Inventario() {
                   <div className="p-4 border border-yellow-200 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-800">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h6 className="font-medium text-yellow-800 dark:text-yellow-200">Stock Bajo - Insumo B</h6>
+                        <h6 className="font-medium text-yellow-800 dark:text-yellow-200">Stock Bajo - Item B</h6>
                         <p className="text-sm text-yellow-600 dark:text-yellow-300">Stock actual: 15 | Mínimo: 25</p>
                       </div>
                       <Button variant="outline">
