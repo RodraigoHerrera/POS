@@ -1,179 +1,242 @@
-# TailAdmin Next.js - Free Next.js Tailwind Admin Dashboard Template
+# Smash POS
 
-TailAdmin is a free and open-source admin dashboard template built on **Next.js and Tailwind CSS** providing developers with everything they need to create a feature-rich and data-driven: back-end, dashboard, or admin panel solution for any sort of web project.
+Sistema POS/ERP ligero para restaurantes fast‑casual (Smash Burguer). Este repositorio contiene la **app web** (Next.js + Prisma + MySQL) y el **API** basado en rutas de App Router.
 
-![TailAdmin - Next.js Dashboard Preview](./banner.png)
+> **Estado:** en desarrollo activo. README ajustado según configuración confirmada (Node v20.18.0, npm, MySQL, JWT/Sesiones).
 
-With TailAdmin Next.js, you get access to all the necessary dashboard UI components, elements, and pages required to build a high-quality and complete dashboard or admin panel. Whether you're building a dashboard or admin panel for a complex web application or a simple website. 
+---
 
-TailAdmin utilizes the powerful features of **Next.js 15** and common features of Next.js such as server-side rendering (SSR), static site generation (SSG), and seamless API route integration. Combined with the advancements of **React 19** and the robustness of **TypeScript**, TailAdmin is the perfect solution to help get your project up and running quickly.
+## 🧭 Tabla de contenidos
 
-## Overview
+* [Arquitectura & Stack](#arquitectura--stack)
+* [Requisitos previos](#requisitos-previos)
+* [Instalación rápida](#instalación-rápida)
+* [Configuración de entorno](#configuración-de-entorno)
+* [Base de datos (Prisma)](#base-de-datos-prisma)
+* [Ejecución](#ejecución)
+* [Build y despliegue](#build-y-despliegue)
+* [Estructura de carpetas](#estructura-de-carpetas)
+* [Flujo de autenticación (modelo POS)](#flujo-de-autenticación-modelo-pos)
+* [API (ejemplos)](#api-ejemplos)
+* [Estándares de código](#estándares-de-código)
+* [Contribución](#contribución)
+* [Solución de problemas](#solución-de-problemas)
+* [Licencia](#licencia)
 
-TailAdmin provides essential UI components and layouts for building feature-rich, data-driven admin dashboards and control panels. It's built on:
+---
 
-- Next.js 15
-- React 19
-- TypeScript
-- Tailwind CSS
+## Arquitectura & Stack
 
-### Quick Links
-- [✨ Visit Website](https://tailadmin.com)
-- [📄 Documentation](https://tailadmin.com/docs)
-- [⬇️ Download](https://tailadmin.com/download)
-- [🖌️ Figma Design File (Community Edition)](https://www.figma.com/community/file/1463141366275764364)
-- [⚡ Get PRO Version](https://tailadmin.com/pricing)
+* **Frontend / Full‑stack:** Next.js (App Router, TypeScript, React Server Components).
+* **ORM:** Prisma.
+* **BD:** MySQL 8.x.
+* **Auth:** Login por **Sucursal** → selección de **Empleado** → **PIN**; sesiones basadas en **JWT**.
+* **Estilos/UI:** TailwindCSS + componentes propios.
 
-### Demos
-- [Free Version](https://nextjs-free-demo.tailadmin.com)
-- [Pro Version](https://nextjs-demo.tailadmin.com)
+> **Nota:** Cada **Sucursal** actúa como “usuario” para el login inicial. Tras seleccionar el **Empleado** y validar **PIN**, se enruta según rol.
 
-### Other Versions
-- [HTML Version](https://github.com/TailAdmin/tailadmin-free-tailwind-dashboard-template)
-- [React Version](https://github.com/TailAdmin/free-react-tailwind-admin-dashboard)
-- [Vue.js Version](https://github.com/TailAdmin/vue-tailwind-admin-dashboard)
+---
 
-## Installation
+## Requisitos previos
 
-### Prerequisites
-To get started with TailAdmin, ensure you have the following prerequisites installed and set up:
+* **Node.js:** v20.18.0
+* **Gestor de paquetes:** npm
+* **Git** ≥ 2.30
+* **MySQL** 8.x
+* **OpenSSL** (para generar secretos)
 
-- Node.js 18.x or later (recommended to use Node.js 20.x or later)
+---
 
-### Cloning the Repository
-Clone the repository using the following command:
+## Instalación rápida
 
 ```bash
-git clone https://github.com/TailAdmin/free-nextjs-admin-dashboard.git
-```
+# 1) Clonar
+git clone <URL-del-repo> smash-pos
+cd smash-pos
 
-> Windows Users: place the repository near the root of your drive if you face issues while cloning.
+# 2) Instalar dependencias
+npm install
 
-1. Install dependencies:
-    ```bash
-    npm install --legacy-peer-deps
-    # or
-    yarn install
-    ```
-    > Some included packages causes peer-deps issue with React 19 while installing.
-    >
-    > With npm the `--legacy-peer-deps` flag is a workaround for that at the moment.
+# 3) Crear .env
+cp .env.example .env  # o copia manual
 
-2. Start the development server:
-    ```bash
-    npm run dev
-    # or
-    yarn dev
-    ```
+# 4) Preparar Prisma
+npx prisma generate
 
-## Components
-
-TailAdmin is a pre-designed starting point for building a web-based dashboard using Next.js and Tailwind CSS. The template includes:
-
-- Sophisticated and accessible sidebar
-- Data visualization components
-- Profile management and custom 404 page
-- Tables and Charts(Line and Bar)
-- Authentication forms and input elements
-- Alerts, Dropdowns, Modals, Buttons and more
-- Can't forget Dark Mode 🕶️
-
-All components are built with React and styled using Tailwind CSS for easy customization.
-
-## Feature Comparison
-
-### Free Version
-- 1 Unique Dashboard
-- 30+ dashboard components
-- 50+ UI elements
-- Basic Figma design files
-- Community support
-
-### Pro Version
-- 5 Unique Dashboards: Analytics, Ecommerce, Marketing, CRM, Stocks (more coming soon)
-- 400+ dashboard components and UI elements
-- Complete Figma design file
-- Email support
-
-To learn more about pro version features and pricing, visit our [pricing page](https://tailadmin.com/pricing).
-
-## Changelog
-
-### Version 2.0.1 - [February 27, 2025]
-
-#### Update Overview
-
-- Upgraded to Tailwind CSS v4 for better performance and efficiency.
-- Updated class usage to match the latest syntax and features.
-- Replaced deprecated class and optimized styles.
-
-#### Next Steps
-
-- Run npm install or yarn install to update dependencies.
-- Check for any style changes or compatibility issues.
-- Refer to the Tailwind CSS v4 [Migration Guide](https://tailwindcss.com/docs/upgrade-guide) on this release. if needed.
-- This update keeps the project up to date with the latest Tailwind improvements. 🚀
-
-### v2.0.0 (February 2025)
-A major update focused on Next.js 15 implementation and comprehensive redesign.
-
-#### Major Improvements
-- Complete redesign using Next.js 15 App Router and React Server Components
-- Enhanced user interface with Next.js-optimized components
-- Improved responsiveness and accessibility
-- New features including collapsible sidebar, chat screens, and calendar
-- Redesigned authentication using Next.js App Router and server actions
-- Updated data visualization using ApexCharts for React
-
-#### Breaking Changes
-
-- Migrated from Next.js 14 to Next.js 15
-- Chart components now use ApexCharts for React
-- Authentication flow updated to use Server Actions and middleware
-
-[Read more](https://tailadmin.com/docs/update-logs/nextjs) on this release.
-
-#### Breaking Changes
-- Migrated from Next.js 14 to Next.js 15
-- Chart components now use ApexCharts for React
-- Authentication flow updated to use Server Actions and middleware
-
-### v1.3.4 (July 01, 2024)
-- Fixed JSvectormap rendering issues
-
-### v1.3.3 (June 20, 2024)
-- Fixed build error related to Loader component
-
-### v1.3.2 (June 19, 2024)
-- Added ClickOutside component for dropdown menus
-- Refactored sidebar components
-- Updated Jsvectormap package
-
-### v1.3.1 (Feb 12, 2024)
-- Fixed layout naming consistency
-- Updated styles
-
-### v1.3.0 (Feb 05, 2024)
-- Upgraded to Next.js 14
-- Added Flatpickr integration
-- Improved form elements
-- Enhanced multiselect functionality
-- Added default layout component
-
-## License
-
-TailAdmin Next.js Free Version is released under the MIT License.
-
-## Support
-
-If you find this project helpful, please consider giving it a star on GitHub. Your support helps us continue developing and maintaining this template.
-
-## Comandos Prisma
-
-npx prisma init
-
+# 5) Crear BD y migrar
 npx prisma migrate dev --name init
 
-Si se edita
-npx prisma migrate dev --name add_estado_a_empleado 
+# 6) Ejecutar en desarrollo
+npm run dev
+```
 
+---
+
+## Configuración de entorno
+
+Crea `.env` en la raíz del proyecto. Variables típicas:
+
+```dotenv
+DATABASE_URL="mysql://usuario:clave@localhost:3306/smash_pos"
+
+# Sesiones/JWT
+JWT_SECRET="<genera-un-secreto>"
+SESSION_EXPIRATION_HOURS=12
+
+# App
+NODE_ENV="development"
+PORT=3000
+```
+
+> Generar secreto rápido: `openssl rand -base64 32`
+
+Incluye un `.env.example` versionado con **placeholders**, nunca subas credenciales reales.
+
+---
+
+## Base de datos (Prisma)
+
+### Modelos principales
+
+* `Sucursal`, `Empleado` *(login por sucursal, selección de empleado, PIN y rol)*
+* `Inventario` (productos/insumos por sucursal)
+* `Factura`, `Cliente`, `Caja`, `Turno` *(planeado/implementándose)*
+
+### Comandos útiles
+
+```bash
+npx prisma generate
+npx prisma migrate dev --name <cambio>
+npx prisma studio
+```
+
+---
+
+## Ejecución
+
+### Desarrollo
+
+```bash
+npm run dev
+```
+
+Accede a `http://localhost:3000`.
+
+### Producción (local)
+
+```bash
+npm run build
+npm start
+```
+
+---
+
+## Build y despliegue
+
+1. **Build:** `npm run build`
+2. **Entorno:** define `.env` seguro en el servidor.
+3. **Migraciones:** `npx prisma migrate deploy` antes de levantar.
+4. **Ejecución:** `npm start` detrás de un reverse proxy (Nginx/Caddy) con HTTPS.
+
+---
+
+## Estructura de carpetas
+
+```
+src/
+  app/
+    api/
+      usuarios/
+        modificar/route.ts
+      inventario/
+        items/route.ts
+  lib/
+    db.ts            # instancia PrismaClient
+  components/
+  hooks/
+prisma/
+  schema.prisma
+  seed.ts
+public/
+```
+
+---
+
+## Flujo de autenticación (modelo POS)
+
+1. **Login Sucursal** (correo/contraseña de la sucursal).
+2. Vista con **empleados de esa sucursal** (foto + nombre).
+3. **PIN del empleado** → verificación.
+4. Redirección por **rol**: `/admin` o `/cajero`.
+
+Sesiones se manejan con **JWT**. Cada token tiene duración controlada según el entorno.
+
+---
+
+## API (ejemplos)
+
+### Crear ítem de inventario (POST)
+
+```
+POST /api/inventario/items
+{
+  "sucursal_id": 1,
+  "codigo": "ING-001",
+  "nombre": "Carne 100g",
+  "unidad": "kg",
+  "costo_unitario": 23.50
+}
+```
+
+Respuesta: `201 Created`.
+
+### Actualizar usuario (PUT)
+
+```
+PUT /api/usuarios/modificar
+{
+  "id": 123,
+  "nombre": "Juan Pérez",
+  "rol": "cajero",
+  "estado": "activo"
+}
+```
+
+Respuesta: `200 OK` con usuario actualizado.
+
+> ⚠️ Si tu modelo usa `BigInt`, conviértelo a string antes de `NextResponse.json()`.
+
+---
+
+## Estándares de código
+
+* **TypeScript estricto.**
+* **ESLint + Prettier.**
+* **Commits:** formato [Conventional Commits](https://www.conventionalcommits.org/es/v1.0.0/).
+
+---
+
+## Contribución
+
+1. Crear un **issue** con descripción del cambio.
+2. Desarrollar en rama `feature/<nombre>`.
+3. Verificar build y lint.
+4. Abrir **PR** a `develop`.
+
+---
+
+## Solución de problemas
+
+**P1012 relaciones Prisma**
+
+> “missing an opposite relation field…” → agrega el campo inverso y corre `prisma format`.
+
+**`TypeError: Do not know how to serialize a BigInt`**
+
+> Convierte BigInt a string antes de devolver JSON.
+
+---
+
+## Licencia
+
+A definir (MIT/propietaria).
