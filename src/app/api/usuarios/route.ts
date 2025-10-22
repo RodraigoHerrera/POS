@@ -1,57 +1,61 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { jwtVerify } from "jose";
+import { cookies } from "next/headers";
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
 async function getSucursalIdFromToken(token: string) {
   try {
     const { payload } = await jwtVerify(token, secret);
-    return payload.sucursalId as number;
+    // En tu login firmamos sucursalId como string, no number
+    return (payload as any)?.sucursalId as string | undefined;
   } catch (error) {
     return null;
   }
 }
 
-export async function GET(req: Request) {
-  const token = req.headers.get("cookie")?.split("token=")[1]?.split(";")[0];
+export async function GET() {
+  // ✅ Usa cookies() (async) y lee la cookie correcta: tokenSucursal
+  const cookieStore = await cookies();
+  const tokenSucursal = cookieStore.get("tokenSucursal")?.value;
 
-  if (!token) {
+  if (!tokenSucursal) {
     return NextResponse.json({ message: "No autorizado" }, { status: 401 });
   }
 
-  const sucursalId = await getSucursalIdFromToken(token);
+  const sucursalIdStr = await getSucursalIdFromToken(tokenSucursal);
 
-  if (!sucursalId) {
+  if (!sucursalIdStr) {
     return NextResponse.json({ message: "Token inválido" }, { status: 403 });
   }
 
   try {
+    // Prisma espera BigInt en sucursal_id
     const empleados = await prisma.empleados.findMany({
-      where: { sucursal_id: sucursalId },
+      where: { sucursal_id: BigInt(sucursalIdStr) },
       select: {
         id: true,
         nombre: true,
         rol: true,
-        estado: true, // Si necesitas el estado, descomenta esta línea
+        estado: true,
         correo: true,
-        celular: true, 
+        celular: true,
         creado: true,
-        usuario: true,
       },
+      orderBy: { nombre: "asc" },
     });
 
-    // Agregar imagen por defecto y convertir BigInt a string
+    // Normalizamos: id a string y foto por defecto
     const empleadosConFoto = empleados.map((e) => ({
       id: e.id.toString(),
       nombre: e.nombre,
       fotoUrl: "/default-user.jpg",
       rol: e.rol,
-      estado: e.estado, // Si necesitas el estado, descomenta esta línea
+      estado: e.estado,
       correo: e.correo,
       celular: e.celular,
       creado: e.creado,
-      usuario: e.usuario,
     }));
 
     return NextResponse.json(empleadosConFoto);

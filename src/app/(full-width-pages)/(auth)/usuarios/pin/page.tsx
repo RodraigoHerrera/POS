@@ -43,8 +43,8 @@ export default function EmpleadoPin() {
       const data = await res.json();
 
       if (res.ok) {
-        if (data.rol === "Administrador") router.push("/admin?id");
-        else if (data.rol === "Cajero") router.push("/cajero?id");
+        if (data.rol === "Administrador") router.push("/admin");
+        else if (data.rol === "Cajero") router.push("/cajero");
       } else {
         setError(data.message || "PIN incorrectooo");
       }
