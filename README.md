@@ -55,7 +55,7 @@ git clone <URL-del-repo> smash-pos
 cd smash-pos
 
 # 2) Instalar dependencias
-npm install
+npm install --legacy-peer-deps
 
 # 3) Crear .env
 cp .env.example .env  # o copia manual
@@ -68,6 +68,12 @@ npx prisma migrate dev --name init
 
 # 6) Ejecutar en desarrollo
 npm run dev
+
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+winget install Schniz.fnm
+
+fnm install 22
 ```
 
 ---
@@ -108,6 +114,14 @@ Incluye un `.env.example` versionado con **placeholders**, nunca subas credencia
 npx prisma generate
 npx prisma migrate dev --name <cambio>
 npx prisma studio
+## Comandos Prisma
+
+npx prisma init
+
+npx prisma migrate dev --name init
+
+Si se edita
+npx prisma migrate dev --name add_estado_a_empleado 
 ```
 
 ---
