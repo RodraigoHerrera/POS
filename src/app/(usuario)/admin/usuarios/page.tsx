@@ -126,7 +126,7 @@ export default function UsuariosSucursal() {
 
         <div>
           {empleados.map((empleado) => (
-            <UserMetaCard key={empleado.id} userData={empleado} />
+            <UserMetaCard key={empleado.id} userData={empleado} onSaved={cargarEmpleados}/>
           ))}
         </div>
 
