@@ -9,10 +9,20 @@ import { Modal } from "@/components/ui/modal";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
+import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
+type FormState = {
+  nombre: string;
+  sku: string;
+  tipo: string;         // Debe coincidir con enum Prisma TipoItem
+  unidad_code: string;  // p.ej. "unidad", "caja", "litro", etc.
+};
 
 export default function Inventario() {
-  // Hooks para cada modal
+  const router = useRouter();
+
+  // Modales
   const entradaModal = useModal();
   const mermasModal = useModal();
   const kardexModal = useModal();
@@ -20,26 +30,128 @@ export default function Inventario() {
   const listaItemsModal = useModal();
   const alertasModal = useModal();
 
+  // ---- Estado del formulario "Nuevo Item"
+  const [form, setForm] = useState<FormState>({
+    nombre: "",
+    sku: "",
+    tipo: "",         // asignamos desde Select
+    unidad_code: "",  // asignamos desde Select
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Opciones UI
+  const categoriasOptions = useMemo(
+    () => [
+      { value: "vendible", label: "Vendible" },
+      { value: "insumo", label: "Insumo" },
+      { value: "prep", label: "Preparación" },
+      { value: "oficina", label: "Oficina" },
+    ],
+    []
+  );
+
+  const unidadesOptions = useMemo(
+    () => [
+      { value: "unidad", label: "Unidad" },
+      { value: "caja", label: "Caja" },
+      { value: "paquete", label: "Paquete" },
+      { value: "litro", label: "Litro" },
+      { value: "kilogramo", label: "Kilogramo" },
+    ],
+    []
+  );
+
+  // Mapeo UI -> Enum de Prisma (ajústalo si tus enums son distintos)
+  // Ejemplos típicos: "VENDIBLE" | "INSUMO" | "PREPARACION" | "OFICINA"
+  const mapCategoriaToEnum = useCallback((uiValue: string) => {
+    const map: Record<string, string> = {
+      vendible: "vendible",
+      insumo: "insumo",
+      prep: "preparacion",
+      oficina: "oficina",
+    };
+    return map[uiValue] ?? uiValue.toUpperCase();
+  }, []);
+
+  // Handlers de inputs
+  const handleTextChange = (key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm((prev) => ({ ...prev, [key]: e.target.value }));
+  };
+
+  const handleCategoriaChange = (value: string) => {
+    setForm((prev) => ({ ...prev, tipo: mapCategoriaToEnum(value) }));
+  };
+
+  const handleUnidadChange = (value: string) => {
+    setForm((prev) => ({ ...prev, unidad_code: value }));
+  };
+
+  // Enviar formulario a /api/items
+  const submitNuevoItem = async () => {
+    try {
+      // Validación mínima en cliente
+      if (!form.nombre || !form.tipo || !form.unidad_code) {
+        window.alert("Por favor completa: Nombre, Categoría y Unidad de Medida.");
+        return;
+      }
+
+      setIsSubmitting(true);
+      const res = await fetch("/api/inventarios/agregarItem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre: form.nombre.trim(),
+          sku: form.sku.trim() || null,
+          tipo: form.tipo,                 // Enum válido para Prisma
+          unidad_code: form.unidad_code,   // string (varchar(16))
+          // activo: true // opcional; el backend ya lo deja por defecto en true
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.message || "No se pudo crear el item");
+      }
+
+      // Éxito
+      // Limpia el formulario y cierra modal
+      setForm({ nombre: "", sku: "", tipo: "", unidad_code: "" });
+      nuevoItemModal.closeModal();
+
+      // Refrescar la página para que se vea el nuevo item en listas/widgets
+      router.refresh();
+
+      // Feedback simple
+      console.log("Item creado con éxito");
+      // opcional: usa tu sistema de toasts si tienes (ej. react-hot-toast)
+      // toast.success("Item creado con éxito");
+    } catch (err: any) {
+      console.error("Error al crear item:", err);
+      window.alert(err?.message || "Error al crear item");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSave = (modalType: string) => {
-    console.log(`Guardando cambios para: ${modalType}`);
-    // Cerrar el modal correspondiente
-    switch(modalType) {
-      case 'entrada':
+    switch (modalType) {
+      case "entrada":
         entradaModal.closeModal();
         break;
-      case 'mermas':
+      case "mermas":
         mermasModal.closeModal();
         break;
-      case 'kardex':
+      case "kardex":
         kardexModal.closeModal();
         break;
-      case 'nuevoItem':
-        nuevoItemModal.closeModal();
+      case "nuevoItem":
+        // Aquí ya no cerramos directo; lo hace submitNuevoItem al éxito
+        submitNuevoItem();
         break;
-      case 'listaItems':
+      case "listaItems":
         listaItemsModal.closeModal();
         break;
-      case 'alertas':
+      case "alertas":
         alertasModal.closeModal();
         break;
     }
@@ -53,21 +165,6 @@ export default function Inventario() {
     { value: "item1", label: "Item A" },
     { value: "item2", label: "Item B" },
     { value: "item3", label: "Item C" },
-  ];
-
-  const categoriasOptions = [
-    { value: "medicamento", label: "Medicamento" },
-    { value: "material_medico", label: "Material Médico" },
-    { value: "limpieza", label: "Limpieza" },
-    { value: "oficina", label: "Oficina" },
-  ];
-
-  const unidadesOptions = [
-    { value: "unidad", label: "Unidad" },
-    { value: "caja", label: "Caja" },
-    { value: "paquete", label: "Paquete" },
-    { value: "litro", label: "Litro" },
-    { value: "kilogramo", label: "Kilogramo" },
   ];
 
   const alertasOptions = [
@@ -86,10 +183,11 @@ export default function Inventario() {
         <h2 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
           Gestión de Items
         </h2>
+
         <div className="grid grid-cols-2 space-x-6">
           <div className="rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03]">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-              Disponibilidad de Items criticos
+              Disponibilidad de Items críticos
             </h3>
             <BarChartOne />
           </div>
@@ -100,11 +198,9 @@ export default function Inventario() {
             </h2>
             <LineChartOne />
           </div>
-        </div> 
+        </div>
 
-        <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
-          Operaciones
-        </h4>
+        <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">Operaciones</h4>
 
         <div className="grid grid-cols-3 space-x-10">
           <Button size="md" variant="outline" startIcon={<PlusIcon />} onClick={entradaModal.openModal}>
@@ -120,7 +216,7 @@ export default function Inventario() {
 
         <div className="grid grid-cols-3 space-x-10">
           <Button size="md" variant="outline" startIcon={<PlusIcon />} onClick={nuevoItemModal.openModal}>
-            Registrar nuevo de item
+            Registrar nuevo item
           </Button>
           <Button size="md" variant="outline" startIcon={<ListIcon />} onClick={listaItemsModal.openModal}>
             Lista de items
@@ -130,6 +226,94 @@ export default function Inventario() {
           </Button>
         </div>
       </div>
+
+      {/* Modal para Registrar Nuevo Item */}
+      <Modal isOpen={nuevoItemModal.isOpen} onClose={nuevoItemModal.closeModal} className="max-w-[800px] m-4">
+        <div className="no-scrollbar relative w-full max-w-[800px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
+          <div className="px-2 pr-14">
+            <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
+              Registrar Nuevo Item
+            </h4>
+            <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
+              Complete la información para agregar un nuevo item al inventario.
+            </p>
+          </div>
+
+          {/* IMPORTANTE: El envío real lo hace el botón "Registrar Item" con submitNuevoItem */}
+          <form className="flex flex-col" onSubmit={(e) => e.preventDefault()}>
+            <div className="custom-scrollbar h-[550px] overflow-y-auto px-2 pb-3">
+              <div className="mt-7">
+                <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
+                  Información del Item
+                </h5>
+                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
+                  <div className="col-span-2">
+                    <Label className="text-black">Nombre del Item</Label>
+                    <Input
+                      className="text-gray-dark"
+                      type="text"
+                      placeholder="Ingrese nombre completo"
+                      value={form.nombre}
+                      onChange={handleTextChange("nombre")}
+                    />
+                  </div>
+
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label className="text-black">Código (SKU)</Label>
+                    <Input
+                      className="text-gray-dark"
+                      type="text"
+                      placeholder="Código único"
+                      value={form.sku}
+                      onChange={handleTextChange("sku")}
+                    />
+                  </div>
+
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label className="text-black">Categoría</Label>
+                    <Select
+                      options={categoriasOptions}
+                      placeholder="Seleccionar categoría"
+                      // asumiendo que tu <Select> llama onChange con (value: string)
+                      onChange={handleCategoriaChange}
+                      className="dark:bg-dark-900"
+                    />
+                  </div>
+
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label className="text-black">Unidad de Medida</Label>
+                    <Select
+                      options={unidadesOptions}
+                      placeholder="Seleccionar unidad"
+                      onChange={handleUnidadChange}
+                      className="dark:bg-dark-900"
+                    />
+                  </div>
+
+                  {/* Los siguientes campos se ignoran para el POST */}
+                  <div className="col-span-2 lg:col-span-1 opacity-50 pointer-events-none">
+                    <Label className="text-black">Stock Inicial</Label>
+                    <Input className="text-gray-dark" type="number" placeholder="0" disabled />
+                  </div>
+                  <div className="col-span-2 lg:col-span-1 opacity-50 pointer-events-none">
+                    <Label className="text-black">Stock Mínimo</Label>
+                    <Input className="text-gray-dark" type="number" placeholder="Stock mínimo alerta" disabled />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
+              <Button size="sm" variant="outline" onClick={nuevoItemModal.closeModal} disabled={isSubmitting}>
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={() => handleSave("nuevoItem")} disabled={isSubmitting}>
+                {isSubmitting ? "Guardando..." : "Registrar Item"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
 
       {/* Modal para Entrada de Items */}
       <Modal isOpen={entradaModal.isOpen} onClose={entradaModal.closeModal} className="max-w-[700px] m-4">
@@ -366,6 +550,7 @@ export default function Inventario() {
         </div>
       </Modal>
 
+      
       {/* Modal para Registrar Nuevo Item */}
       <Modal isOpen={nuevoItemModal.isOpen} onClose={nuevoItemModal.closeModal} className="max-w-[800px] m-4">
         <div className="no-scrollbar relative w-full max-w-[800px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
