@@ -15,23 +15,49 @@ async function verifyJWT(token: string) {
 }
 
 export async function middleware(request: NextRequest) {
-  const token = request.cookies.get("token")?.value;
   const pathname = request.nextUrl.pathname;
   const protectedPaths = ["/admin", "/cajero", "/usuarios"];
   const isProtected = protectedPaths.some((path) => pathname.startsWith(path));
 
+  // 🔑 Leer ambas cookies
+  const tokenSucursal = request.cookies.get("tokenSucursal")?.value;
+  const tokenEmpleado = request.cookies.get("tokenEmpleado")?.value;
+
   if (isProtected) {
-    if (!token) {
-      console.log("🚫 No hay token");
+    // Siempre requerimos tokenSucursal al menos
+    if (!tokenSucursal) {
+      console.log("🚫 No hay tokenSucursal");
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    const validSucursal = await verifyJWT(tokenSucursal);
+    if (!validSucursal) {
+      console.log("🚫 tokenSucursal inválido o expirado");
       return NextResponse.redirect(new URL("/", request.url));
     }
 
-    const valid = await verifyJWT(token);
-    if (!valid) {
-      return NextResponse.redirect(new URL("/", request.url));
+    // /admin y /cajero requieren también tokenEmpleado
+    const requiereEmpleado = pathname.startsWith("/admin") || pathname.startsWith("/cajero");
+
+    if (requiereEmpleado) {
+      if (!tokenEmpleado) {
+        console.log("🚫 No hay tokenEmpleado");
+        // Redirige a selección de empleado (ajusta ruta si usas otra)
+        return NextResponse.redirect(new URL("/usuarios", request.url));
+      }
+      const validEmpleado = await verifyJWT(tokenEmpleado);
+      if (!validEmpleado) {
+        console.log("🚫 tokenEmpleado inválido o expirado");
+        return NextResponse.redirect(new URL("/usuarios", request.url));
+      }
+      console.log("✅ tokenSucursal y tokenEmpleado válidos:", {
+        sucursal: validSucursal,
+        empleado: validEmpleado,
+      });
+    } else {
+      // /usuarios solo necesita tokenSucursal
+      console.log("✅ tokenSucursal válido:", validSucursal);
     }
 
-    console.log("✅ Token válido:", valid);
     return NextResponse.next();
   }
 
