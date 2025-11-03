@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     // Validaciones mínimas (solo requeridos)
     if (!tipo || !nombre || !unidad_code) {
       return NextResponse.json(
-        { message: "Faltan campos requeridos: tipo, nombre, unidad_code" },
+        { message: "Faltan campos requeridoffs: tipo, nombre, unidad_code" },
         { status: 400 }
       );
     }

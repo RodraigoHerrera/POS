@@ -13,14 +13,14 @@ export async function GET(
     const empleadoId = BigInt(id);
     const empleado = await prisma.empleados.findUnique({
       where: { id: empleadoId },
-      select: { nombre: true },
+      select: { nombre: true, usuario: true },
     });
 
     if (!empleado) {
       return NextResponse.json({ error: 'Empleado no encontrado' }, { status: 404 });
     }
 
-    return NextResponse.json({ nombre: empleado.nombre });
+    return NextResponse.json({ nombre: empleado.nombre, usuario: empleado.usuario });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Error al obtener el empleado' }, { status: 500 });

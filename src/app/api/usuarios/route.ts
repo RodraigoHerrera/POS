@@ -42,6 +42,7 @@ export async function GET() {
         correo: true,
         celular: true,
         creado: true,
+        usuario: true
       },
       orderBy: { nombre: "asc" },
     });
@@ -56,6 +57,7 @@ export async function GET() {
       correo: e.correo,
       celular: e.celular,
       creado: e.creado,
+      usuario: e.usuario
     }));
 
     return NextResponse.json(empleadosConFoto);

@@ -13,6 +13,7 @@ interface EmpleadoInfo {
   rol: string;
   estado: string;
   correo: string;
+  usuario: string;
 }
 
 
@@ -61,7 +62,7 @@ export default function UserDropdown() {
           />
         </span>
 
-        <span className="block mr-1 font-medium text-theme-sm">{empleado?.nombre}</span>
+        <span className="block mr-1 font-medium text-theme-sm">{empleado?.usuario}</span>
 
         <svg
           className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${
@@ -145,7 +146,7 @@ export default function UserDropdown() {
                   fill=""
                 />
               </svg>
-              Usuarios
+              Configuración
             </DropdownItem>
           </li>
           <li>
@@ -170,7 +171,7 @@ export default function UserDropdown() {
                   fill=""
                 />
               </svg>
-              Support
+              Soporte
             </DropdownItem>
           </li>
         </ul>

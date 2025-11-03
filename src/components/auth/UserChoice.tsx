@@ -9,6 +9,7 @@ interface Empleado {
   fotoUrl: string;
   rol: string;
   estado: string;
+  usuario: string;
 }
 
 export default function EmpleadoSelector() {
@@ -55,7 +56,7 @@ export default function EmpleadoSelector() {
             className="rounded-md w-full h-auto object-cover"
           />
           <p className="text-center font-mono text-lg mt-2">
-            {empleado.nombre} <br /> {empleado.rol}
+            {empleado.usuario} <br /> {empleado.rol}
           </p>
         </div>
       ))}

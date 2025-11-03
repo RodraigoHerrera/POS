@@ -89,7 +89,7 @@ export default function Inventario() {
   // Enviar formulario a /api/items
   const submitNuevoItem = async () => {
     try {
-      // Validación mínima en cliente
+      //Validación mínima en cliente
       if (!form.nombre || !form.tipo || !form.unidad_code) {
         window.alert("Por favor completa: Nombre, Categoría y Unidad de Medida.");
         return;
@@ -551,73 +551,6 @@ export default function Inventario() {
       </Modal>
 
       
-      {/* Modal para Registrar Nuevo Item */}
-      <Modal isOpen={nuevoItemModal.isOpen} onClose={nuevoItemModal.closeModal} className="max-w-[800px] m-4">
-        <div className="no-scrollbar relative w-full max-w-[800px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
-          <div className="px-2 pr-14">
-            <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-              Registrar Nuevo Item
-            </h4>
-            <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-              Complete la información para agregar un nuevo item al inventario.
-            </p>
-          </div>
-          <form className="flex flex-col">
-            <div className="custom-scrollbar h-[550px] overflow-y-auto px-2 pb-3">
-              <div className="mt-7">
-                <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                  Información del Item
-                </h5>
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                  <div className="col-span-2 lg:col-span-2">
-                    <Label className="text-black">Nombre del Item</Label>
-                    <Input className="text-gray-dark" type="text" placeholder="Ingrese nombre completo" />
-                  </div>
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label className="text-black">Código</Label>
-                    <Input className="text-gray-dark" type="text" placeholder="Código único" />
-                  </div>
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label className="text-black">Categoría</Label>
-                    <Select
-                      options={categoriasOptions}
-                      placeholder="Seleccionar categoría"
-                      onChange={handleSelectChange}
-                      className="dark:bg-dark-900"
-                    />
-                  </div>
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label className="text-black">Unidad de Medida</Label>
-                    <Select
-                      options={unidadesOptions}
-                      placeholder="Seleccionar unidad"
-                      onChange={handleSelectChange}
-                      className="dark:bg-dark-900"
-                    />
-                  </div>
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label className="text-black">Stock Inicial</Label>
-                    <Input className="text-gray-dark" type="number" placeholder="0" />
-                  </div>
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label className="text-black">Stock Mínimo</Label>
-                    <Input className="text-gray-dark" type="number" placeholder="Stock mínimo alerta" />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-              <Button size="sm" variant="outline" onClick={nuevoItemModal.closeModal}>
-                Cancelar
-              </Button>
-              <Button size="sm" onClick={() => handleSave('nuevoItem')}>
-                Registrar Item
-              </Button>
-            </div>
-          </form>
-        </div>
-      </Modal>
-
       {/* Modal para Lista de Items */}
       <Modal isOpen={listaItemsModal.isOpen} onClose={listaItemsModal.closeModal} className="max-w-[1200px] m-4">
         <div className="no-scrollbar relative w-full max-w-[1200px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">

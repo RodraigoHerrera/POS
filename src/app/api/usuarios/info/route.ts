@@ -25,7 +25,6 @@ export async function GET() {
         rol: true,
         usuario: true,
         correo: true,
-
       },
     });
 
@@ -38,6 +37,7 @@ export async function GET() {
       rol: empleado.rol,
       fotoUrl: "/default-user.jpg",
       correo: empleado.correo,
+      usuario: empleado.usuario,
     });
   } catch (error) {
     console.error("Error leyendo tokenEmpleado:", error);

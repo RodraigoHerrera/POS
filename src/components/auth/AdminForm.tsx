@@ -42,11 +42,11 @@ export default function AdminForm() {
 
     if (!usuario) nuevosErrores.usuario = "El nombre de usuario es obligatorio";
 
-    // if (!correo) {
-    //   nuevosErrores.correo = "El correo es obligatorio";
-    // } else if (!/^[\w.+\-]+@gmail\.com$/i.test(correo)) {
-    //   nuevosErrores.correo = "El correo debe terminar en @gmail.com";
-    // }
+    if (!correo) {
+      nuevosErrores.correo = "El correo es obligatorio";
+    } else if (!/^[\w.+\-]+@gmail\.com$/i.test(correo)) {
+      nuevosErrores.correo = "El correo debe terminar en @gmail.com";
+    }
 
     if (!celular) {
       nuevosErrores.celular = "El celular es obligatorio";
