@@ -51,14 +51,6 @@ export default function Inventario() {
     []
   );
 
-  const itemsOptions = useMemo(
-    () => [
-      { value: "item1", label: "Item A" },
-      { value: "item2", label: "Item B" },
-      { value: "item3", label: "Item C" },
-    ],
-    []
-  );
 
   const alertasOptions = useMemo(
     () => [
@@ -80,20 +72,20 @@ export default function Inventario() {
           INVENTARIO
         </h1>
 
-        <h2 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
+        <h2 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90  ">
           Gestión de Items
         </h2>
 
         {/* Tus cards con gráficos */}
         <div className="grid grid-cols-2 space-x-6">
-          <div className="rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03]">
+          <div className="rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/3">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
               Disponibilidad de Items críticos
             </h3>
             <BarChartOne />
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03]">
+          <div className="rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/3">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
               Evolución de inventario mensual
             </h2>
@@ -143,21 +135,18 @@ export default function Inventario() {
       <EntradaModal
         isOpen={entradaModal.isOpen}
         onClose={entradaModal.closeModal}
-        itemsOptions={itemsOptions}
         onSaved={handleDataChanged}
       />
 
       <MermasModal
         isOpen={mermasModal.isOpen}
         onClose={mermasModal.closeModal}
-        itemsOptions={itemsOptions}
         onSaved={handleDataChanged}
       />
 
       <KardexModal
         isOpen={kardexModal.isOpen}
         onClose={kardexModal.closeModal}
-        itemsOptions={itemsOptions}
       />
 
       <ListaItemsModal

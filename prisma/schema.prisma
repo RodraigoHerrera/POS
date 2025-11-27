@@ -13,7 +13,7 @@ datasource db {
 }
 
 // ==========================================
-// Modelos existentes (TAL CUAL nos diste)
+// Modelos existentes
 // ==========================================
 model empleados {
   id          BigInt      @id @default(autoincrement())
@@ -284,3 +284,7 @@ model modificadorProducto {
 
   @@index([item_vendible_id])
 }
+
+// ==========================================
+// Modificadores (extras/sin X)
+// ==========================================

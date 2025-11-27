@@ -13,11 +13,10 @@ type Option = { value: string; label: string };
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  itemsOptions: Option[];
   onSaved?: () => void;
 };
 
-export default function MermasModal({ isOpen, onClose, itemsOptions, onSaved }: Props) {
+export default function MermasModal({ isOpen, onClose, onSaved }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [payload, setPayload] = useState({
     item: "",
@@ -46,6 +45,14 @@ export default function MermasModal({ isOpen, onClose, itemsOptions, onSaved }: 
     }
   };
 
+
+    const optionsItems = [
+      { value: "item1", label: "Item A" },
+      { value: "item2", label: "Item B" },
+      { value: "item3", label: "Item C" },
+  ];
+
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-[700px] m-4">
       <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
@@ -69,7 +76,7 @@ export default function MermasModal({ isOpen, onClose, itemsOptions, onSaved }: 
                 <div className="col-span-2 lg:col-span-1">
                   <Label className="text-black">Item</Label>
                   <Select
-                    options={itemsOptions}
+                    options={optionsItems}
                     placeholder="Seleccionar Item"
                     onChange={handleSelectItem}
                     className="dark:bg-dark-900"

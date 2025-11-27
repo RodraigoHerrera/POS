@@ -58,8 +58,8 @@ const navItems: NavItem[] = [
     name: "Menú",
     icon: <PageIcon />,
     subItems: [
-      { name: "Blank Page", path: "/blank", pro: false },
-      { name: "404 Error", path: "/error-404", pro: false },
+      { name: "Recetas", path: "/admin/recetas", pro: false },
+      { name: "Modificar Menu", path: "/admin/menu", pro: false },
     ],
   },
 ];

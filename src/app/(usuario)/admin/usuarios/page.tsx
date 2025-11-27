@@ -87,7 +87,7 @@ export default function UsuariosSucursal() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sucursal_id: 2,
+          sucursal_id: 1,
           nombre: form.nombre,
           correo: form.correo,
           celular: form.celular,
@@ -116,10 +116,9 @@ export default function UsuariosSucursal() {
     }
   };
 
-  // ---------- UI ----------
   return (
     <>
-      <div className="space-y-10 rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03] sm:space-y-6">
+      <div className="space-y-10 rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/3 sm:space-y-6">
         <h1 className="mt-2 text-center font-bold text-gray-800 text-title-sm dark:text-white/90">
           USUARIOS DE LA SUCURSAL
         </h1>

@@ -122,6 +122,10 @@ npx prisma migrate dev --name init
 
 Si se edita
 npx prisma migrate dev --name add_estado_a_empleado 
+
+
+
+npx prisma migrate dev
 ```
 
 ---

@@ -13,10 +13,9 @@ type Option = { value: string; label: string };
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  itemsOptions: Option[];
 };
 
-export default function KardexModal({ isOpen, onClose, itemsOptions }: Props) {
+export default function KardexModal({ isOpen, onClose}: Props) {
   const [filtros, setFiltros] = useState({
     item: "",
     desde: "",
@@ -32,6 +31,14 @@ export default function KardexModal({ isOpen, onClose, itemsOptions }: Props) {
     // TODO: Lógica de export (CSV/PDF) contra tu endpoint
     onClose();
   };
+
+
+    const optionsItems = [
+      { value: "item1", label: "Item A" },
+      { value: "item2", label: "Item B" },
+      { value: "item3", label: "Item C" },
+  ];
+
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-[1000px] m-4">
@@ -49,7 +56,7 @@ export default function KardexModal({ isOpen, onClose, itemsOptions }: Props) {
           <div>
             <Label className="text-black">Seleccionar Item</Label>
             <Select
-              options={itemsOptions}
+              options={optionsItems}
               placeholder="Todos los items"
               onChange={handleSelectItem}
               className="dark:bg-dark-900"
