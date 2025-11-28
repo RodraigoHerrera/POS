@@ -11,7 +11,7 @@ interface Item {
   unidad_code: string;
 }
 
-export default function UsuariosSucursal() {
+export default function recetas() {
   const [item, setItems] = useState<Item[]>([]);
 
   // ---------- Helpers ----------

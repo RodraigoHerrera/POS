@@ -90,8 +90,8 @@ export default function ArqueoCajaForm({ onSaved, onCancel, className = "" }: Pr
         {/* Cabecera del Total Fijo (Card visual) */}
         <div className="sticky top-0 z-10 -mx-2 px-2 pb-2 bg-white/80 backdrop-blur-md dark:bg-gray-900/80">
            <div className="flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 p-5 rounded-xl border border-blue-100 dark:border-blue-800/30 shadow-sm">
-             <span className="text-sm text-blue-600/80 dark:text-blue-300 font-semibold uppercase tracking-wider">Total Efectivo</span>
-             <span className="text-4xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">
+             <span className="text-sm  dark:text-blue-300 font-semibold uppercase tracking-wider">Total Efectivo</span>
+             <span className="text-4xl font-bold dark:text-blue-400 tabular-nums">
                Bs. {totalGeneral.toFixed(2)}
              </span>
            </div>
@@ -101,7 +101,7 @@ export default function ArqueoCajaForm({ onSaved, onCancel, className = "" }: Pr
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10 mt-2">
           
           {/* Columna Billetes */}
-          <div className="space-y-6">
+          <div className="space-y-6 rounded-2xl dark:bg-white/3">
             <div className="space-y-4">
               {BILLETES.map((valor) => (
                 <div key={`bill-${valor}`} className="flex items-center gap-4 group">
@@ -126,7 +126,7 @@ export default function ArqueoCajaForm({ onSaved, onCancel, className = "" }: Pr
           </div>
 
           {/* Columna Monedas */}
-          <div className="space-y-6">
+          <div className="space-y-6 rounded-2xl dark:bg-white/3">
             <div className="space-y-4">
               {MONEDAS.map((valor) => (
                 <div key={`coin-${valor}`} className="flex items-center gap-4 group">

@@ -154,7 +154,6 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
         })),
       };
 
-      // NOTA: Cambia la ruta a tu endpoint real de inventario
       const res = await fetch(`/api/inventarios/modificarReceta`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

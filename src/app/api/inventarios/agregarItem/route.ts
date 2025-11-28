@@ -46,6 +46,18 @@ export async function POST(req: Request) {
       },
     });
 
+    if(tipo === "vendible")
+    {
+      const nuevoProducto = await prisma.producto.create({
+        data: {
+          nombre: nombre,
+          precio: 0,
+          estado: "Inactivo",
+          item_inventario_id: nuevoItem.id,
+        },
+      });
+    }
+
     // Serializar BigInt para la respuesta
     return NextResponse.json(
       {
@@ -57,6 +69,9 @@ export async function POST(req: Request) {
       },
       { status: 201 }
     );
+
+    
+
   } catch (error: any) {
     // Posible error por enum inválido u otras constraints
     console.error("POST /api/items error:", error);

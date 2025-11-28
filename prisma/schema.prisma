@@ -99,6 +99,8 @@ model item {
   mods_as_vendible  modificadorProducto[] @relation("ModVendible")
   mods_as_insumo    modificadorProducto[] @relation("ModInsumo")
 
+  productos        producto[]
+
   @@index([tipo])
 }
 
@@ -288,3 +290,23 @@ model modificadorProducto {
 // ==========================================
 // Modificadores (extras/sin X)
 // ==========================================
+
+model producto {
+  id          BigInt   @id @default(autoincrement())
+  nombre      String   @db.VarChar(255) // Nombre en Carta: "Monster Burger"
+  descripcion String?  @db.VarChar(500)
+  categoria   String?  @db.VarChar(100)
+  imagenUrl   String?  @db.VarChar(500)
+  
+  // ESTRATEGIA DE PRECIO SIMPLE (Lo que pediste)
+  precio      Decimal  @db.Decimal(18, 2) 
+
+  estado      String   @default("activo") // activo, oculto, agotado
+
+  // CONEXIÓN CON INVENTARIO (Vital)
+  // Este ID conecta con tu tabla 'item' del esquema anterior
+  item_inventario    item?   @relation(fields: [item_inventario_id], references: [id])
+  item_inventario_id BigInt? 
+
+  @@index([categoria])
+}

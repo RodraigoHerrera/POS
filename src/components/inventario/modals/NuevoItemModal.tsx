@@ -56,7 +56,7 @@ export default function NuevoItemModal({
     const map: Record<string, string> = {
       vendible: "vendible",
       insumo: "insumo",
-      prep: "preparacion",
+      prep: "prep",
       oficina: "oficina",
     };
     return map[uiValue] ?? uiValue.toUpperCase();
