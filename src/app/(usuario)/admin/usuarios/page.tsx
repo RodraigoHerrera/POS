@@ -87,7 +87,6 @@ export default function UsuariosSucursal() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sucursal_id: 1,
           nombre: form.nombre,
           correo: form.correo,
           celular: form.celular,

@@ -1,11 +1,39 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcrypt";
+import { jwtVerify } from "jose";
+import { cookies } from "next/headers";
+
+const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+
+async function getSucursalIdFromToken(token: string) {
+  try {
+    const { payload } = await jwtVerify(token, secret);
+    // En tu login firmamos sucursalId como string, no number
+    return (payload as any)?.sucursalId as string | undefined;
+  } catch (error) {
+    return null;
+  }
+}
+
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { sucursal_id, nombre, correo, celular, contraseña, usuario, rol } = body;
+    const { nombre, correo, celular, contraseña, usuario, rol } = body;
+
+    const cookieStore = await cookies();
+      const tokenSucursal = cookieStore.get("tokenSucursal")?.value;
+    
+      if (!tokenSucursal) {
+        return NextResponse.json({ message: "No autorizado" }, { status: 401 });
+      }
+    
+      const sucursalIdStr = await getSucursalIdFromToken(tokenSucursal);
+    
+      if (!sucursalIdStr) {
+        return NextResponse.json({ message: "Token inválido" }, { status: 403 });
+      }
 
     // Verificar si ya existe un administrador con el correo proporcionado
     const existingAdmin = await prisma.empleados.findUnique({
@@ -25,7 +53,7 @@ export async function POST(req: Request) {
     // Crear el nuevo administrador en la base de datos
     const nuevoAdmin = await prisma.empleados.create({
       data: {
-        sucursal_id: BigInt(sucursal_id), // Cambia esto según tu lógica de negocio
+        sucursal_id: BigInt(sucursalIdStr), // Cambia esto según tu lógica de negocio
         rol,
         nombre,
         correo,

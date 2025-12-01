@@ -54,7 +54,7 @@ export default function EntradaModal({ isOpen, onClose, onSaved }: Props) {
           const provData = await provRes.ok ? await provRes.json() : [];
 
           // Mapeamos la respuesta de la BD al formato del Select { value, label }
-          const mappedItems = itemsData.map((i: any) => ({ 
+          const mappedItems = itemsData.filter((i: any) => i.tipo !== "vendible").map((i: any) => ({ 
             value: i.id.toString(), // o i._id 
             label: i.nombre // o i.descripcion
           }));
@@ -62,6 +62,7 @@ export default function EntradaModal({ isOpen, onClose, onSaved }: Props) {
           const mappedProv = provData.map((p: any) => ({ 
             value: p.id.toString(), 
             label: p.nombre // o p.nombre
+
           }));
 
           setItemsOptions(mappedItems);

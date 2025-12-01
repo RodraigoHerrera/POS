@@ -28,6 +28,8 @@ model empleados {
   estado      String      @default("activo")
 
   sucursal    sucursales  @relation(fields: [sucursal_id], references: [id])
+  cajas caja[] // Relación inversa
+  pedidos_atendidos pedido[]
 
   @@index([sucursal_id])
   @@index([correo])
@@ -50,6 +52,8 @@ model sucursales {
   movimientos   movimientoInventario[]
   ordenes       ordenCompra[]
   producciones  produccion[]
+  cajas caja[] // Relación inversa
+  pedidos       pedido[]
 }
 
 // ==========================================
@@ -100,6 +104,7 @@ model item {
   mods_as_insumo    modificadorProducto[] @relation("ModInsumo")
 
   productos        producto[]
+  extras_en_pedidos pedidoItemExtra[]
 
   @@index([tipo])
 }
@@ -306,7 +311,180 @@ model producto {
   // CONEXIÓN CON INVENTARIO (Vital)
   // Este ID conecta con tu tabla 'item' del esquema anterior
   item_inventario    item?   @relation(fields: [item_inventario_id], references: [id])
-  item_inventario_id BigInt? 
+  item_inventario_id BigInt?
+
+  pedido_items pedidoItem[] 
 
   @@index([categoria])
+}
+
+// 2. Nuevo Modelo: Caja (Sesión / Turno)
+model caja {
+  id            BigInt    @id @default(autoincrement())
+  sucursal      sucursales @relation(fields: [sucursal_id], references: [id])
+  sucursal_id   BigInt
+  
+  empleado      empleados @relation(fields: [empleado_id], references: [id])
+  empleado_id   BigInt    // Reemplaza a "nombreCajero"
+
+  // Tiempos
+  fecha_apertura DateTime  @default(now())
+  fecha_cierre   DateTime? // Nullable: porque al crearla aun no se cierra
+
+  // Saldos Iniciales y Finales (El dinero físico)
+  saldo_inicial  Decimal   @db.Decimal(18, 2) // efectivoApertura
+  saldo_final    Decimal?  @db.Decimal(18, 2) // efectivoCierre (lo que cuenta el cajero)
+
+  // Desglose de Ventas (La "foto" del sistema al momento del cierre)
+  total_ventas        Decimal   @default(0) @db.Decimal(18, 2)
+  ventas_efectivo     Decimal   @default(0) @db.Decimal(18, 2)
+  ventas_tarjeta      Decimal   @default(0) @db.Decimal(18, 2)
+  ventas_qr           Decimal   @default(0) @db.Decimal(18, 2)
+  ventas_transfer     Decimal   @default(0) @db.Decimal(18, 2)
+  ventas_giftcard     Decimal   @default(0) @db.Decimal(18, 2)
+  ventas_otros        Decimal   @default(0) @db.Decimal(18, 2)
+
+  // Movimientos de Caja Chica (Gastos/Ingresos manuales)
+  entradas_efectivo   Decimal   @default(0) @db.Decimal(18, 2)
+  salidas_efectivo    Decimal   @default(0) @db.Decimal(18, 2)
+
+  // Diferencias (Calculadas al cerrar: Real - Sistema)
+  diferencia_efectivo Decimal?  @db.Decimal(18, 2)
+  diferencia_tarjeta  Decimal?  @db.Decimal(18, 2) // Opcional, usualmente es 0
+  diferencia_qr       Decimal?  @db.Decimal(18, 2) // Opcional
+
+  estado              String    @default("abierta") @db.VarChar(20) // abierta, cerrada, arqueada
+  observaciones       String?   @db.Text // Para explicar faltantes o sobrantes
+
+  // Relación con movimientos manuales (opcional, si quieres detalle de "en qué se gastó")
+  movimientos         movimientoCaja[] 
+  pedidos_cobrados pedido[]
+
+  @@index([sucursal_id])
+  @@index([empleado_id])
+  @@index([fecha_apertura])
+}
+
+// 3. (Opcional recomendado) Detalle de entradas/salidas de efectivo
+model movimientoCaja {
+  id          BigInt   @id @default(autoincrement())
+  caja        caja     @relation(fields: [caja_id], references: [id])
+  caja_id     BigInt
+  tipo        String   @db.VarChar(10) // "INGRESO" o "EGRESO"
+  monto       Decimal  @db.Decimal(18, 2)
+  descripcion String
+  creado_en   DateTime @default(now())
+
+  @@index([caja_id])
+}
+
+// ==========================================
+// Enums para el flujo de la comanda
+// ==========================================
+enum EstadoPedido {
+  PENDIENTE   // Creada, no enviada a cocina
+  COMANDADO   // Enviada a cocina
+  PREPARADO   // Lista para servir
+  ENTREGADO   // En la mesa
+  PAGADO      // Cerrada en caja
+  ANULADO     // Cancelada
+}
+
+// ==========================================
+// Cabecera del Pedido (La Comanda)
+// ==========================================
+model pedido {
+  id            BigInt    @id @default(autoincrement())
+  sucursal      sucursales @relation(fields: [sucursal_id], references: [id])
+  sucursal_id   BigInt
+  
+  empleado      empleados @relation(fields: [empleado_id], references: [id])
+  empleado_id   BigInt    // El mesero que tomó la orden
+  
+  caja          caja?     @relation(fields: [caja_id], references: [id])
+  caja_id       BigInt?   // Se llena SOLO cuando se paga el pedido
+
+  mesa          String?   @db.VarChar(20) // "Mesa 1", "Barra", "Para Llevar"
+  cliente_nombre String?  @default("Cliente Final")
+  
+  estado        EstadoPedido @default(PENDIENTE)
+  total         Decimal   @default(0) @db.Decimal(18, 2)
+  
+  observaciones String?   @db.Text // Nota general: "Alergia al maní"
+
+  creado_en     DateTime  @default(now())
+  actualizado_en DateTime @updatedAt
+
+  items         pedidoItem[]
+  factura factura?
+  
+  @@index([sucursal_id, estado])
+  @@index([caja_id])
+}
+
+// ==========================================
+// Detalle del Pedido (Los Platos)
+// ==========================================
+model pedidoItem {
+  id            BigInt    @id @default(autoincrement())
+  pedido        pedido    @relation(fields: [pedido_id], references: [id])
+  pedido_id     BigInt
+  
+  producto      producto  @relation(fields: [producto_id], references: [id])
+  producto_id   BigInt
+  
+  cantidad      Int
+  precio_unit   Decimal   @db.Decimal(18, 2) // Guardamos el precio del momento (snapshot)
+  subtotal      Decimal   @db.Decimal(18, 2)
+  
+  notas         String?   @db.VarChar(255) // "Sin cebolla", "Bien cocido"
+  
+  // Relación con extras (si cobras por el extra de tocino, va aquí)
+  extras        pedidoItemExtra[] 
+
+  @@index([pedido_id])
+}
+
+// ==========================================
+// Extras seleccionados (Ej. +Tocino, +Huevo)
+// ==========================================
+model pedidoItemExtra {
+  id              BigInt     @id @default(autoincrement())
+  pedido_item     pedidoItem @relation(fields: [pedido_item_id], references: [id])
+  pedido_item_id  BigInt
+  
+  nombre          String     // Guardamos nombre por si borran el item del menú
+  precio          Decimal    @db.Decimal(18, 2)
+  
+  // Opcional: Relación con item de inventario para descontar stock del extra
+  item_inventario item?      @relation(fields: [item_inv_id], references: [id])
+  item_inv_id     BigInt? 
+}
+
+model factura {
+  id              BigInt   @id @default(autoincrement())
+  
+  // Relación con el Pedido (1 a 1)
+  pedido          pedido   @relation(fields: [pedido_id], references: [id])
+  pedido_id       BigInt   @unique // Una factura pertenece a un solo pedido
+
+  // Datos Fiscales
+  razon_social    String   @db.VarChar(255)
+  nit             String   @db.VarChar(50) // NIT o CI
+  fecha_emision   DateTime @default(now())
+  importe_total   Decimal  @db.Decimal(18, 2)
+  
+  // Datos de Control (Opcionales dependiendo si usas Fac. Electrónica o Computarizada)
+  cuf             String?  @db.Text         // Para facturación electrónica en línea
+  url_sin         String?  @db.VarChar(500) // Link al PDF legal
+
+  // Auditoría del Contenido (SNAPSHOT)
+  // Guardamos un JSON con los items, precios y cantidades AL MOMENTO de la venta.
+  // Esto protege la factura si mañana cambias el precio de la hamburguesa.
+  detalle_items   Json     
+
+  // Método de pago principal con el que se cerró
+  metodo_pago     String   @db.VarChar(50) // "Efectivo", "Tarjeta", "QR"
+  
+  creado_en       DateTime @default(now())
 }

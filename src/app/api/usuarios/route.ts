@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
+
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
 async function getSucursalIdFromToken(token: string) {
