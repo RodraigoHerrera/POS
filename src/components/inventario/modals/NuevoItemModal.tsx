@@ -164,15 +164,6 @@ export default function NuevoItemModal({
                   />
                 </div>
 
-                {/* Campos ignorados en POST (deshabilitados) */}
-                <div className="col-span-2 lg:col-span-1 opacity-50 pointer-events-none">
-                  <Label className="text-black">Stock Inicial</Label>
-                  <Input className="text-gray-dark" type="number" placeholder="0" disabled />
-                </div>
-                <div className="col-span-2 lg:col-span-1 opacity-50 pointer-events-none">
-                  <Label className="text-black">Stock Mínimo</Label>
-                  <Input className="text-gray-dark" type="number" placeholder="Stock mínimo alerta" disabled />
-                </div>
               </div>
             </div>
           </div>

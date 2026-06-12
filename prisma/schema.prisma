@@ -436,6 +436,8 @@ model pedidoItem {
   cantidad      Int
   precio_unit   Decimal   @db.Decimal(18, 2) // Guardamos el precio del momento (snapshot)
   subtotal      Decimal   @db.Decimal(18, 2)
+
+  costo_real    Decimal? @default(0) @db.Decimal(18, 4)
   
   notas         String?   @db.VarChar(255) // "Sin cebolla", "Bien cocido"
   
@@ -487,4 +489,38 @@ model factura {
   metodo_pago     String   @db.VarChar(50) // "Efectivo", "Tarjeta", "QR"
   
   creado_en       DateTime @default(now())
+}
+
+// Modelo optimizado para Reportes y Análisis (Business Intelligence)
+model historialVentas {
+  id              BigInt   @id @default(autoincrement())
+  fecha_venta     DateTime @default(now())
+  sucursal_id     BigInt
+  
+  // Datos del Producto
+  producto_id     BigInt
+  sku_producto    String?  @db.VarChar(50)
+  producto_nombre String   @db.VarChar(255)
+  categoria       String?  @db.VarChar(100)
+  
+  // Métricas Financieras (Snapshot)
+  cantidad        Int
+  precio_unitario Decimal  @db.Decimal(18, 2) // A cuánto lo vendiste
+  venta_total     Decimal  @db.Decimal(18, 2) // precio * cantidad
+  
+  costo_unitario  Decimal  @db.Decimal(18, 4) // Cuánto te costó (suma de insumos FEFO)
+  costo_total     Decimal  @db.Decimal(18, 4) // costo_unit * cantidad
+  margen_ganancia Decimal  @db.Decimal(18, 4) // venta - costo
+
+  // Contexto de la Venta
+  nombre_cliente  String?  @db.VarChar(255)
+  numero_factura  String?  @db.VarChar(50)    // ID de la factura o Nro Fiscal
+  metodo_pago     String   @db.VarChar(50)    // "Efectivo", "Tarjeta", etc.
+  
+  pedido_id       BigInt   // Referencia para trazabilidad
+  empleado_id     BigInt
+
+  @@index([fecha_venta])
+  @@index([sucursal_id])
+  @@index([sku_producto])
 }

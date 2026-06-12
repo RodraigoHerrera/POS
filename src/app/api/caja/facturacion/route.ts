@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/lib/db'; // Asegúrate de usar la ruta correcta a tu instancia de prisma
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 
@@ -12,67 +12,74 @@ export async function POST(req: Request) {
       pedidoId, 
       metodoPago, 
       montoPagado, // Solo relevante para efectivo
-      facturacion: { nit, razonSocial }, // Datos del form que hiciste
-      detallesPago // { last4: '1234' } para tarjetas
+      facturacion: { nit, razonSocial }, 
+      detallesPago 
     } = body;
 
-    // 1. Validar Sesión (Necesitamos saber quién cobra y en qué caja)
-    // ... (Tu lógica de validación de tokens aquí, igual que en apertura de caja) ...
-    // Asumiremos que ya obtuviste: sucursalId, empleadoId, cajaId
+    // 1. Validar Sesión de Caja
     const cookieStore = await cookies();
     const tokenCaja = cookieStore.get("tokenCaja")?.value;
 
-    if ( !tokenCaja) {
-    return NextResponse.json({ error: 'Sesión no válida o expirada' }, { status: 401 });
+    if (!tokenCaja) {
+      return NextResponse.json({ error: 'Sesión no válida o expirada' }, { status: 401 });
     }
 
-    // Decodificar Tokens
+    // Decodificar Token
     let cajaId;
     try {
-        const payloadCaja = await jwtVerify(tokenCaja, secret);
-        cajaId = (payloadCaja.payload as any)?.cajaId || (payloadCaja.payload as any)?.id;
-
+      const payloadCaja = await jwtVerify(tokenCaja, secret);
+      cajaId = (payloadCaja.payload as any)?.cajaId || (payloadCaja.payload as any)?.id;
     } catch (e) {
-    return NextResponse.json({ error: 'Error verificando tokens' }, { status: 403 });
+      return NextResponse.json({ error: 'Error verificando tokens' }, { status: 403 });
     }
 
-    // 2. Transacción Gigante (Todo o Nada)
+    // 2. Transacción Gigante (Cobro + Factura + Reportes)
     const resultado = await prisma.$transaction(async (tx) => {
       
-      // A. Obtener el pedido actual con sus items para congelar precios
+      // A. Obtener el pedido actual CON datos profundos para el reporte
+      // Necesitamos: Producto (para nombre y categoria) -> Item Inventario (para SKU)
       const pedido = await tx.pedido.findUnique({
         where: { id: BigInt(pedidoId) },
-        include: { items: { include: { producto: true } } }
+        include: { 
+          empleado: true, // Necesario para saber quién vendió en el historial
+          items: { 
+            include: { 
+              producto: {
+                include: {
+                  item_inventario: true // Para obtener el SKU real del inventario
+                }
+              } 
+            } 
+          } 
+        }
       });
 
       if (!pedido) throw new Error("Pedido no encontrado");
       if (pedido.estado === 'PAGADO') throw new Error("El pedido ya fue pagado");
 
-      // B. Actualizar Pedido
+      // B. Actualizar Estado del Pedido
       await tx.pedido.update({
         where: { id: BigInt(pedidoId) },
         data: {
           estado: 'PAGADO',
-          caja_id: BigInt(cajaId), // Asignamos a la caja actual
+          caja_id: BigInt(cajaId),
+          // Podrías guardar el método de pago aquí también si agregas el campo al modelo pedido
         }
       });
 
-      // C. Registrar Movimiento de Caja (Si es efectivo)
+      // C. Registrar Movimiento de Caja (Ingreso de Dinero Físico)
       if (metodoPago === 'cash') {
         await tx.movimientoCaja.create({
           data: {
              caja_id: BigInt(cajaId),
              tipo: 'INGRESO',
-             monto: pedido.total, // Ojo: entra el total de la venta, no lo que entregó el cliente
+             monto: pedido.total, // Ingresa el total de la venta
              descripcion: `Venta Pedido #${pedidoId} - Efectivo`,
           }
         });
       }
 
       // D. Generar la FACTURA
-      // Aquí podrías llamar a una API externa (ej. SIAT) antes de guardar
-      // const datosFiscales = await facturacionService.emitir(pedido.total, nit);
-      
       const nuevaFactura = await tx.factura.create({
         data: {
           pedido_id: BigInt(pedidoId),
@@ -80,16 +87,57 @@ export async function POST(req: Request) {
           nit: nit || "0",
           importe_total: pedido.total,
           metodo_pago: metodoPago,
-          // Snapshot del contenido
+          // Snapshot del contenido para auditoría fiscal
           detalle_items: JSON.parse(JSON.stringify(pedido.items.map(i => ({
              nombre: i.producto.nombre,
              cantidad: i.cantidad,
              precio_unit: i.precio_unit,
              subtotal: i.subtotal
           })))),
-          
         }
       });
+
+      // E. GENERAR HISTORIAL DE VENTAS (Data Warehouse Operativo)
+      // Esto alimenta tus gráficos y reportes sin tener que hacer joins complejos después
+      for (const item of pedido.items) {
+          
+          const costoTotal = Number(item.costo_real || 0); // Costo calculado en FEFO (route anterior)
+          const ventaTotal = Number(item.subtotal);
+          const cantidad = item.cantidad;
+          const costoUnitario = cantidad > 0 ? costoTotal / cantidad : 0;
+          const precioUnitario = Number(item.precio_unit);
+
+          await tx.historialVentas.create({
+              data: {
+                  fecha_venta: new Date(),
+                  sucursal_id: pedido.sucursal_id,
+                  pedido_id: pedido.id,
+                  empleado_id: pedido.empleado_id,
+                  
+                  // Datos del Producto (Snapshot)
+                  producto_id: item.producto_id,
+                  producto_nombre: item.producto.nombre,
+                  // Intentamos sacar el SKU del inventario, si no existe ponemos S/N
+                  sku_producto: item.producto.item_inventario?.sku || "S/N",
+                  categoria: item.producto.categoria,
+
+                  // Métricas Financieras
+                  cantidad: cantidad,
+                  precio_unitario: precioUnitario,
+                  venta_total: ventaTotal,
+                  
+                  // Análisis de Rentabilidad
+                  costo_unitario: costoUnitario,
+                  costo_total: costoTotal,
+                  margen_ganancia: ventaTotal - costoTotal,
+
+                  // Contexto
+                  nombre_cliente: razonSocial || pedido.cliente_nombre, 
+                  numero_factura: nuevaFactura.id.toString(),
+                  metodo_pago: metodoPago
+              }
+          });
+      }
 
       return nuevaFactura;
     });
@@ -97,7 +145,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ 
       success: true, 
       facturaId: resultado.id.toString(),
-      mensaje: "Venta cerrada y facturada correctamente"
+      mensaje: "Venta cerrada, facturada y registrada en historial correctamente"
     });
 
   } catch (error: any) {

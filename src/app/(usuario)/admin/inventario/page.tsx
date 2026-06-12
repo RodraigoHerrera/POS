@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import BarChartOne from "@/components/charts/bar/BarChartOne";
 import LineChartOne from "@/components/charts/line/LineChartOne";
 import Button from "@/components/ui/button/Button";
-import { PlusIcon, TrashBinIcon, ListIcon, AlertIcon, CalenderIcon } from "@/icons";
+import { PlusIcon, TrashBinIcon, ListIcon, AlertIcon, BoxCubeIcon } from "@/icons";
 import { useModal } from "@/hooks/useModal";
 
 // Modales desacoplados (ajusta la ruta si los guardaste en otro lugar)
@@ -47,16 +47,6 @@ export default function Inventario() {
       { value: "paquete", label: "Paquete" },
       { value: "litro", label: "Litro" },
       { value: "kilogramo", label: "Kilogramo" },
-    ],
-    []
-  );
-
-
-  const alertasOptions = useMemo(
-    () => [
-      { value: "bajo", label: "Stock Bajo" },
-      { value: "critico", label: "Stock Crítico" },
-      { value: "sobrestock", label: "Sobrestock" },
     ],
     []
   );
@@ -115,8 +105,8 @@ export default function Inventario() {
           <Button size="md" variant="outline" startIcon={<ListIcon />} onClick={listaItemsModal.openModal}>
             Lista de items
           </Button>
-          <Button size="md" variant="outline" startIcon={<AlertIcon />} onClick={alertasModal.openModal}>
-            Configurar alertas de stock
+          <Button size="md" variant="outline" startIcon={<BoxCubeIcon />} onClick={alertasModal.openModal}>
+            Registrar nuevo proveedor
           </Button>
         </div>
       </div>
@@ -158,7 +148,6 @@ export default function Inventario() {
       <AlertasModal
         isOpen={alertasModal.isOpen}
         onClose={alertasModal.closeModal}
-        alertasOptions={alertasOptions}
         onSaved={handleDataChanged}
       />
     </>
