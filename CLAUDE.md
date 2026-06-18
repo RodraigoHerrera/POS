@@ -62,3 +62,27 @@ Any new flow that consumes inventory (production, manual adjustments, etc.) shou
 - Most models/fields are in Spanish (`sucursales`, `empleados`, `pedido`, `caja`, etc.) — keep naming consistent with the existing schema when adding fields/models.
 - `src/lib/db.ts` exports a singleton `prisma` client (standard Next.js dev hot-reload guard) — always import this rather than instantiating a new `PrismaClient`.
 - Path alias `@/*` maps to `src/*`.
+
+## gstack (REQUIRED — global install)
+
+**Before doing ANY work, verify gstack is installed:**
+
+```bash
+test -d ~/.claude/skills/gstack/bin && echo "GSTACK_OK" || echo "GSTACK_MISSING"
+```
+
+If GSTACK_MISSING: STOP. Do not proceed. Tell the user:
+
+> gstack is required for all AI-assisted work in this repo.
+> Install it:
+> ```bash
+> git clone --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack
+> cd ~/.claude/skills/gstack && ./setup --team
+> ```
+> Then restart your AI coding tool.
+
+Do not skip skills, ignore gstack errors, or work around missing gstack.
+
+Using gstack skills: After install, skills like /qa, /ship, /review, /investigate,
+and /browse are available. Use /browse for all web browsing.
+Use ~/.claude/skills/gstack/... for gstack file paths (the global path).
