@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import UserMetaCard from "@/components/user-profile/UserMetaCard";
+import ListCardSkeleton from "@/components/ui/skeleton/ListCardSkeleton";
+import { useFetchData } from "@/hooks/useFetchData";
 import Button from "@/components/ui/button/Button";
 import { useModal } from "@/hooks/useModal";
 import { Modal } from "@/components/ui/modal";
@@ -40,7 +42,7 @@ const INITIAL_FORM: FormState = {
 };
 
 export default function UsuariosSucursal() {
-  const [empleados, setEmpleados] = useState<Empleado[]>([]);
+  const { data: empleados, loading: loadingEmpleados, reload: cargarEmpleados } = useFetchData<Empleado[]>("/api/usuarios", []);
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [isAdmin, setIsAdmin] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -58,21 +60,6 @@ export default function UsuariosSucursal() {
 
   const obtenerRol = (flagAdmin: boolean) =>
     flagAdmin ? "Administrador" : "Cajero";
-
-  const cargarEmpleados = useCallback(async () => {
-    try {
-      const res = await fetch("/api/usuarios", { credentials: "include" });
-      const data = await res.json();
-      setEmpleados(data);
-    } catch (err) {
-      console.error("Error al obtener empleados:", err);
-    }
-  }, []);
-
-  // ---------- Effects ----------
-  useEffect(() => {
-    cargarEmpleados();
-  }, [cargarEmpleados]);
 
   // ---------- Handlers ----------
   const handleToggleAdmin = (checked: boolean) => setIsAdmin(checked);
@@ -122,10 +109,12 @@ export default function UsuariosSucursal() {
           USUARIOS DE LA SUCURSAL
         </h1>
 
-        <div>
-          {empleados.map((empleado) => (
-            <UserMetaCard key={empleado.id} userData={empleado} onSaved={cargarEmpleados}/>
-          ))}
+        <div className="space-y-6">
+          {loadingEmpleados
+            ? Array.from({ length: 3 }).map((_, i) => <ListCardSkeleton key={i} />)
+            : empleados.map((empleado) => (
+                <UserMetaCard key={empleado.id} userData={empleado} onSaved={cargarEmpleados}/>
+              ))}
         </div>
 
         <Button size="sm" variant="outline" className="w-full" onClick={openModal}>

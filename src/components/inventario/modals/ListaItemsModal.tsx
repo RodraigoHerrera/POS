@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/modal";
 import Input from "@/components/form/input/InputField";
 import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
+import TableRowSkeleton from "@/components/ui/skeleton/TableRowSkeleton";
 
 // --- Interfaces basadas en tu Schema ---
 interface InventoryItem {
@@ -145,11 +146,7 @@ export default function ListaItemsModal({ isOpen, onClose, categoriasOptions }: 
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                 {loading ? (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
-                      Cargando inventario...
-                    </td>
-                  </tr>
+                  Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} columns={4} />)
                 ) : filteredItems.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-4 py-8 text-center text-gray-500">

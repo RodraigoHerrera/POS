@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db"; // Ajusta el import según tu estructura
 import { jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { serializeBigInt } from "@/lib/serialize";
+import { errorResponse } from "@/lib/apiError";
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -131,22 +133,16 @@ export async function POST(req: Request) {
       },
     });
 
-    // Serialización para respuesta JSON (BigInt a String)
-    const serialize = (obj: any) => JSON.parse(JSON.stringify(obj, (key, value) =>
-      typeof value === 'bigint' ? value.toString() : value
-    ));
-
     return NextResponse.json(
       {
         message: "Inventario actualizado correctamente",
-        lote: serialize(lote),
-        inventario: serialize(inventario),
+        lote: serializeBigInt(lote),
+        inventario: serializeBigInt(inventario),
       },
       { status: 201 }
     );
 
   } catch (error) {
-    console.error("Error al insertar inventario:", error);
-    return NextResponse.json({ message: "Error interno del servidor" }, { status: 500 });
+    return errorResponse(error, "Error al registrar la entrada de inventario");
   }
 }

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { ApexOptions } from "apexcharts";
 import dynamic from "next/dynamic";
+import ChartSkeleton from "../ui/skeleton/ChartSkeleton";
 
 // Dynamically import the ReactApexChart component
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
@@ -89,6 +90,7 @@ export default function StatisticsChart() {
   // Series 0: Real, Series 1: Pronóstico
   const [series, setSeries] = useState<any[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Efecto para cargar datos del API
   useEffect(() => {
@@ -136,6 +138,8 @@ export default function StatisticsChart() {
         }
       } catch (error) {
         console.error("Error cargando estadísticas:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -242,12 +246,16 @@ export default function StatisticsChart() {
 
       <div className="max-w-full overflow-x-auto custom-scrollbar">
         <div className="min-w-[1000px] xl:min-w-full">
-          <ReactApexChart
-            options={options}
-            series={series}
-            type="area"
-            height={310}
-          />
+          {loading ? (
+            <ChartSkeleton height={310} />
+          ) : (
+            <ReactApexChart
+              options={options}
+              series={series}
+              type="area"
+              height={310}
+            />
+          )}
         </div>
       </div>
     </div>

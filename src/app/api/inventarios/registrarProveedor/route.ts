@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
+import { errorResponse } from '@/lib/apiError';
+import { serializeBigInt } from '@/lib/serialize';
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -50,19 +52,13 @@ export async function POST(req: Request) {
       }
     });
 
-    // 4. Serializar respuesta (Manejo de BigInt para JSON)
-    const proveedorSerializado = JSON.parse(JSON.stringify(nuevoProveedor, (key, value) =>
-      typeof value === 'bigint' ? value.toString() : value
-    ));
-
     return NextResponse.json({
       success: true,
       message: "Proveedor creado exitosamente",
-      data: proveedorSerializado
+      data: serializeBigInt(nuevoProveedor)
     }, { status: 201 });
 
   } catch (error: any) {
-    console.error("Error al crear proveedor:", error);
-    return NextResponse.json({ error: error.message || 'Error interno del servidor' }, { status: 500 });
+    return errorResponse(error, "Error al crear el proveedor");
   }
 }

@@ -5,6 +5,7 @@ import { MoreDotIcon } from "@/icons";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { useState, useEffect } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
+import ChartSkeleton from "../ui/skeleton/ChartSkeleton";
 
 // Dynamically import the ReactApexChart component
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
@@ -18,6 +19,7 @@ export default function MonthlySalesChart() {
   const [categories, setCategories] = useState<string[]>([]);
   // Estado para el total anual (opcional, para mostrarlo en el header si quisieras)
   const [totalAnual, setTotalAnual] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const [isOpen, setIsOpen] = useState(false);
 
@@ -42,6 +44,8 @@ export default function MonthlySalesChart() {
         }
       } catch (error) {
         console.error("Error cargando gráfico de ventas:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -163,12 +167,16 @@ export default function MonthlySalesChart() {
 
       <div className="max-w-full overflow-x-auto custom-scrollbar">
         <div className="-ml-5 min-w-[650px] xl:min-w-full pl-2">
-          <ReactApexChart
-            options={options}
-            series={series}
-            type="bar"
-            height={180}
-          />
+          {loading ? (
+            <ChartSkeleton height={180} />
+          ) : (
+            <ReactApexChart
+              options={options}
+              series={series}
+              type="bar"
+              height={180}
+            />
+          )}
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";  
+import { prisma } from "@/lib/db";
+import { serializeBigInt } from "@/lib/serialize";
 
 export const dynamic = 'force-dynamic';
 
@@ -21,13 +22,7 @@ export async function GET() {
       },
     });
 
-    // Conversión de BigInt a String para evitar errores de serialización JSON
-    const safeProveedores = proveedores.map((prov) => ({
-      ...prov,
-      id: prov.id.toString(),
-    }));
-
-    return NextResponse.json(safeProveedores);
+    return NextResponse.json(serializeBigInt(proveedores));
 
   } catch (error) {
     console.error("Error obteniendo proveedores:", error);

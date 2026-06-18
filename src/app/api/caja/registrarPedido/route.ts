@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
+import { errorResponse } from '@/lib/apiError';
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -43,9 +44,122 @@ export async function POST(req: Request) {
       return acc + (parseFloat(item.precio_unit) * item.cantidad);
     }, 0);
 
-    // 4. Transacción de Base de Datos
+    // 4. PRE-CÁLCULO (fuera de la transacción): resolver productos -> recetas
+    //    y simular el consumo FEFO en memoria, para minimizar las consultas
+    //    que se hacen mientras la transacción mantiene locks abiertos.
+    const productoIds: bigint[] = [...new Set<bigint>(items.map((i: any) => BigInt(i.producto_id)))];
+
+    const productos = await prisma.producto.findMany({
+      where: { id: { in: productoIds } },
+      select: { id: true, item_inventario_id: true },
+    });
+    const productoMap = new Map(
+      productos.map((p) => [p.id.toString(), p.item_inventario_id])
+    );
+
+    const itemInventarioIds = [
+      ...new Set(
+        productos
+          .map((p) => p.item_inventario_id)
+          .filter((id): id is bigint => id !== null)
+      ),
+    ];
+
+    const recetas = await prisma.receta.findMany({
+      where: { item_vendible_id: { in: itemInventarioIds } },
+      include: { items: true },
+    });
+    const recetaMap = new Map(recetas.map((r) => [r.item_vendible_id.toString(), r.items]));
+
+    // Requerimientos de insumos por cada item del carrito
+    interface Requerimiento { insumoId: bigint; cantidadRequerida: number }
+
+    const requerimientosPorItem: Requerimiento[][] = items.map((itemPedido: any) => {
+      const itemInventarioId = productoMap.get(String(BigInt(itemPedido.producto_id)));
+      const recetaItems = itemInventarioId ? recetaMap.get(itemInventarioId.toString()) : undefined;
+
+      if (!recetaItems || recetaItems.length === 0) return [];
+
+      return recetaItems.map((ingrediente) => ({
+        insumoId: ingrediente.item_insumo_id,
+        cantidadRequerida: Number(ingrediente.cantidad) * Number(itemPedido.cantidad),
+      }));
+    });
+
+    const insumoIds: bigint[] = [
+      ...new Set<bigint>(
+        requerimientosPorItem.flat().map((r) => r.insumoId)
+      ),
+    ];
+
+    // Lotes disponibles (FEFO) para todos los insumos involucrados, en una sola consulta
+    const lotesDisponibles = insumoIds.length > 0
+      ? await prisma.stockLoteSucursal.findMany({
+          where: {
+            sucursal_id: sucursalBigInt,
+            lote: { item_id: { in: insumoIds } },
+            cantidad: { gt: 0 },
+          },
+          include: { lote: true },
+          orderBy: { lote: { fecha_caducidad: 'asc' } },
+        })
+      : [];
+
+    // Agrupar lotes por insumo, conservando el orden FEFO
+    const lotesPorInsumo = new Map<string, { id: bigint; lote_id: bigint; costo_unit: number; restante: number }[]>();
+    for (const stockLote of lotesDisponibles) {
+      const key = stockLote.lote.item_id.toString();
+      const lista = lotesPorInsumo.get(key) ?? [];
+      lista.push({
+        id: stockLote.id,
+        lote_id: stockLote.lote_id,
+        costo_unit: Number(stockLote.lote.costo_unit),
+        restante: Number(stockLote.cantidad),
+      });
+      lotesPorInsumo.set(key, lista);
+    }
+
+    // Simular el consumo FEFO: acumular costo por item, decremento por lote
+    // y decremento total por insumo, todo en memoria.
+    const costoPorItem: number[] = [];
+    const lotDecrements = new Map<string, { id: bigint; lote_id: bigint; item_id: bigint; costo_unit: number; total: number }>();
+    const inventarioDecrements = new Map<string, number>();
+
+    items.forEach((itemPedido: any, idx: number) => {
+      let costoAcumuladoDelItem = 0;
+
+      for (const { insumoId, cantidadRequerida } of requerimientosPorItem[idx]) {
+        let restante = cantidadRequerida;
+        const lotes = lotesPorInsumo.get(insumoId.toString()) ?? [];
+
+        for (const lote of lotes) {
+          if (restante <= 0) break;
+          if (lote.restante <= 0) continue;
+
+          const aDescontar = Math.min(lote.restante, restante);
+          if (aDescontar <= 0) continue;
+
+          lote.restante -= aDescontar;
+          restante -= aDescontar;
+
+          const key = lote.id.toString();
+          const acumulado = lotDecrements.get(key) ?? { id: lote.id, lote_id: lote.lote_id, item_id: insumoId, costo_unit: lote.costo_unit, total: 0 };
+          acumulado.total += aDescontar;
+          lotDecrements.set(key, acumulado);
+
+          const insumoKey = insumoId.toString();
+          inventarioDecrements.set(insumoKey, (inventarioDecrements.get(insumoKey) ?? 0) + aDescontar);
+
+          costoAcumuladoDelItem += aDescontar * lote.costo_unit;
+        }
+      }
+
+      costoPorItem.push(costoAcumuladoDelItem);
+    });
+
+    // 5. Transacción de Base de Datos
     const nuevoPedido = await prisma.$transaction(async (tx) => {
-      
+
       // A. Crear Cabecera del Pedido
       const pedido = await tx.pedido.create({
         data: {
@@ -59,11 +173,11 @@ export async function POST(req: Request) {
         },
       });
 
-      // B. Procesar Items del Pedido
-      for (const itemPedido of items) {
-        
-        // B.1 Crear detalle en tabla pedidoItem y GUARDAR REFERENCIA
-        const nuevoPedidoItem = await tx.pedidoItem.create({
+      // B. Crear el detalle de cada item (con su costo real ya calculado)
+      for (let idx = 0; idx < items.length; idx++) {
+        const itemPedido = items[idx];
+
+        await tx.pedidoItem.create({
           data: {
             pedido_id: pedido.id,
             producto_id: BigInt(itemPedido.producto_id),
@@ -71,122 +185,59 @@ export async function POST(req: Request) {
             precio_unit: itemPedido.precio_unit,
             subtotal: itemPedido.precio_unit * itemPedido.cantidad,
             notas: itemPedido.notas,
-            costo_real: 0, // Inicializamos en 0, lo calcularemos abajo
+            costo_real: costoPorItem[idx],
             extras: {
               create: itemPedido.extras.map((extraNombre: string) => ({
                 nombre: extraNombre,
-                precio: 0, 
+                precio: 0,
               })),
             },
           },
         });
+      }
 
-        // Variable para acumular el costo financiero de este item (Suma de costos de insumos)
-        let costoAcumuladoDelItem = 0;
-        
-        // C. LÓGICA DE DESCUENTO DE INVENTARIO Y CALCULO DE COSTOS
-        
-        // 1. Obtener el Producto para ver a qué ITEM de inventario está vinculado
-        const productoDB = await tx.producto.findUnique({
-          where: { id: BigInt(itemPedido.producto_id) },
-          select: { item_inventario_id: true } 
+      // C. Aplicar los descuentos de inventario acumulados (1 update por lote tocado)
+      for (const { id, total } of lotDecrements.values()) {
+        await tx.stockLoteSucursal.update({
+          where: { id },
+          data: { cantidad: { decrement: total } },
         });
+      }
 
-        if (productoDB && productoDB.item_inventario_id) {
-          
-          // 2. Buscar la receta asociada a ese Item
-          const receta = await tx.receta.findUnique({
-            where: { item_vendible_id: productoDB.item_inventario_id },
-            include: { items: true }
-          });
+      // D. Registrar los movimientos de kardex en una sola operación
+      if (lotDecrements.size > 0) {
+        await tx.movimientoInventario.createMany({
+          data: [...lotDecrements.values()].map((lote) => ({
+            sucursal_id: sucursalBigInt,
+            item_id: lote.item_id,
+            lote_id: lote.lote_id,
+            tipo: 'Salida' as const,
+            motivo: 'Venta' as const,
+            cantidad: lote.total,
+            costo_unit: lote.costo_unit,
+            referencia: `Pedido #${pedido.id}`,
+          })),
+        });
+      }
 
-          if (receta && receta.items.length > 0) {
-            
-            // 3. Iterar sobre cada ingrediente de la receta
-            for (const ingrediente of receta.items) {
-              
-              let cantidadRequerida = Number(ingrediente.cantidad) * Number(itemPedido.cantidad);
-              const insumoId = ingrediente.item_insumo_id;
-
-              // 4. Buscar lotes disponibles (FEFO)
-              const lotesDisponibles = await tx.stockLoteSucursal.findMany({
-                where: {
-                  sucursal_id: sucursalBigInt,
-                  lote: { item_id: insumoId },
-                  cantidad: { gt: 0 }
-                },
-                include: { lote: true },
-                orderBy: { lote: { fecha_caducidad: 'asc' } }
-              });
-
-              // 5. Descontar de los lotes
-              for (const stockLote of lotesDisponibles) {
-                if (cantidadRequerida <= 0) break; 
-
-                const disponibleEnLote = Number(stockLote.cantidad);
-                const aDescontar = Math.min(disponibleEnLote, cantidadRequerida);
-
-                if (aDescontar > 0) {
-                  // --- ACTUALIZACIÓN FÍSICA ---
-                  
-                  // Actualizar Stock Lote
-                  await tx.stockLoteSucursal.update({
-                    where: { id: stockLote.id },
-                    data: { cantidad: { decrement: aDescontar } }
-                  });
-
-                  // Registrar Movimiento
-                  await tx.movimientoInventario.create({
-                    data: {
-                      sucursal_id: sucursalBigInt,
-                      item_id: insumoId,
-                      lote_id: stockLote.lote_id,
-                      tipo: 'Salida', 
-                      motivo: 'Venta', 
-                      cantidad: aDescontar,
-                      costo_unit: stockLote.lote.costo_unit,
-                      referencia: `Pedido #${pedido.id}`,
-                    }
-                  });
-
-                  // Actualizar Inventario Global
-                  await tx.inventarioSucursal.updateMany({
-                    where: { sucursal_id: sucursalBigInt, item_id: insumoId },
-                    data: { stock: { decrement: aDescontar } }
-                  });
-
-                  // --- CÁLCULO FINANCIERO (NUEVO) ---
-                  // Sumamos al costo del item: Cantidad * Costo Unitario de ESTE lote específico
-                  const costoDeEstaDeduccion = aDescontar * Number(stockLote.lote.costo_unit);
-                  costoAcumuladoDelItem += costoDeEstaDeduccion;
-
-                  cantidadRequerida -= aDescontar;
-                }
-              }
-            }
-          }
-        }
-
-        // D. FINALIZAR ITEM: Guardar el costo real calculado
-        if (costoAcumuladoDelItem > 0) {
-          await tx.pedidoItem.update({
-            where: { id: nuevoPedidoItem.id },
-            data: { costo_real: costoAcumuladoDelItem }
-          });
-        }
+      // E. Actualizar el stock agregado por sucursal (1 update por insumo afectado)
+      for (const [insumoIdStr, total] of inventarioDecrements) {
+        await tx.inventarioSucursal.updateMany({
+          where: { sucursal_id: sucursalBigInt, item_id: BigInt(insumoIdStr) },
+          data: { stock: { decrement: total } },
+        });
       }
 
       return pedido;
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       pedidoId: nuevoPedido.id.toString(),
-      message: 'Pedido enviado a cocina' 
+      message: 'Pedido enviado a cocina'
     });
 
   } catch (error: any) {
-    console.error("Error al registrar pedido:", error);
-    return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 });
+    return errorResponse(error, "Error al registrar el pedido");
   }
 }

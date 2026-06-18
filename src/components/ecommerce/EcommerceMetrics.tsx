@@ -2,18 +2,20 @@
 import React, { useEffect, useState } from "react";
 import Badge from "../ui/badge/Badge";
 import { ArrowDownIcon, ArrowUpIcon, BoxIconLine, GroupIcon } from "@/icons";
+import { Skeleton } from "../ui/skeleton/Skeleton";
 
 export const EcommerceMetrics = () => {
-  // Estado para el monto de ventas (inicializamos con carga o cero)
-  const [ventasMes, setVentasMes] = useState<string>("Cargando...");
-  
+  // Estado para el monto de ventas
+  const [ventasMes, setVentasMes] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+
   // Efecto para obtener el total del mes actual al montar el componente
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
         const response = await fetch("/api/ventas/ventaMensual");
         const data = await response.json();
-        
+
         if (data.success) {
           // Usamos 'formatted' que ya viene como "Bs 123.00"
           setVentasMes(data.formatted);
@@ -23,6 +25,8 @@ export const EcommerceMetrics = () => {
       } catch (error) {
         console.error("Error cargando métricas:", error);
         setVentasMes("Error");
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -60,9 +64,13 @@ export const EcommerceMetrics = () => {
             <span className="text-sm text-gray-500 dark:text-gray-400">
               Ventas (Mes Actual)
             </span>
-            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
-              {ventasMes}
-            </h4>
+            {loading ? (
+              <Skeleton className="mt-2 h-7 w-24" />
+            ) : (
+              <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
+                {ventasMes}
+              </h4>
+            )}
           </div>
 
         </div>

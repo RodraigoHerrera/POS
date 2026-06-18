@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { prisma } from "@/lib/db"; 
+import { prisma } from "@/lib/db";
+import { errorResponse } from "@/lib/apiError";
 
 // --- SOLUCIÓN BIGINT ---
 // Esto define cómo se debe comportar BigInt al convertirse a JSON.
@@ -72,9 +73,6 @@ export async function PUT(request: Request) {
       );
     }
     
-    return NextResponse.json(
-      { message: error.message || 'Error interno del servidor.' },
-      { status: 500 }
-    );
+    return errorResponse(error, "Error interno del servidor.");
   }
 }

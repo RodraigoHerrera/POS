@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {useRouter}  from "next/navigation";
+import { useFetchData } from "@/hooks/useFetchData";
+import ProductCardSkeleton from "@/components/ui/skeleton/ProductCardSkeleton";
 
 // --- Interfaces ---
 
@@ -54,8 +56,8 @@ const ProductCard = ({ item }: { item: Item }) => (
 
 export default function Ventas() {
   const router = useRouter();
-  const [products, setProducts] = useState<Item[]>([]);
-  
+  const { data: products, loading: loadingProducts } = useFetchData<Item[]>("/api/inventarios/productos", []);
+
   // Estado para el Carrito (Columna 1)
   const [cart, setCart] = useState<CartItem[]>([]);
   
@@ -66,28 +68,6 @@ export default function Ventas() {
 
   // Estado para controlar el envío
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // ---------- Helpers de Carga ----------
-
-  const cargarItems = useCallback(async () => {
-    try {
-      const res = await fetch("/api/inventarios/productos");
-      if (!res.ok) throw new Error("Error fetching products");
-      const data = await res.json();
-      setProducts(data);
-    } catch (err) {
-      console.error("Error al obtener items:", err);
-      // Fallback de datos para demostración si falla la API
-      setProducts([
-        { id: 1, nombre: "Hamburguesa Clásica", precio: "45.00", estado: "activo", categoria: "Hamburguesas", descripcion: "Carne de res, lechuga, tomate." },
-        { id: 2, nombre: "Refresco", precio: "10.00", estado: "activo", categoria: "Bebidas", descripcion: "Coca-Cola 500ml" },
-      ]);
-    }
-  }, []);
-
-  useEffect(() => {
-    cargarItems();
-  }, [cargarItems]);
 
   // ---------- Lógica del Carrito (Columna 1) ----------
 
@@ -264,7 +244,9 @@ export default function Ventas() {
         <h2 className="mb-4 text-lg font-bold text-gray-800 dark:text-gray-100 shrink-0">Catálogo</h2>
         <div className="flex-1 overflow-y-auto pr-1">
           <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
-            {products.map((item) => (
+            {loadingProducts
+              ? Array.from({ length: 6 }).map((_, i) => <ProductCardSkeleton key={i} />)
+              : products.map((item) => (
               <div 
                 key={item.id} 
                 onClick={() => !isSubmitting && handleSelectProduct(item)}

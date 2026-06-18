@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
+import { errorResponse } from '@/lib/apiError';
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -30,32 +31,21 @@ export async function GET(req: Request) {
     const startOfYear = new Date(currentYear, 0, 1); // 1 de Enero 00:00:00
     const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59); // 31 de Diciembre 23:59:59
 
-    // 3. Consultar la tabla de Historial
-    // CAMBIO: Ahora seleccionamos 'cantidad' en lugar de 'venta_total'
-    const ventas = await prisma.historialVentas.findMany({
-      where: {
-        sucursal_id: BigInt(sucursalId),
-        fecha_venta: {
-          gte: startOfYear,
-          lte: endOfYear
-        }
-      },
-      select: {
-        fecha_venta: true,
-        cantidad: true // Solicitamos la cantidad de items vendidos
-      }
-    });
+    // 3. Consultar la tabla de Historial con la agregación hecha en la DB
+    // (evita traer todas las filas del año para sumarlas en memoria)
+    const ventasPorMes = await prisma.$queryRaw<{ mes: bigint | number; total: bigint | number | null }[]>`
+      SELECT MONTH(fecha_venta) as mes, SUM(cantidad) as total
+      FROM historialVentas
+      WHERE sucursal_id = ${BigInt(sucursalId)}
+        AND fecha_venta BETWEEN ${startOfYear} AND ${endOfYear}
+      GROUP BY MONTH(fecha_venta)
+    `;
 
-    // 4. Procesamiento de Datos (Agregación en Memoria)
+    // 4. Mapear los resultados agregados a un arreglo de 12 posiciones
     const cantidadesPorMes = Array(12).fill(0);
 
-    ventas.forEach((venta) => {
-      const mesIndex = new Date(venta.fecha_venta).getMonth();
-      
-      // Sumamos la cantidad física
-      const cantidad = Number(venta.cantidad);
-      
-      cantidadesPorMes[mesIndex] += cantidad;
+    ventasPorMes.forEach((fila) => {
+      cantidadesPorMes[Number(fila.mes) - 1] = Number(fila.total ?? 0);
     });
 
     // 5. Formatear respuesta para el Frontend
@@ -73,7 +63,6 @@ export async function GET(req: Request) {
     });
 
   } catch (error: any) {
-    console.error("Error generando reporte mensual:", error);
-    return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 });
+    return errorResponse(error, "Error al generar el reporte mensual");
   }
 }

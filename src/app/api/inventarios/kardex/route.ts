@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
+import { errorResponse } from '@/lib/apiError';
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -86,7 +87,6 @@ export async function GET(req: Request) {
     });
 
   } catch (error: any) {
-    console.error("Error consultando Kardex:", error);
-    return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 });
+    return errorResponse(error, "Error al consultar el kardex");
   }
 }

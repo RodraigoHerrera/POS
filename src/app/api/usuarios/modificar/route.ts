@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-
-// helper: convierte cualquier BigInt a string para JSON
-function jsonSafe<T>(data: T): T {
-  return JSON.parse(
-    JSON.stringify(data, (_k, v) => (typeof v === "bigint" ? v.toString() : v))
-  );
-}
+import { serializeBigInt } from "@/lib/serialize";
+import { errorResponse } from "@/lib/apiError";
 
 // PUT /api/usuarios  (id viene en el body)
 export async function PUT(req: Request) {
@@ -53,13 +48,8 @@ export async function PUT(req: Request) {
       },
     });
 
-    // ✅ convierte BigInt a string antes de responder
-    return NextResponse.json(jsonSafe(updated), { status: 200 });
+    return NextResponse.json(serializeBigInt(updated), { status: 200 });
   } catch (err: any) {
-    console.error("PUT /api/usuarios error:", err);
-    return NextResponse.json(
-      { message: "Error al actualizar el usuario" },
-      { status: 500 }
-    );
+    return errorResponse(err, "Error al actualizar el usuario");
   }
 }

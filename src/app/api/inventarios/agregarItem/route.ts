@@ -1,6 +1,7 @@
 // src/app/api/items/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { serializeBigInt } from "@/lib/serialize";
 
 // Crea un nuevo item en el catálogo de inventario
 export async function POST(req: Request) {
@@ -58,14 +59,10 @@ export async function POST(req: Request) {
       });
     }
 
-    // Serializar BigInt para la respuesta
     return NextResponse.json(
       {
         message: "Item creado con éxito",
-        item: {
-          ...nuevoItem,
-          id: nuevoItem.id.toString(),
-        },
+        item: serializeBigInt(nuevoItem),
       },
       { status: 201 }
     );

@@ -6,6 +6,7 @@ import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
 import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
+import TableRowSkeleton from "@/components/ui/skeleton/TableRowSkeleton";
 
 // --- Interfaces ---
 interface KardexMovement {
@@ -181,11 +182,7 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                 {loading && movimientosFiltrados.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                      Cargando movimientos...
-                    </td>
-                  </tr>
+                  Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} columns={7} />)
                 ) : movimientosFiltrados.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-gray-500">

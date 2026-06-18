@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import bcrypt from "bcrypt";
 import { jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { serializeBigInt } from "@/lib/serialize";
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -49,8 +50,7 @@ export async function POST(req: Request) {
     // Crear el nuevo administrador en la base de datos
     const nuevoAdmin = await prisma.empleados.create({
       data: {
-        sucursal_id: 3
-        , // Cambia esto según tu lógica de negocio
+        sucursal_id: BigInt(sucursalIdStr),
         rol,
         nombre,
         correo,
@@ -65,13 +65,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         message: "Administrador registrado con éxito",
-        admin: {
-          ...nuevoAdmin,
-          // Con esto evitamos posibles problemas con campos bigint
-          id: nuevoAdmin.id.toString(),
-          sucursal_id: nuevoAdmin.sucursal_id.toString(),
-          creado: nuevoAdmin.creado.toISOString(),
-        },
+        admin: serializeBigInt(nuevoAdmin),
       },
       { status: 201 }
     );

@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React from "react";
 import ProductosCard from "@/components/ui/productos/ProductosCard";
+import ProductCardSkeleton from "@/components/ui/skeleton/ProductCardSkeleton";
+import { useFetchData } from "@/hooks/useFetchData";
 
 interface Item {
   id: number;
@@ -14,26 +16,7 @@ interface Item {
 }
 
 export default function menu() {
-  const [item, setItems] = useState<Item[]>([]);
-
-  // ---------- Helpers ----------
-
-  const cargarItems = useCallback(async () => {
-    try {
-      const res = await fetch("/api/inventarios/productos", { credentials: "include" });
-      const data = await res.json();
-      setItems(data);
-    } catch (err) {
-      console.error("Error al obtener item:", err);
-    }
-  }, []);
-
-  // ---------- Effects ----------
-  useEffect(() => {
-    cargarItems();
-  }, [cargarItems]);
-
-  // ---------- Handlers ----------
+  const { data: item, loading, reload: cargarItems } = useFetchData<Item[]>("/api/inventarios/productos", []);
 
   return (
     <>
@@ -43,10 +26,11 @@ export default function menu() {
         </h1>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-          {/* AQUI ESTA EL CAMBIO: Agregamos .filter antes del .map */}
-          {item.map((item) => (
-              <ProductosCard key={item.id} itemData={item} onSaved={cargarItems} />
-            ))}
+          {loading
+            ? Array.from({ length: 6 }).map((_, i) => <ProductCardSkeleton key={i} />)
+            : item.map((item) => (
+                <ProductosCard key={item.id} itemData={item} onSaved={cargarItems} />
+              ))}
         </div>
 
       </div>

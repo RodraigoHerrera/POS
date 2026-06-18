@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db'; // Asegúrate de usar la ruta correcta a tu instancia de prisma
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
+import { errorResponse } from '@/lib/apiError';
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -149,7 +150,12 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error("Error al cobrar:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error.message === "Pedido no encontrado") {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+    if (error.message === "El pedido ya fue pagado") {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    return errorResponse(error, "Error al procesar el cobro");
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 // IMPORTANTE: Ajusta esta importación a donde tengas tu instancia de Prisma o conexión a BD
-import { prisma } from "@/lib/db"; 
+import { prisma } from "@/lib/db";
+import { serializeBigInt } from "@/lib/serialize";
 
 // Esto asegura que la API no se guarde en caché y siempre traiga datos frescos
 export const dynamic = 'force-dynamic';
@@ -27,15 +28,7 @@ export async function GET() {
       },
     });
 
-    // CORRECCIÓN: Convertir BigInt a String
-    // JSON.stringify no soporta BigInt nativamente, por lo que da error.
-    // Mapeamos los items y convertimos el ID a string.
-    const safeItems = items.map((item) => ({
-      ...item,
-      id: item.id.toString(),
-    }));
-
-    return NextResponse.json(safeItems);
+    return NextResponse.json(serializeBigInt(items));
 
   } catch (error) {
     console.error("Error obteniendo items:", error);
