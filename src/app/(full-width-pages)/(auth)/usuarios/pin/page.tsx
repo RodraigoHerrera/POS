@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 export default function EmpleadoPin() {
   const [pin, setPin] = useState("");
   const [nombre, setNombre] = useState("");
+  const [usuario, setUsuario] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -18,6 +19,7 @@ export default function EmpleadoPin() {
         const res = await fetch(`/api/usuarios/${id}`);
         const data = await res.json();
         setNombre(data.nombre);
+        setUsuario(data.usuario);
       } catch (err) {
         console.error("Error al obtener nombre del empleado:", err);
       }
@@ -43,8 +45,8 @@ export default function EmpleadoPin() {
       const data = await res.json();
 
       if (res.ok) {
-        if (data.rol === "admin") router.push("/admin?id=" + id);
-        else if (data.rol === "cajero") router.push("/cajero?id=" + id);
+        if (data.rol === "Administrador") router.push("/admin");
+        else if (data.rol === "Cajero") router.push("/cajero");
       } else {
         setError(data.message || "PIN incorrectooo");
       }
@@ -60,7 +62,7 @@ export default function EmpleadoPin() {
     <div className="min-h-screen flex items-center justify-center bg-[#0C0C0F]/98 p-6">
       <div className="bg-white/10 p-6 rounded-lg max-w-sm w-full text-center">
         <h2 className="text-xl font-semibold text-white mb-4">
-          Hola, {nombre}
+          Hola, {usuario}
         </h2>
         <p className="text-white mb-4">Ingresa tu PIN para continuar</p>
         <form onSubmit={handleSubmit} className="space-y-4">

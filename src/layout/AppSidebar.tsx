@@ -16,6 +16,7 @@ import {
   PlugInIcon,
   TableIcon,
   UserCircleIcon,
+  DocsIcon,
 } from "../icons/index";
 
 type NavItem = {
@@ -33,32 +34,41 @@ const navItems: NavItem[] = [
     path: "/admin",
   },
   {
-    icon: <CalenderIcon />,
-    name: "Calendario",
-    path: "/calendar",
+    icon: <ListIcon />,
+    name: "Inventario",
+    path: "/admin/inventario",
   },
   {
     icon: <UserCircleIcon />,
     name: "Usuarios",
-    path: "/profile",
+    path: "/admin/usuarios",
   },
 
   {
     name: "Informes",
-    icon: <ListIcon />,
-    subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
+    icon: <DocsIcon />,
+    subItems: [{ name: "Reporte de Ventas", path: "/admin/informes/reporte-ventas", pro: false },
+      { name: "Reporte de Gastos", path: "/admin/informes/reporte-gastos", pro: false },
+      { name: "Reporte de Inventario", path: "/admin/informes/reporte-inventario", pro: false },
+      { name: "Reporte de Clientes", path: "/admin/informes/reporte-clientes", pro: false },
+      { name: "Reporte de Proveedores", path: "/admin/informes/reporte-proveedores", pro: false },
+    ],
   },
   {
     name: "Contabilidad",
     icon: <TableIcon />,
-    subItems: [{ name: "Basic Tables", path: "/basic-tables", pro: false }],
+    subItems: [{ name: "Impuestos", path: "/admin/impuestos", pro: false },
+      { name: "Gastos", path: "/admin/gastos", pro: false },
+      { name: "Balance General", path: "/admin/balance-general", pro: false },
+      
+    ],
   },
   {
     name: "Menú",
     icon: <PageIcon />,
     subItems: [
-      { name: "Blank Page", path: "/blank", pro: false },
-      { name: "404 Error", path: "/error-404", pro: false },
+      { name: "Recetas", path: "/admin/recetas", pro: false },
+      { name: "Modificar Menu", path: "/admin/menu", pro: false },
     ],
   },
 ];
@@ -321,10 +331,10 @@ const AppSidebar: React.FC = () => {
               />
               <Image
                 className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
+                src="/images/logo/logo-smash.svg"
                 alt="Logo"
-                width={150}
-                height={40}
+                width={80}
+                height={10}
               />
             </>
           ) : (
@@ -360,7 +370,7 @@ const AppSidebar: React.FC = () => {
               {renderMenuItems(navItems, "main")}
             </div>
 
-            <div className="">
+            {/* <div className="">
               <h2
                 className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-950 ${
                   !isExpanded && !isHovered
@@ -375,7 +385,7 @@ const AppSidebar: React.FC = () => {
                 )}
               </h2>
               {renderMenuItems(othersItems, "others")}
-            </div>
+            </div> */}
           </div>
         </nav>
         {isExpanded || isHovered || isMobileOpen }

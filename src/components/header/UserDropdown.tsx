@@ -1,13 +1,25 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 
 
+interface EmpleadoInfo {
+  id: number;
+  nombre: string;
+  fotoUrl: string;
+  rol: string;
+  estado: string;
+  correo: string;
+  usuario: string;
+}
+
+
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
+  const [empleado, setEmpleado] = useState<EmpleadoInfo | null>(null);
 
 
   function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
@@ -18,6 +30,23 @@ export default function UserDropdown() {
   function closeDropdown() {
     setIsOpen(false);
   }
+
+  useEffect(() => {
+      const fetchEmpleado = async () => {
+        try {
+          const res = await fetch("/api/usuarios/info", {
+            credentials: "include",
+          });
+          const data = await res.json();
+          setEmpleado(data);
+          console.log(data);
+        } catch (error) {
+          console.error("Error al obtener empleados:", error);
+        }
+      };
+      fetchEmpleado();
+    }, []);
+  
   return (
     <div className="relative">
       <button
@@ -28,12 +57,12 @@ export default function UserDropdown() {
           <Image
             width={44}
             height={44}
-            src="/images/user/owner.jpg"
-            alt="User"
+            src={empleado?.fotoUrl || "/default-user.jpg"}
+            alt="User Avatar"
           />
         </span>
 
-        <span className="block mr-1 font-medium text-theme-sm">Musharof Chowdhury</span>
+        <span className="block mr-1 font-medium text-theme-sm">{empleado?.usuario}</span>
 
         <svg
           className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${
@@ -62,10 +91,10 @@ export default function UserDropdown() {
       >
         <div>
           <span className="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
-            Musharof Chowdhury
+            {empleado?.nombre}
           </span>
           <span className="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">
-            randomuser@pimjo.com
+            {empleado?.correo}
           </span>
         </div>
 
@@ -117,7 +146,7 @@ export default function UserDropdown() {
                   fill=""
                 />
               </svg>
-              Usuarios
+              Configuración
             </DropdownItem>
           </li>
           <li>
@@ -142,12 +171,12 @@ export default function UserDropdown() {
                   fill=""
                 />
               </svg>
-              Support
+              Soporte
             </DropdownItem>
           </li>
         </ul>
         <Link
-          href="/"
+          href="/usuarios"
           className="flex items-center gap-3 px-3 py-2 mt-3 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
         >
           <svg

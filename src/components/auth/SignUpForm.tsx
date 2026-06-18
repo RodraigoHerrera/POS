@@ -106,16 +106,6 @@ export default function SignUpForm() {
   // Renderizado del componente: se muestra el formulario con sus respectivos campos y validaciones
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar bg-[#0C0C0F]/95 p-6 rounded shadow max-w-lg">
-      {/* Enlace para volver al dashboard */}
-      <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
-        <Link
-          href="/"
-          className="inline-flex items-center text-sm text-gray-300 transition-colors hover:text-gray-400"
-        >
-          <ChevronLeftIcon />
-          Volver al dashboard
-        </Link>
-      </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
           {/* Encabezado del formulario */}
@@ -232,19 +222,6 @@ export default function SignUpForm() {
                 </div>
               </div>
             </form>
-
-            {/* Enlace para redireccionar a la página de inicio de sesión en caso de tener cuenta */}
-            <div className="mt-5">
-              <p className="text-sm font-normal text-center text-gray-300  sm:text-start">
-                ¿Tienes una cuenta?{" "}
-                <Link
-                  href="/"
-                  className="text-brand-600 hover:text-brand-500"
-                >
-                  Iniciar Sesión
-                </Link>
-              </p>
-            </div>
           </div>
         </div>
       </div>

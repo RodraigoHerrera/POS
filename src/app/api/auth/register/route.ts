@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/db";
+import { serializeBigInt } from "@/lib/serialize";
 
 export async function POST(req: Request) {
   try {
@@ -32,16 +34,38 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json(
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      console.error("Falta JWT_SECRET en variables de entorno");
+      return NextResponse.json({ message: "Error de configuración" }, { status: 500 });
+    }
+
+    const sucursalToken = jwt.sign(
+      {
+        sucursalId: nuevaSucursal.id.toString(),
+        correo: nuevaSucursal.correo,
+      },
+      secret,
+      { expiresIn: "8h" }
+    );
+
+    const response = NextResponse.json(
         {
           message: "Sucursal registrada con éxito",
-          sucursal: {
-            ...nuevaSucursal,
-            id: nuevaSucursal.id.toString(), // 👈 Esto evita el error
-          },
+          sucursal: serializeBigInt(nuevaSucursal),
         },
         { status: 201 }
       );
+
+    response.cookies.set("tokenSucursal", sucursalToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/",
+      maxAge: 60 * 60 * 8, // 8 horas
+    });
+
+    return response;
   } catch (error) {
     console.error("Error al registrar sucursal:", error);
     return NextResponse.json(
