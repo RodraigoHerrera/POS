@@ -1,7 +1,7 @@
 // components/inventario/modals/MermasModal.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/modal";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
@@ -18,6 +18,8 @@ type Props = {
 
 export default function MermasModal({ isOpen, onClose, onSaved }: Props) {
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [optionsItems, setOptionsItems] = useState<Option[]>([]);
   const [payload, setPayload] = useState({
     item: "",
     lote: "",
@@ -27,6 +29,27 @@ export default function MermasModal({ isOpen, onClose, onSaved }: Props) {
     motivo: "",
   });
 
+  // Cargar insumos/prep reales (las mermas no aplican a items vendibles)
+  useEffect(() => {
+    if (!isOpen) return;
+    const fetchItems = async () => {
+      try {
+        const res = await fetch("/api/inventarios/items");
+        if (res.ok) {
+          const data = await res.json();
+          setOptionsItems(
+            data
+              .filter((i: any) => i.tipo !== "vendible")
+              .map((i: any) => ({ value: String(i.id), label: `${i.nombre} (${i.unidad_code || "u"})` }))
+          );
+        }
+      } catch (err) {
+        console.error("Error cargando items para mermas:", err);
+      }
+    };
+    fetchItems();
+  }, [isOpen]);
+
   const handleText =
     (key: keyof typeof payload) => (e: React.ChangeEvent<HTMLInputElement>) =>
       setPayload((p) => ({ ...p, [key]: e.target.value }));
@@ -35,22 +58,39 @@ export default function MermasModal({ isOpen, onClose, onSaved }: Props) {
   const handleSelectTipo = (val: string) => setPayload((p) => ({ ...p, tipoMerma: val }));
 
   const save = async () => {
+    setError(null);
+    if (!payload.item || !payload.cantidad || !payload.tipoMerma) {
+      setError("Completa Item, Cantidad y Tipo de Merma.");
+      return;
+    }
     try {
       setIsSaving(true);
-      // TODO: POST a /api/inventarios/mermas con payload
+      const res = await fetch("/api/inventarios/mermas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemId: payload.item,
+          cantidad: Number(payload.cantidad),
+          tipoMerma: payload.tipoMerma,
+          motivo: payload.motivo || undefined,
+          loteReferencia: payload.lote || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || "No se pudo registrar la merma");
+        return;
+      }
+      setPayload({ item: "", lote: "", cantidad: "", fecha: "", tipoMerma: "", motivo: "" });
       onSaved?.();
       onClose();
+    } catch (err) {
+      console.error("Error registrando merma:", err);
+      setError("Error de red al registrar la merma");
     } finally {
       setIsSaving(false);
     }
   };
-
-
-    const optionsItems = [
-      { value: "item1", label: "Item A" },
-      { value: "item2", label: "Item B" },
-      { value: "item3", label: "Item C" },
-  ];
 
 
   return (
@@ -84,18 +124,21 @@ export default function MermasModal({ isOpen, onClose, onSaved }: Props) {
                 </div>
 
                 <div className="col-span-2 lg:col-span-1">
-                  <Label className="text-black">Lote Afectado</Label>
-                  <Input className="text-gray-dark" type="text" placeholder="Número de lote" onChange={handleText("lote")} />
-                </div>
-
-                <div className="col-span-2 lg:col-span-1">
                   <Label className="text-black">Cantidad Perdida</Label>
                   <Input className="text-gray-dark" type="number" placeholder="Cantidad" onChange={handleText("cantidad")} />
                 </div>
 
                 <div className="col-span-2 lg:col-span-1">
-                  <Label className="text-black">Fecha de Pérdida</Label>
-                  <Input className="text-gray-dark" type="date" onChange={handleText("fecha")} />
+                  <Label className="text-black">Referencia de lote (opcional)</Label>
+                  <Input
+                    className="text-gray-dark"
+                    type="text"
+                    placeholder="Ej: código físico del lote"
+                    onChange={handleText("lote")}
+                  />
+                  <p className="mt-1 text-xs text-gray-400">
+                    El stock se descuenta por FEFO automáticamente; esto es solo una nota.
+                  </p>
                 </div>
 
                 <div className="col-span-2">
@@ -125,6 +168,12 @@ export default function MermasModal({ isOpen, onClose, onSaved }: Props) {
               </div>
             </div>
           </div>
+
+          {error && (
+            <p className="mx-2 mb-2 rounded-md bg-error-50 px-3 py-2 text-sm text-error-600 dark:bg-error-500/10 dark:text-error-400">
+              {error}
+            </p>
+          )}
 
           <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
             <Button size="sm" variant="outline" onClick={onClose} disabled={isSaving}>

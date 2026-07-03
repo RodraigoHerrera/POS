@@ -1,30 +1,17 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { cookies } from 'next/headers';
-import { jwtVerify } from 'jose';
 import { errorResponse } from '@/lib/apiError';
 import { serializeBigInt } from '@/lib/serialize';
-
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+import { requireEmpleado, esRespuestaError } from '@/lib/auth';
 
 export async function POST(req: Request) {
   try {
+    // 1. Validar Sesión y rol
+    const sesion = await requireEmpleado(["Administrador"]);
+    if (esRespuestaError(sesion)) return sesion;
+
     const body = await req.json();
     const { nombre, nit, contacto, telefono, email } = body;
-
-    // 1. Validar Sesión (Seguridad básica)
-    const cookieStore = await cookies();
-    const tokenSucursal = cookieStore.get("tokenSucursal")?.value;
-
-    if (!tokenSucursal) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
-    try {
-      await jwtVerify(tokenSucursal, secret);
-    } catch {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 403 });
-    }
 
     // 2. Validaciones de Datos
     if (!nombre) {

@@ -88,10 +88,11 @@ export default function SignInForm() {
                     Correo <span className="text-error-500">*</span>{" "}
                   </Label>
                   <Input
-                    placeholder="info@gmail.com"
+                    placeholder="ejemplo@smash.com"
                     type="email"
                     value={correo}
                     onChange={(e) => setCorreo(e.target.value)}
+                    style={{ color: "var(--color-gray-25)" }}
                   />
                   {errorCorreo && (
                     <p className="mt-1 text-sm text-error-500">{errorCorreo}</p>
@@ -107,6 +108,7 @@ export default function SignInForm() {
                       placeholder="Ingrese su contraseña"
                       value={contraseña}
                       onChange={(e) => setContraseña(e.target.value)}
+                      style={{ color: "var(--color-gray-25)" }}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}

@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 import { ApexOptions } from "apexcharts";
 
@@ -9,98 +9,126 @@ const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
 });
 
+interface MovimientosMensuales {
+  labels: string[];
+  compras: number[];
+  consumo: number[];
+  mermas: number[];
+  totalMermas: number;
+  mermaPctSobreConsumo: number;
+}
+
+/**
+ * Compras vs. Consumo (ventas) vs. Mermas, en Bs, últimos 6 meses — desde el
+ * kardex real (movimientoInventario). Es el indicador de merma que faltaba
+ * en el módulo de Inventario.
+ */
 export default function LineChartOne() {
+  const [datos, setDatos] = useState<MovimientosMensuales | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const obtenerDatos = async () => {
+      try {
+        const respuesta = await fetch("/api/inventarios/movimientosMensuales");
+        if (!respuesta.ok) {
+          throw new Error("Error al conectar con el servidor");
+        }
+        const json: MovimientosMensuales = await respuesta.json();
+        setDatos(json);
+      } catch (err) {
+        console.error(err);
+        setError("No se pudieron cargar los movimientos de inventario.");
+      } finally {
+        setCargando(false);
+      }
+    };
+    obtenerDatos();
+  }, []);
+
+  if (cargando) return <div className="p-4 text-gray-500">Cargando gráfica...</div>;
+  if (error) return <div className="p-4 text-red-500">{error}</div>;
+  if (!datos) return null;
+
   const options: ApexOptions = {
     legend: {
-      show: false, // Hide legend
+      show: true,
       position: "top",
       horizontalAlign: "left",
     },
-    colors: ["#465FFF", "#9CB9FF"], // Define line colors
+    colors: ["#465FFF", "#9CB9FF", "#F04438"], // Compras, Consumo, Mermas (rojo de alerta)
     chart: {
       fontFamily: "Outfit, sans-serif",
       height: 310,
-      type: "line", // Set the chart type to 'line'
+      type: "line",
       toolbar: {
-        show: false, // Hide chart toolbar
+        show: false,
       },
     },
     stroke: {
-      curve: "straight", // Define the line style (straight, smooth, or step)
-      width: [2, 2], // Line width for each dataset
+      curve: "smooth",
+      width: [2, 2, 3],
     },
-
     fill: {
       type: "gradient",
       gradient: {
-        opacityFrom: 0.55,
+        opacityFrom: 0.45,
         opacityTo: 0,
       },
     },
     markers: {
-      size: 0, // Size of the marker points
-      strokeColors: "#fff", // Marker border color
+      size: 0,
+      strokeColors: "#fff",
       strokeWidth: 2,
       hover: {
-        size: 6, // Marker size on hover
+        size: 6,
       },
     },
     grid: {
       xaxis: {
         lines: {
-          show: false, // Hide grid lines on x-axis
+          show: false,
         },
       },
       yaxis: {
         lines: {
-          show: true, // Show grid lines on y-axis
+          show: true,
         },
       },
     },
     dataLabels: {
-      enabled: false, // Disable data labels
+      enabled: false,
     },
     tooltip: {
-      enabled: true, // Enable tooltip
-      x: {
-        format: "dd MMM yyyy", // Format for x-axis tooltip
+      enabled: true,
+      y: {
+        formatter: (val: number) => `Bs ${val.toFixed(2)}`,
       },
     },
     xaxis: {
-      type: "category", // Category-based x-axis
-      categories: [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ],
+      type: "category",
+      categories: datos.labels,
       axisBorder: {
-        show: false, // Hide x-axis border
+        show: false,
       },
       axisTicks: {
-        show: false, // Hide x-axis ticks
+        show: false,
       },
       tooltip: {
-        enabled: false, // Disable tooltip for x-axis points
+        enabled: false,
       },
     },
     yaxis: {
       labels: {
         style: {
-          fontSize: "12px", // Adjust font size for y-axis labels
-          colors: ["#6B7280"], // Color of the labels
+          fontSize: "12px",
+          colors: ["#6B7280"],
         },
+        formatter: (val: number) => `Bs ${val.toFixed(0)}`,
       },
       title: {
-        text: "", // Remove y-axis title
+        text: "",
         style: {
           fontSize: "0px",
         },
@@ -109,18 +137,28 @@ export default function LineChartOne() {
   };
 
   const series = [
-    {
-      name: "Sales",
-      data: [180, 190, 170, 160, 175, 165, 170, 205, 230, 210, 240, 235],
-    },
-    {
-      name: "Revenue",
-      data: [40, 30, 50, 40, 55, 40, 70, 100, 110, 120, 150, 140],
-    },
+    { name: "Compras", data: datos.compras },
+    { name: "Consumo (ventas)", data: datos.consumo },
+    { name: "Mermas", data: datos.mermas },
   ];
+
   return (
     <div className="max-w-full overflow-x-auto custom-scrollbar">
-      
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-xs text-gray-500 dark:text-gray-400">
+          Últimos {datos.labels.length} meses, en bolivianos
+        </span>
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+            datos.mermaPctSobreConsumo > 8
+              ? "bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-400"
+              : "bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-400"
+          }`}
+          title="Mermas como % del consumo (ventas) del periodo"
+        >
+          Merma: {datos.mermaPctSobreConsumo.toFixed(1)}% del consumo
+        </span>
+      </div>
       <div id="chartEight" className="min-w-[450px]">
         <ReactApexChart
           options={options}

@@ -1,28 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { cookies } from 'next/headers';
-import { jwtVerify } from 'jose';
 import { errorResponse } from '@/lib/apiError';
-
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+import { requireEmpleado, esRespuestaError } from '@/lib/auth';
 
 export async function GET(req: Request) {
   try {
-    // 1. Autenticación (Seguridad: Solo la sucursal activa)
-    const cookieStore = await cookies();
-    const tokenSucursal = cookieStore.get("tokenSucursal")?.value;
-
-    if (!tokenSucursal) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
-    let sucursalId;
-    try {
-      const payload = await jwtVerify(tokenSucursal, secret);
-      sucursalId = (payload.payload as any)?.sucursalId || (payload.payload as any)?.id;
-    } catch {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 403 });
-    }
+    // 1. Autenticación y rol (dashboard gerencial)
+    const sesion = await requireEmpleado(["Administrador"]);
+    if (esRespuestaError(sesion)) return sesion;
+    const sucursalId = sesion.sucursalId;
 
     // 2. Calcular Rango de Fechas (Mes Actual)
     const now = new Date();
@@ -50,16 +36,31 @@ export async function GET(req: Request) {
       },
     });
 
+    // 3b. Conteo de pedidos distintos en el mismo rango
+    const pedidosDistintos = await prisma.historialVentas.groupBy({
+      by: ['pedido_id'],
+      where: {
+        sucursal_id: BigInt(sucursalId),
+        fecha_venta: {
+          gte: startOfMonth,
+          lte: endOfMonth,
+        },
+      },
+    });
+
     // 4. Formatear Resultado
     // Si no hay ventas, Prisma devuelve null, así que usamos el operador ?? 0
     const totalMesActual = Number(resultado._sum.venta_total ?? 0);
+    const pedidosCount = pedidosDistintos.length;
 
     return NextResponse.json({
       success: true,
       mes: month + 1, // Retornamos el número de mes para referencia (1-12)
       anio: year,
       total: totalMesActual, // El monto total en Bolivianos
-      formatted: `Bs ${totalMesActual.toFixed(2)}` // Formato listo para mostrar
+      formatted: `Bs ${totalMesActual.toFixed(2)}`, // Formato listo para mostrar
+      pedidosCount, // Cantidad de pedidos distintos del mes
+      pedidosFormatted: `${pedidosCount} pedidos`,
     });
 
   } catch (error: any) {

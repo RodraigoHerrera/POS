@@ -14,7 +14,9 @@ export default function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [nombre, setNombre] = useState("");
   const [direccion, setDireccion] = useState("");
-  const [correo, setCorreo] = useState("");
+  // Solo se captura la parte local del correo; el dominio "@smash.com" es fijo
+  // y se concatena al enviar (ver handleSubmit).
+  const [correoLocal, setCorreoLocal] = useState("");
   const [telefono, setTelefono] = useState("");
   const [contraseña, setContraseña] = useState("");
   const [error, setError] = useState("");
@@ -43,10 +45,10 @@ export default function SignUpForm() {
     if (!nombre) nuevosErrores.nombre = "El nombre es obligatorio";
     if (!direccion) nuevosErrores.direccion = "La dirección es obligatoria";
 
-    if (!correo) {
+    if (!correoLocal) {
       nuevosErrores.correo = "El correo es obligatorio";
-    } else if (!correo.endsWith("@gmail.com")) {
-      nuevosErrores.correo = "El correo debe terminar en @gmail.com";
+    } else if (!/^[a-zA-Z0-9._%+-]+$/.test(correoLocal)) {
+      nuevosErrores.correo = "El correo solo puede contener letras, números, puntos, guiones y guion bajo";
     }
 
     if (!telefono) {
@@ -74,6 +76,7 @@ export default function SignUpForm() {
     // Normalizamos el nombre y la dirección utilizando la función capitalizar
     const nombreFormateado = capitalizar(nombre);
     const direccionFormateada = capitalizar(direccion);
+    const correo = `${correoLocal.trim()}@smash.com`;
 
     // Realizamos una petición POST a la API para registrar la nueva sucursal
     const res = await fetch("/api/auth/register", {
@@ -132,6 +135,7 @@ export default function SignUpForm() {
                       placeholder="Nombre de la sucursal"
                       value={nombre}
                       onChange={(e) => setNombre(e.target.value)}
+                      style={{ color: "var(--color-gray-25)" }}
                     />
                     {erroresCampo.nombre && (
                       <p className="text-sm text-error-500">{erroresCampo.nombre}</p>
@@ -146,6 +150,7 @@ export default function SignUpForm() {
                       placeholder="Dirección de la sucursal"
                       value={direccion}
                       onChange={(e) => setDireccion(e.target.value)}
+                      style={{ color: "var(--color-gray-25)" }}
                     />
                     {erroresCampo.direccion && (
                       <p className="text-sm text-error-500">{erroresCampo.direccion}</p>
@@ -159,12 +164,19 @@ export default function SignUpForm() {
                     <Label>
                       Correo<span className="text-error-500">*</span>
                     </Label>
-                    <Input
-                      type="email"
-                      placeholder="Correo de la sucursal"
-                      value={correo}
-                      onChange={(e) => setCorreo(e.target.value)}
-                    />
+                    <div className="flex items-stretch gap-2">
+                      <Input
+                        type="text"
+                        placeholder="ejemplo"
+                        value={correoLocal}
+                        onChange={(e) => setCorreoLocal(e.target.value.split("@")[0])}
+                        style={{ color: "var(--color-gray-25)" }}
+                      />
+                      <span className="flex h-11 shrink-0 items-center whitespace-nowrap rounded-lg border border-gray-700 bg-white/5 px-3 text-sm text-gray-400">
+                        @smash.com
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-400">No es necesario escribir &quot;@smash.com&quot;, se agrega automáticamente.</p>
                     {erroresCampo.correo && (
                       <p className="text-sm text-error-500">{erroresCampo.correo}</p>
                     )}
@@ -178,6 +190,7 @@ export default function SignUpForm() {
                       placeholder="Teléfono de la sucursal"
                       value={telefono}
                       onChange={(e) => setTelefono(e.target.value)}
+                      style={{ color: "var(--color-gray-25)" }}
                     />
                     {erroresCampo.telefono && (
                       <p className="text-sm text-error-500">{erroresCampo.telefono}</p>
@@ -196,6 +209,7 @@ export default function SignUpForm() {
                       type={showPassword ? "text" : "password"}
                       value={contraseña}
                       onChange={(e) => setContraseña(e.target.value)}
+                      style={{ color: "var(--color-gray-25)" }}
                     />
                     {/* Ícono para alternar la visibilidad de la contraseña */}
                     <span

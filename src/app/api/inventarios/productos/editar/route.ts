@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from "@/lib/db";
 import { errorResponse } from "@/lib/apiError";
+import { requireEmpleado, esRespuestaError } from "@/lib/auth";
 
 // --- SOLUCIÓN BIGINT ---
 // Esto define cómo se debe comportar BigInt al convertirse a JSON.
@@ -24,6 +25,9 @@ interface ProductUpdateData {
 
 export async function PUT(request: Request) {
   try {
+    const sesion = await requireEmpleado(["Administrador"]);
+    if (esRespuestaError(sesion)) return sesion;
+
     // 1. Parsear el cuerpo de la petición
     const body: ProductUpdateData = await request.json();
     

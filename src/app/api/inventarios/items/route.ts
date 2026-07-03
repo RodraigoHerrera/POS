@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 // IMPORTANTE: Ajusta esta importación a donde tengas tu instancia de Prisma o conexión a BD
 import { prisma } from "@/lib/db";
 import { serializeBigInt } from "@/lib/serialize";
+import { requireEmpleado, esRespuestaError } from "@/lib/auth";
 
 // Esto asegura que la API no se guarde en caché y siempre traiga datos frescos
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    const sesion = await requireEmpleado(["Administrador"]);
+    if (esRespuestaError(sesion)) return sesion;
+
     // Consulta a la base de datos
     const items = await prisma.item.findMany({
       where: {
@@ -16,12 +20,13 @@ export async function GET() {
       },
       select: {
         id: true,
-        nombre: true, 
+        nombre: true,
         tipo: true,
         sku: true,
         unidad_code: true,
+        costo_estandar: true,
         // Puedes traer más datos si los necesitas para mostrarlos en el select
-        // codigo: true, 
+        // codigo: true,
       },
       orderBy: {
         nombre: 'asc',

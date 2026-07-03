@@ -1,36 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db"; // Ajusta el import según tu estructura
-import { jwtVerify } from "jose";
-import { cookies } from "next/headers";
 import { serializeBigInt } from "@/lib/serialize";
 import { errorResponse } from "@/lib/apiError";
-
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-
-async function getSucursalIdFromToken(token: string) {
-  try {
-    const { payload } = await jwtVerify(token, secret);
-    return (payload as any)?.sucursalId as string | undefined;
-  } catch (error) {
-    return null;
-  }
-}
+import { requireEmpleado, esRespuestaError } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
+    const sesion = await requireEmpleado(["Administrador"]);
+    if (esRespuestaError(sesion)) return sesion;
+    const sucursalIdStr = sesion.sucursalId;
+
     const body = await req.json();
-    const cookieStore = await cookies();
-    const tokenSucursal = cookieStore.get("tokenSucursal")?.value;
-
-    if (!tokenSucursal) {
-      return NextResponse.json({ message: "No autorizado" }, { status: 401 });
-    }
-
-    const sucursalIdStr = await getSucursalIdFromToken(tokenSucursal);
-
-    if (!sucursalIdStr) {
-      return NextResponse.json({ message: "Token inválido" }, { status: 403 });
-    }
 
     const {
       item: item_id,
@@ -40,6 +20,7 @@ export async function POST(req: Request) {
       fechaVenc: fecha_vencimiento,
       referencia,
       motivo,
+      proveedor: proveedor_id,
     } = body;
 
     // Validación mínima
@@ -57,6 +38,14 @@ export async function POST(req: Request) {
     // =====================================================================
     // INICIO DE LA LÓGICA DE ACTUALIZACIÓN
     // =====================================================================
+
+    // 0️⃣ Registrar el proveedor preferido del item (usado luego por el MRP)
+    if (proveedor_id) {
+      await prisma.item.update({
+        where: { id: BigInt(item_id) },
+        data: { proveedor_id: BigInt(proveedor_id) },
+      });
+    }
 
     // 1️⃣ Crear el lote
     const lote = await prisma.lote.create({

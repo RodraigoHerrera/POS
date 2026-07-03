@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-
+import { requireEmpleado, esRespuestaError } from "@/lib/auth";
 
 export async function PUT(request: Request) {
   try {
+    const sesion = await requireEmpleado(["Administrador"]);
+    if (esRespuestaError(sesion)) return sesion;
+
     // 1. Leemos el JSON exacto que envía el frontend
     const body = await request.json();
     

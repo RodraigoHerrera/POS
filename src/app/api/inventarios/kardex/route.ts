@@ -1,29 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { cookies } from 'next/headers';
-import { jwtVerify } from 'jose';
 import { errorResponse } from '@/lib/apiError';
-
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+import { requireEmpleado, esRespuestaError } from '@/lib/auth';
 
 export async function GET(req: Request) {
   try {
-    // 1. Validar Sesión de Sucursal
-    const cookieStore = await cookies();
-    const tokenSucursal = cookieStore.get("tokenSucursal")?.value;
-
-    if (!tokenSucursal) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
-    let sucursalId;
-    try {
-      const payload = await jwtVerify(tokenSucursal, secret);
-      // Extraemos el ID de la sucursal del token
-      sucursalId = (payload.payload as any)?.sucursalId || (payload.payload as any)?.id;
-    } catch {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 403 });
-    }
+    // 1. Validar Sesión y rol
+    const sesion = await requireEmpleado(["Administrador"]);
+    if (esRespuestaError(sesion)) return sesion;
+    const sucursalId = sesion.sucursalId;
 
     // 2. Obtener parámetros de filtrado opcionales de la URL (Query Params)
     const { searchParams } = new URL(req.url);

@@ -27,7 +27,7 @@ export default function recetas() {
           {loading
             ? Array.from({ length: 4 }).map((_, i) => <ListCardSkeleton key={i} />)
             : item
-                .filter((i) => i.tipo === "vendible")
+                .filter((i) => i.tipo === "vendible" || i.tipo === "prep")
                 .map((item) => (
                   <RecetasCard key={item.id} itemData={item} onSaved={cargarItems} />
                 ))}

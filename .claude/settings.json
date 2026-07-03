@@ -1,4 +1,12 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const net=require\\('net'\\);const s=net.connect\\(3306,'localhost',\\(\\)=>{console.log\\('MySQL UP'\\);s.end\\(\\)}\\);s.on\\('error',e=>console.log\\('MySQL DOWN:',e.code\\)\\)\")",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
+      "Bash(break)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {

@@ -38,3 +38,13 @@ next-env.d.ts
 
 package-lock.json
 yarn.lock
+.gstack/
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# secrets
+.env

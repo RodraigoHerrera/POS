@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { serializeBigInt } from "@/lib/serialize";
+import { requireEmpleado, esRespuestaError } from "@/lib/auth";
 
 // Esto asegura que la API no se guarde en caché y siempre traiga datos frescos
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    // Catálogo de venta: lo usa tanto el cajero (POS) como el admin, por eso
+    // no se restringe por rol — solo se exige estar autenticado como empleado.
+    const sesion = await requireEmpleado();
+    if (esRespuestaError(sesion)) return sesion;
+
     // Consulta a la base de datos
     const items = await prisma.producto.findMany({
       where: {

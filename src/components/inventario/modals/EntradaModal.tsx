@@ -15,9 +15,11 @@ type Props = {
   onClose: () => void;
   // Ya no necesitamos pasar itemsOptions por props, el modal se encarga
   onSaved?: () => void;
+  // Preselecciona un item (viene de "Reponer" en StockAlertsCard)
+  presetItemId?: string;
 };
 
-export default function EntradaModal({ isOpen, onClose, onSaved }: Props) {
+export default function EntradaModal({ isOpen, onClose, onSaved, presetItemId }: Props) {
   const [isSaving, setIsSaving] = useState(false);
 
   // Estados para las listas dinámicas
@@ -68,6 +70,11 @@ export default function EntradaModal({ isOpen, onClose, onSaved }: Props) {
           setItemsOptions(mappedItems);
           setProvOptions(mappedProv);
 
+          // Preselecciona el item venido de "Reponer" (StockAlertsCard) una vez cargadas las opciones
+          if (presetItemId) {
+            setPayload((p) => ({ ...p, item: presetItemId }));
+          }
+
         } catch (error) {
           console.error("Error cargando datos:", error);
           // Opcional: Mostrar toast de error
@@ -77,7 +84,7 @@ export default function EntradaModal({ isOpen, onClose, onSaved }: Props) {
 
       fetchData();
     }
-  }, [isOpen]);
+  }, [isOpen, presetItemId]);
 
   const handleText =
     (key: keyof typeof payload) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -153,8 +160,11 @@ export default function EntradaModal({ isOpen, onClose, onSaved }: Props) {
                 <div className="col-span-2 lg:col-span-1">
                   <Label className="text-black">Item</Label>
                   <Select
+                    // key fuerza remount para reflejar defaultValue cuando llega el preset
+                    key={payload.item || "sin-preset"}
                     options={itemsOptions}
                     placeholder={"Seleccionar Item"}
+                    defaultValue={payload.item}
                     onChange={handleSelect("item")}
                     className="dark:bg-dark-900"
                   />

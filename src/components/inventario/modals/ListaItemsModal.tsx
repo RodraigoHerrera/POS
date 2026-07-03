@@ -15,6 +15,8 @@ interface InventoryItem {
   tipo: string; // vendible, insumo, prep
   unidad_code: string;
   activo: boolean;
+  // Costo de referencia fijo para costeo teórico. null = usa costo_promedio (fallback automático).
+  costo_estandar: string | null;
   // Relación con el inventario (mantenemos la interfaz aunque no la mostremos en la tabla)
   inventario?: {
     stock: string;
@@ -88,6 +90,37 @@ export default function ListaItemsModal({ isOpen, onClose, categoriasOptions }: 
     alert("Función de exportar pendiente");
   };
 
+  // Fija o limpia (campo vacío) el costo estándar de un insumo. Sin valor,
+  // el costeo teórico cae automáticamente a costo_promedio.
+  const guardarCostoEstandar = async (itemId: string, valor: string) => {
+    const costoEstandar = valor.trim() === "" ? null : Number(valor);
+    if (costoEstandar !== null && (Number.isNaN(costoEstandar) || costoEstandar < 0)) {
+      alert("El costo estándar debe ser un número válido");
+      return;
+    }
+    try {
+      const res = await fetch("/api/inventarios/costoEstandar", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId, costoEstandar }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.message || "No se pudo guardar el costo estándar");
+        return;
+      }
+      setItems((prev) =>
+        prev.map((it) =>
+          it.id === itemId
+            ? { ...it, costo_estandar: costoEstandar === null ? null : String(costoEstandar) }
+            : it
+        )
+      );
+    } catch (error) {
+      console.error("Error guardando costo estándar:", error);
+    }
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-[1200px] m-4">
       <div className="no-scrollbar relative w-full max-w-[1200px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
@@ -142,14 +175,17 @@ export default function ListaItemsModal({ isOpen, onClose, categoriasOptions }: 
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Nombre Item</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Tipo</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Unidad</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400" title="Usado en el costeo teórico (BOM). Vacío = usa el costo promedio de compra.">
+                    Costo estándar
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                 {loading ? (
-                  Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} columns={4} />)
+                  Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} columns={5} />)
                 ) : filteredItems.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
                       No se encontraron items.
                     </td>
                   </tr>
@@ -168,6 +204,20 @@ export default function ListaItemsModal({ isOpen, onClose, categoriasOptions }: 
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                           {item.unidad_code}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            defaultValue={item.costo_estandar ?? ""}
+                            placeholder="auto (promedio)"
+                            onBlur={(e) => {
+                              if (e.target.value === (item.costo_estandar ?? "")) return;
+                              guardarCostoEstandar(item.id, e.target.value);
+                            }}
+                            className="w-32 rounded-md border border-gray-300 bg-white px-2 py-1 text-right text-sm text-gray-800 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                          />
                         </td>
                       </tr>
                     );

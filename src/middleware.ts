@@ -49,6 +49,15 @@ export async function middleware(request: NextRequest) {
         console.log("🚫 tokenEmpleado inválido o expirado");
         return NextResponse.redirect(new URL("/usuarios", request.url));
       }
+
+      // /admin es exclusivo de Administrador. /cajero acepta ambos roles
+      // (un administrador también puede operar la caja).
+      const rol = (validEmpleado as any)?.rol;
+      if (pathname.startsWith("/admin") && rol !== "Administrador") {
+        console.log(`🚫 Rol "${rol}" sin acceso a /admin`);
+        return NextResponse.redirect(new URL("/cajero", request.url));
+      }
+
       console.log("✅ tokenSucursal y tokenEmpleado válidos:", {
         sucursal: validSucursal,
         empleado: validEmpleado,

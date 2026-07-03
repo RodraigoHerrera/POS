@@ -2,10 +2,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { serializeBigInt } from "@/lib/serialize";
+import { requireEmpleado, esRespuestaError } from "@/lib/auth";
 
 // Crea un nuevo item en el catálogo de inventario
 export async function POST(req: Request) {
   try {
+    const sesion = await requireEmpleado(["Administrador"]);
+    if (esRespuestaError(sesion)) return sesion;
+
     const body = await req.json();
 
     // Campos esperados

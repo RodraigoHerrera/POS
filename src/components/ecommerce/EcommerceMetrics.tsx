@@ -1,12 +1,14 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Badge from "../ui/badge/Badge";
-import { ArrowDownIcon, ArrowUpIcon, BoxIconLine, GroupIcon } from "@/icons";
+import { ArrowDownIcon, ArrowUpIcon, BoxIconLine, ListIcon } from "@/icons";
 import { Skeleton } from "../ui/skeleton/Skeleton";
 
 export const EcommerceMetrics = () => {
   // Estado para el monto de ventas
   const [ventasMes, setVentasMes] = useState<string>("");
+  // Estado para el conteo de pedidos del mes
+  const [pedidosMes, setPedidosMes] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   // Efecto para obtener el total del mes actual al montar el componente
@@ -19,12 +21,15 @@ export const EcommerceMetrics = () => {
         if (data.success) {
           // Usamos 'formatted' que ya viene como "Bs 123.00"
           setVentasMes(data.formatted);
+          setPedidosMes(data.pedidosFormatted);
         } else {
           setVentasMes("Bs 0.00");
+          setPedidosMes("0 pedidos");
         }
       } catch (error) {
         console.error("Error cargando métricas:", error);
         setVentasMes("Error");
+        setPedidosMes("Error");
       } finally {
         setLoading(false);
       }
@@ -35,25 +40,6 @@ export const EcommerceMetrics = () => {
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6">
-      {/* <!-- Metric Item Start --> */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-xl dark:bg-gray-800">
-          <GroupIcon className="text-gray-800 size-6 dark:text-white/90" />
-        </div>
-
-        <div className="flex items-end justify-between mt-5">
-          <div>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              Clientes
-            </span>
-            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
-              3,782
-            </h4>
-          </div>
-        </div>
-      </div>
-      {/* <!-- Metric Item End --> */}
-
       {/* <!-- Metric Item Start (VENTAS DINÁMICAS) --> */}
       <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
         <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-xl dark:bg-gray-800">
@@ -73,6 +59,28 @@ export const EcommerceMetrics = () => {
             )}
           </div>
 
+        </div>
+      </div>
+      {/* <!-- Metric Item End --> */}
+
+      {/* <!-- Metric Item Start (PEDIDOS DINÁMICOS) --> */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+        <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-xl dark:bg-gray-800">
+          <ListIcon className="text-gray-800 size-6 dark:text-white/90" />
+        </div>
+        <div className="flex items-end justify-between mt-5">
+          <div>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              Pedidos (Mes Actual)
+            </span>
+            {loading ? (
+              <Skeleton className="mt-2 h-7 w-24" />
+            ) : (
+              <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
+                {pedidosMes}
+              </h4>
+            )}
+          </div>
         </div>
       </div>
       {/* <!-- Metric Item End --> */}

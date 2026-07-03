@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { serializeBigInt } from "@/lib/serialize";
+import { requireEmpleado, esRespuestaError } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    const sesion = await requireEmpleado(["Administrador"]);
+    if (esRespuestaError(sesion)) return sesion;
+
     // Consulta a la base de datos
     // Asumimos que tu modelo en schema.prisma se llama "proveedor"
     const proveedores = await prisma.proveedor.findMany({

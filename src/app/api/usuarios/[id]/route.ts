@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET(
   request: Request,
-  context: { params: { id: string } | Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Esperar a que se resuelvan los parámetros dinámicos

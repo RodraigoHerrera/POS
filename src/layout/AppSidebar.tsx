@@ -39,6 +39,11 @@ const navItems: NavItem[] = [
     path: "/admin/inventario",
   },
   {
+    icon: <BoxCubeIcon />,
+    name: "Planificación (MRP)",
+    path: "/admin/mrp",
+  },
+  {
     icon: <UserCircleIcon />,
     name: "Usuarios",
     path: "/admin/usuarios",

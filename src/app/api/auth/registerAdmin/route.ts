@@ -1,35 +1,49 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcrypt";
-import { jwtVerify } from "jose";
-import { cookies } from "next/headers";
 import { serializeBigInt } from "@/lib/serialize";
-
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-
-async function getSucursalIdFromToken(token: string) {
-  try {
-    const { payload } = await jwtVerify(token, secret);
-    // En tu login firmamos sucursalId como string, no number
-    return (payload as any)?.sucursalId as string | undefined;
-  } catch (error) {
-    return null;
-  }
-}
-
+import { obtenerSesionSucursal, obtenerSesionEmpleado } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { nombre, correo, celular, contraseña, usuario, rol } = body;
+    let { nombre, correo, celular, contraseña, usuario, rol } = body;
 
-    const cookieStore = await cookies();
-    const tokenSucursal = cookieStore.get("tokenSucursal")?.value;
-    
-    const sucursalIdStr = await getSucursalIdFromToken(tokenSucursal!);
-    
-    if (!sucursalIdStr) {
+    if (!correo || !/^[a-zA-Z0-9._%+-]+@smash\.com$/i.test(correo)) {
+      return NextResponse.json(
+        { message: "El correo debe terminar en @smash.com" },
+        { status: 400 }
+      );
+    }
+
+    const sesionSucursal = await obtenerSesionSucursal();
+    if (!sesionSucursal) {
       return NextResponse.json({ message: "Token inválido" }, { status: 403 });
+    }
+    const sucursalIdStr = sesionSucursal.sucursalId;
+
+    // Este endpoint sirve para dos casos:
+    //  1) Bootstrap: la sucursal recién se creó (signup/newadmin) y todavía
+    //     no tiene NINGÚN empleado — se permite sin tokenEmpleado, pero se
+    //     fuerza rol "Administrador" sin importar lo que mande el body.
+    //  2) Gestión normal (/admin/usuarios): la sucursal ya tiene empleados,
+    //     así que se exige una sesión de empleado con rol Administrador —
+    //     de lo contrario, cualquiera con solo tokenSucursal podría crearse
+    //     un admin nuevo o agregar empleados sin permiso.
+    const totalEmpleados = await prisma.empleados.count({
+      where: { sucursal_id: BigInt(sucursalIdStr) },
+    });
+
+    if (totalEmpleados === 0) {
+      rol = "Administrador";
+    } else {
+      const sesionEmpleado = await obtenerSesionEmpleado();
+      if (!sesionEmpleado || sesionEmpleado.rol !== "Administrador") {
+        return NextResponse.json(
+          { message: "Solo un administrador puede registrar nuevos empleados" },
+          { status: 403 }
+        );
+      }
     }
 
     // Verificar si ya existe un administrador con el correo proporcionado

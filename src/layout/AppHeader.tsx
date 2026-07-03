@@ -126,9 +126,9 @@ const AppHeader: React.FC = () => {
             </svg>
           </button>
 
-          <div className="hidden lg:block">
+          {/* <div className="hidden lg:block"> */}
             {/* <!-- Search Form --> */}
-            <form>
+            {/* <form>
               <div className="relative">
                 
                 <input
@@ -159,7 +159,7 @@ const AppHeader: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
+          </div> */}
         </div>
         
         <div

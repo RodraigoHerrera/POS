@@ -1,13 +1,13 @@
 // app/inventario/page.tsx
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import BarChartOne from "@/components/charts/bar/BarChartOne";
 import LineChartOne from "@/components/charts/line/LineChartOne";
+import StockAlertsCard from "@/components/inventario/StockAlertsCard";
 import Button from "@/components/ui/button/Button";
-import { PlusIcon, TrashBinIcon, ListIcon, AlertIcon, BoxCubeIcon } from "@/icons";
+import { PlusIcon, TrashBinIcon, ListIcon, GroupIcon } from "@/icons";
 import { useModal } from "@/hooks/useModal";
 
 // Modales desacoplados (ajusta la ruta si los guardaste en otro lugar)
@@ -28,6 +28,9 @@ export default function Inventario() {
   const nuevoItemModal = useModal();
   const listaItemsModal = useModal();
   const alertasModal = useModal();
+
+  // Item preseleccionado en EntradaModal cuando se llega vía "Reponer" desde StockAlertsCard
+  const [presetItemId, setPresetItemId] = useState<string | undefined>(undefined);
 
   // Opciones (las mismas que tenías)
   const categoriasOptions = useMemo(
@@ -56,58 +59,62 @@ export default function Inventario() {
 
   return (
     <>
-      <div className="space-y-10 sm:space-y-6">
-        {/* Header que ya tenías */}
-        <h1 className="text-center mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
-          INVENTARIO
+      <div className="space-y-8">
+        {/* Header */}
+        <h1 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
+          Inventario
         </h1>
 
-        <h2 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90  ">
-          Gestión de Items
-        </h2>
+        {/* Alertas de stock (ancho completo) */}
+        <StockAlertsCard
+          onReponer={(itemId) => {
+            setPresetItemId(itemId);
+            entradaModal.openModal();
+          }}
+          onVerTodos={listaItemsModal.openModal}
+        />
 
-        {/* Tus cards con gráficos */}
-        <div className="grid grid-cols-2 space-x-6">
-          <div className="rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/3">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-              Disponibilidad de Items críticos
-            </h3>
-            <BarChartOne />
-          </div>
+        <div className="rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/3">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
+            Compras, Consumo y Mermas
+          </h2>
+          <LineChartOne />
+        </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/3">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
-              Evolución de inventario mensual
-            </h2>
-            <LineChartOne />
+        {/* Operación diaria */}
+        <div>
+          <h4 className="mb-4 font-bold text-gray-800 text-title-sm dark:text-white/90">
+            Operación diaria
+          </h4>
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Button size="md" variant="primary" startIcon={<PlusIcon />} onClick={entradaModal.openModal}>
+              Registrar entrada
+            </Button>
+            <Button size="md" variant="outline" startIcon={<TrashBinIcon />} onClick={mermasModal.openModal}>
+              Registrar mermas
+            </Button>
+            <Button size="md" variant="outline" startIcon={<ListIcon />} onClick={kardexModal.openModal}>
+              Consultar Kardex
+            </Button>
+            <Button size="md" variant="outline" startIcon={<ListIcon />} onClick={listaItemsModal.openModal}>
+              Lista de items
+            </Button>
           </div>
         </div>
 
-        {/* Botoneras/Operaciones tal como estaban */}
-        <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">Operaciones</h4>
-
-        <div className="grid grid-cols-3 space-x-10">
-          <Button size="md" variant="outline" startIcon={<PlusIcon />} onClick={entradaModal.openModal}>
-            Registrar entrada de items
-          </Button>
-          <Button size="md" variant="outline" startIcon={<TrashBinIcon />} onClick={mermasModal.openModal}>
-            Registrar mermas
-          </Button>
-          <Button size="md" variant="outline" startIcon={<ListIcon />} onClick={kardexModal.openModal}>
-            Consultar Kardex
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-3 space-x-10">
-          <Button size="md" variant="outline" startIcon={<PlusIcon />} onClick={nuevoItemModal.openModal}>
-            Registrar nuevo item
-          </Button>
-          <Button size="md" variant="outline" startIcon={<ListIcon />} onClick={listaItemsModal.openModal}>
-            Lista de items
-          </Button>
-          <Button size="md" variant="outline" startIcon={<BoxCubeIcon />} onClick={alertasModal.openModal}>
-            Registrar nuevo proveedor
-          </Button>
+        {/* Catálogo y proveedores */}
+        <div>
+          <h4 className="mb-4 font-bold text-gray-800 text-title-sm dark:text-white/90">
+            Catálogo y proveedores
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Button size="sm" variant="outline" startIcon={<PlusIcon />} onClick={nuevoItemModal.openModal}>
+              Registrar nuevo item
+            </Button>
+            <Button size="sm" variant="outline" startIcon={<GroupIcon />} onClick={alertasModal.openModal}>
+              Registrar nuevo proveedor
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -124,8 +131,12 @@ export default function Inventario() {
 
       <EntradaModal
         isOpen={entradaModal.isOpen}
-        onClose={entradaModal.closeModal}
+        onClose={() => {
+          entradaModal.closeModal();
+          setPresetItemId(undefined);
+        }}
         onSaved={handleDataChanged}
+        presetItemId={presetItemId}
       />
 
       <MermasModal

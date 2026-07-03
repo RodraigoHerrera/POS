@@ -9,7 +9,6 @@ import { useModal } from "@/hooks/useModal";
 import { Modal } from "@/components/ui/modal";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
-import { EnvelopeIcon } from "@/icons";
 import Switch from "@/components/form/switch/Switch";
 
 interface Empleado {
@@ -75,7 +74,7 @@ export default function UsuariosSucursal() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nombre: form.nombre,
-          correo: form.correo,
+          correo: `${form.correo.trim()}@smash.com`,
           celular: form.celular,
           contraseña: form.contraseña,
           usuario: form.usuario,
@@ -172,18 +171,23 @@ export default function UsuariosSucursal() {
 
                     <div className="col-span-2">
                       <Label className="text-black">Correo Electrónico</Label>
-                      <div className="relative">
+                      <div className="flex items-stretch gap-2">
                         <Input
-                          placeholder="info@gmail.com"
+                          placeholder="ejemplo"
                           type="text"
-                          className="pl-[62px] text-gray-500 dark:border-gray-800 dark:text-gray-400"
+                          className="text-gray-500 dark:border-gray-800 dark:text-gray-400"
                           value={form.correo}
-                          onChange={actualizarCampo("correo")}
+                          onChange={(e) =>
+                            setForm((prev) => ({ ...prev, correo: e.target.value.split("@")[0] }))
+                          }
                         />
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 border-r border-gray-200 px-3.5 py-3 text-gray-500 dark:border-gray-800 dark:text-gray-400">
-                          <EnvelopeIcon />
+                        <span className="flex h-11 shrink-0 items-center whitespace-nowrap rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-500 dark:border-gray-700 dark:bg-white/5 dark:text-gray-400">
+                          @smash.com
                         </span>
                       </div>
+                      <p className="mt-1 text-xs text-gray-400">
+                        No es necesario escribir &quot;@smash.com&quot;, se agrega automáticamente.
+                      </p>
                     </div>
 
                     <div className="col-span-2">

@@ -54,6 +54,7 @@ model sucursales {
   producciones  produccion[]
   cajas caja[] // Relación inversa
   pedidos       pedido[]
+  mrp_corridas  mrpCorrida[]
 }
 
 // ==========================================
@@ -91,6 +92,19 @@ model item {
   unidad_code   String   @db.VarChar(16) // "u", "g", "kg", "ml", "L", etc.
   activo        Boolean  @default(true)
 
+  // Compras / MRP
+  lead_time_dias Int      @default(0) // días entre emitir la OC y recibir el insumo
+  vida_util_dias Int?                 // días de vida útil ya recibido (tope de caducidad en MRP)
+  proveedor_id   BigInt?
+  proveedor      proveedor? @relation(fields: [proveedor_id], references: [id])
+
+  // Costo estándar para costeo teórico (BOM). Opcional: si es null, el cálculo
+  // de costo teórico cae a costo_promedio (inventarioSucursal). Fijar este
+  // valor "congela" el teórico frente a fluctuaciones de compra, aislando la
+  // brecha real-vs-teórico a causas operativas (merma, sobre-porcionamiento)
+  // en lugar de variación de precio de mercado.
+  costo_estandar Decimal? @db.Decimal(18, 4)
+
   // Relaciones
   receta_vendible   receta?
   receta_items      recetaItem[]
@@ -102,11 +116,13 @@ model item {
   prod_items        produccionItem[]    @relation("ProduccionItemInsumo")
   mods_as_vendible  modificadorProducto[] @relation("ModVendible")
   mods_as_insumo    modificadorProducto[] @relation("ModInsumo")
+  mrp_necesidades   mrpNecesidadInsumo[]
 
   productos        producto[]
   extras_en_pedidos pedidoItemExtra[]
 
   @@index([tipo])
+  @@index([proveedor_id])
 }
 
 model receta {
@@ -217,7 +233,8 @@ model proveedor {
   telefono String? @db.VarChar(50)
   email    String?
 
-  ordenes  ordenCompra[]
+  ordenes        ordenCompra[]
+  items_preferidos item[] // insumos para los que este es el proveedor preferido
 }
 
 model ordenCompra {
@@ -230,10 +247,15 @@ model ordenCompra {
   total        Decimal     @db.Decimal(18, 2)
   creado_en    DateTime    @default(now())
 
+  // Trazabilidad: qué corrida de MRP generó esta orden (null si fue manual)
+  mrp_corrida    mrpCorrida? @relation(fields: [mrp_corrida_id], references: [id])
+  mrp_corrida_id BigInt?
+
   items ordenCompraItem[]
 
   @@index([proveedor_id])
   @@index([creado_en])
+  @@index([mrp_corrida_id])
 }
 
 model ordenCompraItem {
@@ -288,6 +310,9 @@ model modificadorProducto {
   item_insumo      item   @relation("ModInsumo", fields: [item_insumo_id], references: [id])
   item_insumo_id   BigInt
   delta_cantidad   Decimal @db.Decimal(18, 6)
+  // Precio que se cobra al cliente por unidad de producto con este extra
+  // aplicado (independiente del costo del insumo que consume).
+  precio           Decimal @default(0) @db.Decimal(18, 2)
 
   @@index([item_vendible_id])
 }
@@ -313,7 +338,8 @@ model producto {
   item_inventario    item?   @relation(fields: [item_inventario_id], references: [id])
   item_inventario_id BigInt?
 
-  pedido_items pedidoItem[] 
+  pedido_items pedidoItem[]
+  mrp_forecast mrpForecastDetalle[]
 
   @@index([categoria])
 }
@@ -438,7 +464,10 @@ model pedidoItem {
   subtotal      Decimal   @db.Decimal(18, 2)
 
   costo_real    Decimal? @default(0) @db.Decimal(18, 4)
-  
+  // Costo teórico = receta (BOM) × costo_promedio del insumo en la sucursal al momento de la venta.
+  // Permite calcular la brecha costo_real vs costo_teorico por venta (diagnóstico central del proyecto).
+  costo_teorico Decimal? @default(0) @db.Decimal(18, 4)
+
   notas         String?   @db.VarChar(255) // "Sin cebolla", "Bien cocido"
   
   // Relación con extras (si cobras por el extra de tocino, va aquí)
@@ -508,9 +537,14 @@ model historialVentas {
   precio_unitario Decimal  @db.Decimal(18, 2) // A cuánto lo vendiste
   venta_total     Decimal  @db.Decimal(18, 2) // precio * cantidad
   
-  costo_unitario  Decimal  @db.Decimal(18, 4) // Cuánto te costó (suma de insumos FEFO)
+  costo_unitario  Decimal  @db.Decimal(18, 4) // Cuánto te costó realmente (FEFO)
   costo_total     Decimal  @db.Decimal(18, 4) // costo_unit * cantidad
   margen_ganancia Decimal  @db.Decimal(18, 4) // venta - costo
+
+  // Costo teórico = receta (BOM) × costo_promedio del insumo, snapshot al momento de la venta.
+  // costo_total - costo_teorico_total = brecha en Bs para esta línea de venta.
+  costo_teorico_unitario Decimal @default(0) @db.Decimal(18, 4)
+  costo_teorico_total    Decimal @default(0) @db.Decimal(18, 4)
 
   // Contexto de la Venta
   nombre_cliente  String?  @db.VarChar(255)
@@ -523,4 +557,64 @@ model historialVentas {
   @@index([fecha_venta])
   @@index([sucursal_id])
   @@index([sku_producto])
+}
+
+// ==========================================
+// MRP: Pronóstico → MPS → Explosión de materiales
+// ==========================================
+
+// Cabecera de una corrida del pipeline de MRP para una sucursal.
+model mrpCorrida {
+  id             BigInt     @id @default(autoincrement())
+  sucursal       sucursales @relation(fields: [sucursal_id], references: [id])
+  sucursal_id    BigInt
+  horizonte_dias Int
+  metodo         String     @db.VarChar(30) // "suavizacion_exponencial" | "promedio_movil"
+  parametros     Json?
+  empleado_id    BigInt?
+  creado_en      DateTime   @default(now())
+
+  forecastDetalle  mrpForecastDetalle[]
+  necesidades      mrpNecesidadInsumo[]
+  ordenesGeneradas ordenCompra[]
+
+  @@index([sucursal_id, creado_en])
+}
+
+// Pronóstico de demanda y MPS (cantidad a producir) por producto y periodo.
+model mrpForecastDetalle {
+  id                    BigInt     @id @default(autoincrement())
+  corrida               mrpCorrida @relation(fields: [corrida_id], references: [id])
+  corrida_id            BigInt
+  producto              producto   @relation(fields: [producto_id], references: [id])
+  producto_id           BigInt
+  periodo_inicio        DateTime
+  periodo_fin           DateTime
+  cantidad_pronosticada Decimal    @db.Decimal(18, 3)
+  mape_pct              Decimal?   @db.Decimal(6, 2)
+  mps_qty               Decimal    @db.Decimal(18, 3)
+
+  @@index([corrida_id])
+  @@index([producto_id])
+}
+
+// Necesidad bruta/neta de un insumo comprable, resultado de explotar el MPS
+// contra las recetas (multinivel) y netear contra stock/entradas/seguridad.
+model mrpNecesidadInsumo {
+  id                     BigInt     @id @default(autoincrement())
+  corrida                mrpCorrida @relation(fields: [corrida_id], references: [id])
+  corrida_id             BigInt
+  item                   item       @relation(fields: [item_id], references: [id])
+  item_id                BigInt
+  necesidad_bruta        Decimal    @db.Decimal(18, 3)
+  stock_actual           Decimal    @db.Decimal(18, 3)
+  entradas_programadas   Decimal    @db.Decimal(18, 3)
+  stock_seguridad        Decimal    @db.Decimal(18, 3)
+  necesidad_neta         Decimal    @db.Decimal(18, 3)
+  fecha_sugerida_emision DateTime
+  nivel_explosion        Int        @default(0)
+  observaciones          String?    @db.VarChar(255)
+
+  @@index([corrida_id])
+  @@index([item_id])
 }

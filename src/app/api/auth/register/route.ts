@@ -9,7 +9,12 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { nombre, direccion, correo, telefono, contraseña } = body;
 
-    
+    if (!correo || !/^[a-zA-Z0-9._%+-]+@smash\.com$/i.test(correo)) {
+      return NextResponse.json(
+        { message: "El correo debe terminar en @smash.com" },
+        { status: 400 }
+      );
+    }
 
     const existingSucursal = await prisma.sucursales.findUnique({
       where: { correo },
