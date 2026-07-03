@@ -5,6 +5,35 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
+// Anti fuerza-bruta del PIN (4 dígitos = 10.000 combinaciones): tras
+// MAX_INTENTOS fallos seguidos sobre un mismo empleado, se bloquea ese
+// empleado por BLOQUEO_MS. En memoria por instancia: se reinicia con el
+// server, suficiente para frenar un ataque online contra este despliegue
+// de instancia única.
+const MAX_INTENTOS = 5;
+const BLOQUEO_MS = 15 * 60 * 1000;
+const intentosFallidos = new Map<string, { count: number; primerIntento: number }>();
+
+function estaBloqueado(empleadoId: string): boolean {
+  const registro = intentosFallidos.get(empleadoId);
+  if (!registro) return false;
+  if (Date.now() - registro.primerIntento > BLOQUEO_MS) {
+    intentosFallidos.delete(empleadoId);
+    return false;
+  }
+  return registro.count >= MAX_INTENTOS;
+}
+
+function registrarFallo(empleadoId: string) {
+  const ahora = Date.now();
+  const registro = intentosFallidos.get(empleadoId);
+  if (!registro || ahora - registro.primerIntento > BLOQUEO_MS) {
+    intentosFallidos.set(empleadoId, { count: 1, primerIntento: ahora });
+  } else {
+    registro.count += 1;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -81,17 +110,31 @@ export async function POST(request: Request) {
       );
     }
 
-    // Logs de depuración
-    console.log("DEBUG: PIN recibido:", pin);
-    console.log("DEBUG: Hash almacenado:", empleado.contrasena);
+    // Un empleado dado de baja no puede iniciar sesión aunque conserve su PIN
+    if ((empleado.estado ?? "").toLowerCase() !== "activo") {
+      return NextResponse.json(
+        { error: "El empleado no está activo en esta sucursal" },
+        { status: 403 }
+      );
+    }
+
+    const empleadoKey = empleado.id.toString();
+    if (estaBloqueado(empleadoKey)) {
+      return NextResponse.json(
+        { error: "Demasiados intentos fallidos. Intenta de nuevo en unos minutos." },
+        { status: 429 }
+      );
+    }
 
     // Comparar el PIN recibido con el hash almacenado
     const isValid = await bcrypt.compare(String(pin), empleado.contrasena);
-    console.log("DEBUG: Resultado de bcrypt.compare:", isValid);
 
     if (!isValid) {
+      registrarFallo(empleadoKey);
       return NextResponse.json({ error: "PIN incorrecto" }, { status: 401 });
     }
+
+    intentosFallidos.delete(empleadoKey);
 
     // Emitir tokenEmpleado (2h)
     const tokenEmpleado = jwt.sign(
@@ -111,12 +154,6 @@ export async function POST(request: Request) {
       sameSite: "strict",
       path: "/",
       maxAge: 60 * 60 * 2, // 2 horas
-    });
-
-    console.log("✅ Login de empleado exitoso:", {
-      empleadoId: empleado.id,
-      rol: empleado.rol,
-      sucursalId,
     });
 
     return response;

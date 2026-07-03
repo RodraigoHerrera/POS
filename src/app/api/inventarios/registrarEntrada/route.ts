@@ -4,6 +4,11 @@ import { serializeBigInt } from "@/lib/serialize";
 import { errorResponse } from "@/lib/apiError";
 import { requireEmpleado, esRespuestaError } from "@/lib/auth";
 
+// Motivos del enum MotivoMovimiento que tienen sentido para una entrada
+// manual de inventario. Se valida ANTES de escribir: antes un motivo
+// inválido reventaba contra el enum de la BD a mitad de las escrituras.
+const MOTIVOS_ENTRADA_VALIDOS = ["Compra", "Ajuste", "Traslado", "Produccion"];
+
 export async function POST(req: Request) {
   try {
     const sesion = await requireEmpleado(["Administrador"]);
@@ -23,110 +28,132 @@ export async function POST(req: Request) {
       proveedor: proveedor_id,
     } = body;
 
-    // Validación mínima
-    if (!item_id || !cantidad || !costo_unit) {
+    // Validación: costo 0 es legítimo (donaciones/promos), negativo no.
+    // `costo_unit == null` cubre undefined y null sin rechazar el 0.
+    if (!item_id || cantidad == null || costo_unit == null) {
       return NextResponse.json(
         { message: "Faltan campos requeridos: item_id, cantidad, costo_unit" },
         { status: 400 }
       );
     }
 
-    // Convertimos a números para cálculos matemáticos
     const qtyEntrada = Number(cantidad);
     const costoEntrada = Number(costo_unit);
 
-    // =====================================================================
-    // INICIO DE LA LÓGICA DE ACTUALIZACIÓN
-    // =====================================================================
-
-    // 0️⃣ Registrar el proveedor preferido del item (usado luego por el MRP)
-    if (proveedor_id) {
-      await prisma.item.update({
-        where: { id: BigInt(item_id) },
-        data: { proveedor_id: BigInt(proveedor_id) },
-      });
+    if (!Number.isFinite(qtyEntrada) || qtyEntrada <= 0) {
+      return NextResponse.json(
+        { message: "La cantidad debe ser un número mayor a 0" },
+        { status: 400 }
+      );
+    }
+    if (!Number.isFinite(costoEntrada) || costoEntrada < 0) {
+      return NextResponse.json(
+        { message: "El costo unitario debe ser un número mayor o igual a 0" },
+        { status: 400 }
+      );
     }
 
-    // 1️⃣ Crear el lote
-    const lote = await prisma.lote.create({
-      data: {
-        item_id: BigInt(item_id), // Aseguramos BigInt si tu schema lo usa
-        codigo_lote,
-        fecha_caducidad: fecha_vencimiento ? new Date(fecha_vencimiento) : null,
-        costo_unit: costoEntrada,
-      },
-    });
+    const motivoEntrada = motivo || "Compra";
+    if (!MOTIVOS_ENTRADA_VALIDOS.includes(motivoEntrada)) {
+      return NextResponse.json(
+        { message: `motivo debe ser uno de: ${MOTIVOS_ENTRADA_VALIDOS.join(", ")}` },
+        { status: 400 }
+      );
+    }
 
-    // 2️⃣ Crear o Actualizar inventarioSucursal (CORREGIDO)
-    let inventario = await prisma.inventarioSucursal.findFirst({
-      where: { 
-        item_id: BigInt(item_id), 
-        sucursal_id: BigInt(sucursalIdStr) 
-      },
-    });
-
-    if (!inventario) {
-      // A) Si NO existe: CREAR
-      inventario = await prisma.inventarioSucursal.create({
-        data: {
-          item_id: BigInt(item_id),
-          sucursal_id: BigInt(sucursalIdStr),
-          stock: qtyEntrada,
-          costo_promedio: costoEntrada,
-        },
-      });
-    } else {
-      // B) Si YA existe: ACTUALIZAR (Promedio Ponderado)
-      const stockActual = Number(inventario.stock);
-      const costoActual = Number(inventario.costo_promedio);
-
-      const nuevoStockTotal = stockActual + qtyEntrada;
-      
-      // Fórmula: ((StockActual * CostoActual) + (Entrada * CostoEntrada)) / NuevoStockTotal
-      let nuevoCostoPromedio = costoEntrada; // Default por si el stock actual es 0
-      
-      if (nuevoStockTotal > 0) {
-        const valorTotal = (stockActual * costoActual) + (qtyEntrada * costoEntrada);
-        nuevoCostoPromedio = valorTotal / nuevoStockTotal;
+    // Todo o nada: lote + stock por lote + agregado + kardex en una sola
+    // transacción. Antes eran 4 writes sueltos y un fallo a mitad dejaba
+    // lotes fantasma sin stock ni kardex que los respalde.
+    const resultado = await prisma.$transaction(async (tx) => {
+      // 0️⃣ Registrar el proveedor preferido del item (usado luego por el MRP)
+      if (proveedor_id) {
+        await tx.item.update({
+          where: { id: BigInt(item_id) },
+          data: { proveedor_id: BigInt(proveedor_id) },
+        });
       }
 
-      inventario = await prisma.inventarioSucursal.update({
-        where: { id: inventario.id },
+      // 1️⃣ Crear el lote
+      const lote = await tx.lote.create({
         data: {
-          stock: { increment: qtyEntrada }, // Sumamos la cantidad
-          costo_promedio: nuevoCostoPromedio, // Actualizamos el costo
+          item_id: BigInt(item_id),
+          codigo_lote,
+          fecha_caducidad: fecha_vencimiento ? new Date(fecha_vencimiento) : null,
+          costo_unit: costoEntrada,
         },
       });
-    }
 
-    // 3️⃣ Crear stockLoteSucursal
-    const stockLote = await prisma.stockLoteSucursal.create({
-      data: {
-        sucursal_id: BigInt(sucursalIdStr),
-        lote_id: lote.id,
-        cantidad: qtyEntrada,
-      },
-    });
+      // 2️⃣ Crear o Actualizar inventarioSucursal (Promedio Ponderado)
+      let inventario = await tx.inventarioSucursal.findFirst({
+        where: {
+          item_id: BigInt(item_id),
+          sucursal_id: BigInt(sucursalIdStr),
+        },
+      });
 
-    // 4️⃣ Registrar movimientoInventario
-    const movimiento = await prisma.movimientoInventario.create({
-      data: {
-        sucursal_id: BigInt(sucursalIdStr),
-        item_id: BigInt(item_id),
-        lote_id: lote.id,
-        tipo: "Entrada",
-        motivo: motivo || "Compra",
-        cantidad: qtyEntrada,
-        costo_unit: costoEntrada,
-        referencia: referencia ?? `Lote-${lote.id}`,
-      },
+      if (!inventario) {
+        inventario = await tx.inventarioSucursal.create({
+          data: {
+            item_id: BigInt(item_id),
+            sucursal_id: BigInt(sucursalIdStr),
+            stock: qtyEntrada,
+            costo_promedio: costoEntrada,
+          },
+        });
+      } else {
+        const stockActual = Number(inventario.stock);
+        const costoActual = Number(inventario.costo_promedio);
+
+        const nuevoStockTotal = stockActual + qtyEntrada;
+
+        // Fórmula: ((StockActual * CostoActual) + (Entrada * CostoEntrada)) / NuevoStockTotal
+        let nuevoCostoPromedio = costoEntrada; // Default por si el stock actual es 0
+
+        if (nuevoStockTotal > 0) {
+          const valorTotal = (stockActual * costoActual) + (qtyEntrada * costoEntrada);
+          nuevoCostoPromedio = valorTotal / nuevoStockTotal;
+        }
+
+        inventario = await tx.inventarioSucursal.update({
+          where: { id: inventario.id },
+          data: {
+            stock: { increment: qtyEntrada },
+            costo_promedio: nuevoCostoPromedio,
+          },
+        });
+      }
+
+      // 3️⃣ Crear stockLoteSucursal
+      await tx.stockLoteSucursal.create({
+        data: {
+          sucursal_id: BigInt(sucursalIdStr),
+          lote_id: lote.id,
+          cantidad: qtyEntrada,
+        },
+      });
+
+      // 4️⃣ Registrar movimientoInventario
+      await tx.movimientoInventario.create({
+        data: {
+          sucursal_id: BigInt(sucursalIdStr),
+          item_id: BigInt(item_id),
+          lote_id: lote.id,
+          tipo: "Entrada",
+          motivo: motivoEntrada as "Compra" | "Ajuste" | "Traslado" | "Produccion",
+          cantidad: qtyEntrada,
+          costo_unit: costoEntrada,
+          referencia: referencia ?? `Lote-${lote.id}`,
+        },
+      });
+
+      return { lote, inventario };
     });
 
     return NextResponse.json(
       {
         message: "Inventario actualizado correctamente",
-        lote: serializeBigInt(lote),
-        inventario: serializeBigInt(inventario),
+        lote: serializeBigInt(resultado.lote),
+        inventario: serializeBigInt(resultado.inventario),
       },
       { status: 201 }
     );

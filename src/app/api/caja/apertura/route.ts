@@ -12,6 +12,14 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { total, detalles } = body;
 
+    const saldoInicial = Number(total);
+    if (!Number.isFinite(saldoInicial) || saldoInicial < 0) {
+      return NextResponse.json(
+        { error: 'El saldo inicial debe ser un número mayor o igual a 0.' },
+        { status: 400 }
+      );
+    }
+
     // 1. Obtener las cookies
     const cookieStore = await cookies();
     const tokenSucursal = cookieStore.get("tokenSucursal")?.value;
@@ -77,17 +85,38 @@ export async function POST(request: Request) {
       );
     }
 
-    // 6. Crear el registro de la caja
+    // 6. Crear el registro de la caja, con verificación anti doble-apertura:
+    // el findFirst de arriba no cubre dos requests simultáneos (doble click),
+    // así que tras crear se re-consulta cuántas cajas abiertas hay para este
+    // empleado; si esta no es la más antigua, perdió la carrera y se elimina.
     const nuevaCaja = await prisma.caja.create({
       data: {
         sucursal_id: BigInt(sucursalId),
         empleado_id: BigInt(empleadoId),
         fecha_apertura: new Date(),
-        saldo_inicial: total,
+        saldo_inicial: saldoInicial,
         estado: 'abierta',
         observaciones: `Apertura con desglose: ${JSON.stringify(detalles)}`,
       },
     });
+
+    const abiertas = await prisma.caja.findMany({
+      where: {
+        sucursal_id: BigInt(sucursalId),
+        empleado_id: BigInt(empleadoId),
+        estado: 'abierta',
+      },
+      orderBy: { id: 'asc' },
+      select: { id: true },
+    });
+
+    if (abiertas.length > 1 && abiertas[0].id !== nuevaCaja.id) {
+      await prisma.caja.delete({ where: { id: nuevaCaja.id } });
+      return NextResponse.json(
+        { error: 'Ya tienes una caja abierta en esta sucursal.' },
+        { status: 409 }
+      );
+    }
 
     const secret1 = process.env.JWT_SECRET;
     if (!secret1) {

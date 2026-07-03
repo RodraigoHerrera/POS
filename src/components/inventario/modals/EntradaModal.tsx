@@ -129,11 +129,14 @@ export default function EntradaModal({ isOpen, onClose, onSaved, presetItemId }:
     }
   };
 
+  // Los values deben existir en el enum MotivoMovimiento de Prisma
+  // (Compra/Ajuste/Traslado/...): antes "Transferencia" y "Bonificacion"
+  // reventaban contra la BD al registrar el movimiento. Una bonificación
+  // del proveedor se registra como Compra con costo unitario 0.
   const optionsMotiv = [
       { value: "Compra", label: "Compra" },
       { value: "Ajuste", label: "Ajuste positivo" },
-      { value: "Transferencia", label: "Transferencia" },
-      { value: "Bonificacion", label: "Bonificación" },
+      { value: "Traslado", label: "Transferencia" },
   ];
 
   return (
