@@ -44,6 +44,11 @@ const navItems: NavItem[] = [
     path: "/admin/mrp",
   },
   {
+    icon: <PlugInIcon />,
+    name: "Producción",
+    path: "/admin/produccion",
+  },
+  {
     icon: <UserCircleIcon />,
     name: "Usuarios",
     path: "/admin/usuarios",
@@ -54,7 +59,7 @@ const navItems: NavItem[] = [
     icon: <DocsIcon />,
     subItems: [{ name: "Reporte de Ventas", path: "/admin/informes/reporte-ventas", pro: false },
       { name: "Reporte de Gastos", path: "/admin/informes/reporte-gastos", pro: false },
-      { name: "Reporte de Inventario", path: "/admin/informes/reporte-inventario", pro: false },
+      { name: "Estado del Stock", path: "/admin/informes/stock", pro: false },
       { name: "Reporte de Clientes", path: "/admin/informes/reporte-clientes", pro: false },
       { name: "Reporte de Proveedores", path: "/admin/informes/reporte-proveedores", pro: false },
     ],
