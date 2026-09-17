@@ -30,9 +30,10 @@ type Props = {
   isOpen: boolean;
   onClose: () => void;
   categoriasOptions: Option[];
+  onEditItem?: (item: InventoryItem) => void; // NEW
 };
 
-export default function ListaItemsModal({ isOpen, onClose, categoriasOptions }: Props) {
+export default function ListaItemsModal({ isOpen, onClose, categoriasOptions, onEditItem }: Props) {
   // --- Estados ---
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -178,14 +179,19 @@ export default function ListaItemsModal({ isOpen, onClose, categoriasOptions }: 
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400" title="Usado en el costeo teórico (BOM). Vacío = usa el costo promedio de compra.">
                     Costo estándar
                   </th>
+                  {onEditItem && (
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400 w-20">
+                      Acciones
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                 {loading ? (
-                  Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} columns={5} />)
+                  Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} columns={onEditItem ? 6 : 5} />)
                 ) : filteredItems.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={onEditItem ? 6 : 5} className="px-4 py-8 text-center text-gray-500">
                       No se encontraron items.
                     </td>
                   </tr>
@@ -219,6 +225,16 @@ export default function ListaItemsModal({ isOpen, onClose, categoriasOptions }: 
                             className="w-32 rounded-md border border-gray-300 bg-white px-2 py-1 text-right text-sm text-gray-800 outline-none focus:border-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                           />
                         </td>
+                        {onEditItem && (
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              onClick={() => onEditItem(item)}
+                              className="inline-flex items-center gap-1 rounded-md bg-brand-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-600 transition-colors"
+                            >
+                              Editar
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })

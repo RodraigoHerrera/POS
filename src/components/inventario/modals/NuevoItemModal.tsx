@@ -1,7 +1,7 @@
 // components/inventario/modals/NuevoItemModal.tsx
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Modal } from "@/components/ui/modal";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
@@ -9,6 +9,14 @@ import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 
 type Option = { value: string; label: string };
+
+interface InventoryItem {
+  id: string;
+  nombre: string;
+  sku: string | null;
+  tipo: string;
+  unidad_code: string;
+}
 
 type FormState = {
   nombre: string;
@@ -22,6 +30,7 @@ type Props = {
   onClose: () => void;
   categoriasOptions: Option[];
   unidadesOptions: Option[];
+  itemToEdit?: InventoryItem | null; // NEW: null/undefined = create mode
   onCreated?: () => void; // callback para refrescar padre
 };
 
@@ -30,6 +39,7 @@ export default function NuevoItemModal({
   onClose,
   categoriasOptions,
   unidadesOptions,
+  itemToEdit,
   onCreated,
 }: Props) {
   const [form, setForm] = useState<FormState>({
@@ -39,6 +49,22 @@ export default function NuevoItemModal({
     unidad_code: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isEditing = !!itemToEdit;
+
+  // Pre-populate form when switching to edit mode; reset when creating
+  useEffect(() => {
+    if (itemToEdit) {
+      setForm({
+        nombre: itemToEdit.nombre,
+        sku: itemToEdit.sku ?? "",
+        tipo: itemToEdit.tipo,
+        unidad_code: itemToEdit.unidad_code,
+      });
+    } else {
+      setForm({ nombre: "", sku: "", tipo: "", unidad_code: "" });
+    }
+  }, [itemToEdit]);
 
   // Si tu <Select> devuelve el string directamente, esto va bien.
   // Si devuelve {label,value}, ajusta a (opt) => setForm(...opt.value)
@@ -75,8 +101,13 @@ export default function NuevoItemModal({
 
     try {
       setIsSubmitting(true);
-      const res = await fetch("/api/inventarios/agregarItem", {
-        method: "POST",
+      const url = isEditing
+        ? `/api/inventarios/items/${itemToEdit!.id}`
+        : "/api/inventarios/agregarItem";
+      const method = isEditing ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nombre: form.nombre.trim(),
@@ -88,15 +119,15 @@ export default function NuevoItemModal({
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data?.message || "No se pudo crear el item");
+        throw new Error(data?.message || "No se pudo guardar el item");
       }
 
       // éxito
       resetAndClose();
       onCreated?.();
     } catch (err: any) {
-      console.error("Error al crear item:", err);
-      window.alert(err?.message || "Error al crear item");
+      console.error("Error al guardar item:", err);
+      window.alert(err?.message || "Error al guardar item");
     } finally {
       setIsSubmitting(false);
     }
@@ -107,10 +138,12 @@ export default function NuevoItemModal({
       <div className="no-scrollbar relative w-full max-w-[800px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
         <div className="px-2 pr-14">
           <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-            Registrar Nuevo Item
+            {isEditing ? "Editar Item" : "Registrar Nuevo Item"}
           </h4>
           <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-            Complete la información para agregar un nuevo item al inventario.
+            {isEditing
+              ? "Modifique los campos del item seleccionado."
+              : "Complete la información para agregar un nuevo item al inventario."}
           </p>
         </div>
 
@@ -147,9 +180,11 @@ export default function NuevoItemModal({
                 <div className="col-span-2 lg:col-span-1">
                   <Label className="text-black">Categoría</Label>
                   <Select
+                    key={`cat-${itemToEdit?.id ?? 'create'}`}
                     options={categoriasOptions}
                     placeholder="Seleccionar categoría"
                     onChange={handleSelectCategoria}
+                    defaultValue={isEditing ? itemToEdit!.tipo : ""}
                     className="dark:bg-dark-900"
                   />
                 </div>
@@ -157,9 +192,11 @@ export default function NuevoItemModal({
                 <div className="col-span-2 lg:col-span-1">
                   <Label className="text-black">Unidad de Medida</Label>
                   <Select
+                    key={`uni-${itemToEdit?.id ?? 'create'}`}
                     options={unidadesOptions}
                     placeholder="Seleccionar unidad"
                     onChange={handleSelectUnidad}
+                    defaultValue={isEditing ? itemToEdit!.unidad_code : ""}
                     className="dark:bg-dark-900"
                   />
                 </div>
@@ -173,7 +210,11 @@ export default function NuevoItemModal({
               Cancelar
             </Button>
             <Button size="sm" onClick={submit} disabled={isSubmitting}>
-              {isSubmitting ? "Guardando..." : "Registrar Item"}
+              {isSubmitting
+                ? "Guardando..."
+                : isEditing
+                  ? "Guardar Cambios"
+                  : "Registrar Item"}
             </Button>
           </div>
         </form>

@@ -1,7 +1,7 @@
 // app/inventario/page.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 import LineChartOne from "@/components/charts/line/LineChartOne";
@@ -18,6 +18,14 @@ import KardexModal from "@/components/inventario/modals/KardexModal";
 import ListaItemsModal from "@/components/inventario/modals/ListaItemsModal";
 import AlertasModal from "@/components/inventario/modals/AlertasModal";
 
+interface InventoryItem {
+  id: string;
+  nombre: string;
+  sku: string | null;
+  tipo: string;
+  unidad_code: string;
+}
+
 export default function Inventario() {
   const router = useRouter();
 
@@ -31,6 +39,27 @@ export default function Inventario() {
 
   // Item preseleccionado en EntradaModal cuando se llega vía "Reponer" desde StockAlertsCard
   const [presetItemId, setPresetItemId] = useState<string | undefined>(undefined);
+
+  // Item seleccionado para editar desde ListaItemsModal
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+
+  // Contador para forzar re-fetch de ListaItemsModal tras editar un item
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const handleEditItem = useCallback((item: InventoryItem) => {
+    setEditingItem(item);
+    nuevoItemModal.openModal();
+  }, [nuevoItemModal]);
+
+  const handleDataChanged = useCallback(() => {
+    router.refresh();
+    setRefreshTrigger((prev) => prev + 1);
+  }, [router]);
+
+  const handleNuevoItemClose = useCallback(() => {
+    setEditingItem(null);
+    nuevoItemModal.closeModal();
+  }, [nuevoItemModal]);
 
   // Opciones (las mismas que tenías)
   const categoriasOptions = useMemo(
@@ -53,9 +82,6 @@ export default function Inventario() {
     ],
     []
   );
-
-  // Cuando un modal guarda algo -> refrescamos widgets/listas
-  const handleDataChanged = () => router.refresh();
 
   return (
     <>
@@ -120,12 +146,13 @@ export default function Inventario() {
 
       {/* ======= Modales (componentes separados) ======= */}
 
-      {/* Registrar Nuevo Item */}
+      {/* Registrar / Editar Item */}
       <NuevoItemModal
         isOpen={nuevoItemModal.isOpen}
-        onClose={nuevoItemModal.closeModal}
+        onClose={handleNuevoItemClose}
         categoriasOptions={categoriasOptions}
         unidadesOptions={unidadesOptions}
+        itemToEdit={editingItem}
         onCreated={handleDataChanged}
       />
 
@@ -151,9 +178,11 @@ export default function Inventario() {
       />
 
       <ListaItemsModal
+        key={refreshTrigger}
         isOpen={listaItemsModal.isOpen}
         onClose={listaItemsModal.closeModal}
         categoriasOptions={categoriasOptions}
+        onEditItem={handleEditItem}
       />
 
       <AlertasModal
