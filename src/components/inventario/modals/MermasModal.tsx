@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Modal } from "@/components/ui/modal";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
@@ -82,6 +83,7 @@ export default function MermasModal({ isOpen, onClose, onSaved }: Props) {
         return;
       }
       setPayload({ item: "", lote: "", cantidad: "", fecha: "", tipoMerma: "", motivo: "" });
+      toast.success('Operación exitosa');
       onSaved?.();
       onClose();
     } catch (err) {
@@ -106,7 +108,7 @@ export default function MermasModal({ isOpen, onClose, onSaved }: Props) {
         </div>
 
         <form className="flex flex-col" onSubmit={(e) => e.preventDefault()}>
-          <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">
+          <div className="custom-scrollbar max-h-[60vh] overflow-y-auto px-2 pb-3">
             <div className="mt-7">
               <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
                 Información de Mermas

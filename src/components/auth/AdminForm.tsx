@@ -8,6 +8,7 @@ import Link from "next/link"; // Componente de navegación de Next.js para enlac
 import React, { useState } from "react"; // Importación de React y hook useState para manejo de estados
 import { useRouter } from "next/navigation"; // Hook de Next.js para manejar la navegación programática
 import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
 export default function AdminForm() {
 
@@ -97,6 +98,7 @@ export default function AdminForm() {
     const data = await res.json();
 
     if (res.ok) {
+      toast.success('Operación exitosa');
       router.push("/");
     } else {
       setError(data.message || "Ocurrió un error al registrar el administrador");

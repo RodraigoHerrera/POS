@@ -6,6 +6,7 @@ import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -51,6 +52,7 @@ export default function SignInForm() {
 
 
     if (res.ok) {
+      toast.success('Operación exitosa');
       router.push("/usuarios");
     } else {
       const error = await res.json();
@@ -74,7 +76,7 @@ export default function SignInForm() {
         <div>
           <div className="mb-5 sm:mb-8">
             <h1 className="mb-2 font-semibold text-brand-500 text-title-sm text-center sm:text-title-md">
-              SMASH POS
+              KUMOYA POS
             </h1>
             <p className="text-sm text-brand-25 text-center">
               ¡Hoy es un gran día para marcar la diferencia!
@@ -88,7 +90,7 @@ export default function SignInForm() {
                     Correo <span className="text-error-500">*</span>{" "}
                   </Label>
                   <Input
-                    placeholder="ejemplo@smash.com"
+                    placeholder="ejemplo@gmail.com"
                     type="email"
                     value={correo}
                     onChange={(e) => setCorreo(e.target.value)}

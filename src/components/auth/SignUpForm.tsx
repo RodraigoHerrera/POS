@@ -7,6 +7,7 @@ import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons"; // Importació
 import Link from "next/link"; // Componente de navegación de Next.js para enlaces internos
 import React, { useState } from "react"; // Importación de React y hook useState para manejo de estados
 import { useRouter } from "next/navigation"; // Hook de Next.js para manejar la navegación programática
+import { toast } from "sonner";
 
 // Componente funcional que representa el formulario de registro de sucursal
 export default function SignUpForm() {
@@ -98,6 +99,7 @@ export default function SignUpForm() {
 
     if (res.ok) {
       // Si la respuesta es exitosa, se redirige a la página principal
+      toast.success('Operación exitosa');
       router.push(`/signup/newadmin?sucursalId=${data.sucursal.id}`);
     } else {
       // En caso de error, se muestra el mensaje recibido o un mensaje por defecto
