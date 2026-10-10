@@ -74,7 +74,7 @@ export default function ProveedorModal({ isOpen, onClose, onSaved }: Props) {
         )}
 
         <form className="flex flex-col" onSubmit={(e) => e.preventDefault()}>
-          <div className="custom-scrollbar max-h-[400px] overflow-y-auto px-2 pb-3">
+          <div className="custom-scrollbar max-h-[60vh] overflow-y-auto px-2 pb-3">
             <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
 
               <div className="col-span-2">

@@ -76,7 +76,7 @@ export default function AdminForm() {
     setErroresCampo({});
 
     const nombreFormateado = capitalizar(nombre);
-    const correo = `${correoLocal.trim()}@smash.com`;
+    const correo = `${correoLocal.trim()}@gmail.com`;
 
     const res = await fetch("/api/auth/registerAdmin", {
       method: "POST",
@@ -182,10 +182,10 @@ export default function AdminForm() {
                     style={{ color: "var(--color-gray-25)" }}
                   />
                   <span className="flex h-11 shrink-0 items-center whitespace-nowrap rounded-lg border border-gray-700 bg-white/5 px-3 text-sm text-gray-400">
-                    @smash.com
+                    @gmail.com
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-gray-400">No es necesario escribir &quot;@smash.com&quot;, se agrega automáticamente.</p>
+                <p className="mt-1 text-xs text-gray-400">No es necesario escribir &quot;@gmail.com&quot;, se agrega automáticamente.</p>
                 {erroresCampo.correo && (
                   <p className="text-sm text-error-500">{erroresCampo.correo}</p>
                 )}

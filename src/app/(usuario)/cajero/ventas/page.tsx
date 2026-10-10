@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useFetchData } from "@/hooks/useFetchData";
 import TopBarCajero from "@/components/caja/TopBarCajero";
 import ProductCatalogGrid from "@/components/caja/ProductCatalogGrid";
@@ -9,13 +9,17 @@ import PersonalizeDrawer from "@/components/caja/PersonalizeDrawer";
 import CartCheckoutPanel from "@/components/caja/CartCheckoutPanel";
 import type { Item, CartItem, ExtraOption } from "@/components/caja/types";
 
+
 interface SesionCaja {
   empleadoNombre: string;
   fechaApertura: string;
 }
 
-export default function Ventas() {
+function VentasContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams?.get("editId");
+
   const { data: products, loading: loadingProducts } = useFetchData<Item[]>("/api/inventarios/productos", []);
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -39,6 +43,34 @@ export default function Ventas() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (editId && products.length > 0) {
+      fetch(`/api/caja/pedido?id=${editId}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.pedido) {
+            setCliente(data.pedido.cliente || "");
+            const loadedCart: CartItem[] = data.pedido.items.map((item: any) => {
+              const product = products.find((p) => p.id.toString() === item.producto_id);
+              return {
+                cartId: `${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                product: product || { ...item.producto, id: parseInt(item.producto_id) },
+                quantity: item.cantidad,
+                extras: item.extras.map((e: any) => ({
+                  id: e.item_inv_id || 0, // Fallback if no inv id
+                  nombre: e.nombre,
+                  precio: Number(e.precio),
+                })),
+                notes: item.notas || "",
+              };
+            });
+            setCart(loadedCart);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [editId, products]);
 
   const flashAdded = (productId: number) => {
     setJustAddedId(productId);
@@ -103,9 +135,11 @@ export default function Ventas() {
     if (cart.length === 0) return;
 
     setIsSubmitting(true);
+    const ticketWin = window.open("about:blank", "_blank");
 
     try {
       const payload = {
+        ...(editId ? { pedidoId: editId } : {}),
         mesa: "Mesa 1", // Fuera de alcance por ahora: sin selector de mesa en la UI
         cliente: cliente.trim() || "Cliente Mostrador",
         items: cart.map((item) => ({
@@ -117,7 +151,9 @@ export default function Ventas() {
         })),
       };
 
-      const response = await fetch("/api/caja/registrarPedido", {
+      const endpoint = editId ? "/api/caja/editarPedido" : "/api/caja/registrarPedido";
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -129,13 +165,35 @@ export default function Ventas() {
         throw new Error(result.error || "Error desconocido al procesar el pedido");
       }
 
-      router.push(`/cajero/metodos-pago?id=${result.pedidoId}&total=${result.total}&cliente=${encodeURIComponent(payload.cliente)}`);
+      if (result.droppedItems && result.droppedItems.length > 0) {
+        const productNames = result.droppedItems.map((di: any) => di.productName || 'Producto').join(", ");
+        alert(`Atención: Se omitieron los siguientes items por falta de stock: ${productNames}`);
+      }
+
+      if (result.isCorrection) {
+        alert("El pedido actualizado es una corrección. Se ha generado una nota para cocina.");
+      }
+
+      if (ticketWin && result.pedidoId) {
+        ticketWin.location.href = `/cajero/comanda/${result.pedidoId}`;
+      } else if (ticketWin) {
+        ticketWin.close();
+      }
+
+      if (!editId) {
+        router.push(`/cajero/metodos-pago?id=${result.pedidoId}&total=${result.total}&cliente=${encodeURIComponent(payload.cliente)}`);
+      } else {
+        router.push("/cajero/pedidos");
+      }
       setCart([]);
       setCustomizing(null);
       setCliente("");
     } catch (error: any) {
       console.error("Error enviando pedido:", error);
       alert(`❌ Error: ${error.message}`);
+      if (ticketWin) {
+        ticketWin.close();
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -179,9 +237,18 @@ export default function Ventas() {
             onCancelOrder={handleCancelOrder}
             onCommandOrder={handleCommandOrder}
             isSubmitting={isSubmitting}
+            isEditing={!!editId}
           />
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Ventas() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">Cargando...</div>}>
+      <VentasContent />
+    </Suspense>
   );
 }

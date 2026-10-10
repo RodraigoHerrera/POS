@@ -39,6 +39,11 @@ const navItems: NavItem[] = [
     path: "/admin/inventario",
   },
   {
+    icon: <PieChartIcon />,
+    name: "Producción",
+    path: "/admin/produccion",
+  },
+  {
     icon: <BoxCubeIcon />,
     name: "Planificación (MRP)",
     path: "/admin/mrp",
@@ -48,7 +53,14 @@ const navItems: NavItem[] = [
     name: "Usuarios",
     path: "/admin/usuarios",
   },
-
+  {
+    name: "Menú",
+    icon: <PageIcon />,
+    subItems: [
+      { name: "Recetas", path: "/admin/recetas", pro: false },
+      { name: "Modificar Menu", path: "/admin/menu", pro: false },
+    ],
+  },
   {
     name: "Informes",
     icon: <DocsIcon />,
@@ -68,14 +80,7 @@ const navItems: NavItem[] = [
       
     ],
   },
-  {
-    name: "Menú",
-    icon: <PageIcon />,
-    subItems: [
-      { name: "Recetas", path: "/admin/recetas", pro: false },
-      { name: "Modificar Menu", path: "/admin/menu", pro: false },
-    ],
-  },
+  
 ];
 
 const othersItems: NavItem[] = [
@@ -160,6 +165,7 @@ const AppSidebar: React.FC = () => {
             nav.path && (
               <Link
                 href={nav.path}
+                prefetch={true}
                 className={`menu-item group ${
                   isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
                 }`}
@@ -197,6 +203,7 @@ const AppSidebar: React.FC = () => {
                   <li key={subItem.name}>
                     <Link
                       href={subItem.path}
+                      prefetch={true}
                       className={`menu-dropdown-item ${
                         isActive(subItem.path)
                           ? "menu-dropdown-item-active"
@@ -329,29 +336,29 @@ const AppSidebar: React.FC = () => {
             <>
               <Image
                 className="dark:hidden"
-                src="/images/logo/logo-smash.svg"
-                alt="Logo"
+                src="/images/logo/logo-kumo.svg"
+                alt="LogoO"
                 width={80}
                 height={10}
               />
               <Image
                 className="hidden dark:block"
-                src="/images/logo/logo-smash.svg"
-                alt="Logo"
+                src="/images/logo/logo-kumo-dark.svg"
+                alt="LogoOO"
                 width={80}
                 height={10}
               />
             </>
           ) : (
             <Image
-              src="/images/logo/logo-icon.svg"
-              alt="Logo"
+              src="/images/logo/logo-kumo.svg"
+              alt="LogoOO"
               width={32}
               height={32}
             />
           )}
         </Link>
-        <span className="ml-2 text-gray-900 dark:text-gray-100">SMASH POS</span>
+        <span className="ml-2 text-gray-100">KUMO POS</span>
       </div>
 
       {/*  */}
@@ -360,7 +367,7 @@ const AppSidebar: React.FC = () => {
           <div className="flex flex-col gap-4">
             <div>
               <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-950 ${
+                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-950 dark:text-gray-300 ${
                   !isExpanded && !isHovered
                     ? "lg:justify-center"
                     : "justify-start"

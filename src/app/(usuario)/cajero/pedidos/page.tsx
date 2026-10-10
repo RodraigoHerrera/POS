@@ -183,6 +183,16 @@ export default function PedidosAbiertosPage() {
                         Bs {pedido.total.toFixed(2)}
                       </span>
 
+                      {(pedido.estado === "PENDIENTE" || pedido.estado === "COMANDADO") && (
+                        <button
+                          onClick={() => router.push(`/cajero/ventas?editId=${pedido.id}`)}
+                          disabled={voidingId !== null}
+                          className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-500 transition hover:border-blue-300 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-400 dark:hover:border-blue-700 dark:hover:text-blue-400"
+                        >
+                          Editar
+                        </button>
+                      )}
+
                       <button
                         onClick={() => handleAnular(pedido)}
                         disabled={isVoiding || voidingId !== null}

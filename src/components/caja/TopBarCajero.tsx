@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { ArrowLeft, Clock } from "lucide-react";
+import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
 
 interface TopBarCajeroProps {
   empleadoNombre: string;
@@ -82,7 +83,7 @@ export default function TopBarCajero({
           </button>
         ) : (
           <span className="shrink-0 text-sm font-semibold text-gray-700 dark:text-gray-200">
-            Smash POS
+            KUMO POS
           </span>
         )}
 
@@ -125,6 +126,7 @@ export default function TopBarCajero({
       </div>
 
       <div className="flex items-center gap-3">
+        <ThemeToggleButton />
         {variant === "default" && (
           <label className="flex items-center gap-2">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Cliente</span>

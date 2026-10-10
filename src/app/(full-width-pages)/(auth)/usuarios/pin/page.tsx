@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function EmpleadoPin() {
+import { Suspense } from "react";
+
+function EmpleadoPinContent() {
   const [pin, setPin] = useState("");
   const [nombre, setNombre] = useState("");
   const [usuario, setUsuario] = useState("");
@@ -84,5 +86,13 @@ export default function EmpleadoPin() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function EmpleadoPin() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <EmpleadoPinContent />
+    </Suspense>
   );
 }

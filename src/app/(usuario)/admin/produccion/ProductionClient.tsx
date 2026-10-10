@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { executeProductionBatch, ProductionBatchInput } from "@/app/actions/produccion";
+import Button from "@/components/ui/button/Button";
 
 type Props = {
   recipes: Array<{ id: string; name: string }>;
@@ -122,13 +123,16 @@ export default function ProductionClient({ recipes, sucursales }: Props) {
           </div>
         )}
 
-        <button
+        {/* <button
           type="submit"
           disabled={loading}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? "Procesando..." : "Ejecutar Producción"}
-        </button>
+        </button> */}
+        <Button size="sm" variant="primary" disabled={loading} className="w-full h" >
+          {loading ? "Procesando..." : "Ejecutar Producción"}
+        </Button>
       </form>
     </div>
   );

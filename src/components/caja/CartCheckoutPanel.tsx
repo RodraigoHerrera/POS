@@ -2,6 +2,7 @@
 
 import React, { useMemo } from "react";
 import type { CartItem } from "./types";
+import Button from "@/components/ui/button/Button";
 
 interface CartCheckoutPanelProps {
   cart: CartItem[];
@@ -9,6 +10,7 @@ interface CartCheckoutPanelProps {
   onCancelOrder: () => void;
   onCommandOrder: () => void;
   isSubmitting: boolean;
+  isEditing?: boolean;
 }
 
 function lineTotal(item: CartItem): number {
@@ -28,6 +30,7 @@ export default function CartCheckoutPanel({
   onCancelOrder,
   onCommandOrder,
   isSubmitting,
+  isEditing = false,
 }: CartCheckoutPanelProps) {
   const total = useMemo(() => cart.reduce((acc, item) => acc + lineTotal(item), 0), [cart]);
 
@@ -35,7 +38,7 @@ export default function CartCheckoutPanel({
     <div className="flex h-full w-full flex-col border-l border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
       <div className="shrink-0 border-b border-gray-100 p-4 dark:border-gray-800">
         <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">Pedido Actual</h2>
-        <span className="text-sm text-gray-500">{cart.length} ítems</span>
+        <span className="text-sm text-gray-500 dark:text-gray-400">{cart.length} ítems</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 space-y-2">
@@ -82,19 +85,22 @@ export default function CartCheckoutPanel({
           <span>Bs {total.toFixed(2)}</span>
         </div>
 
-        <button
+        {/* <button
           onClick={onCommandOrder}
           disabled={isSubmitting || cart.length === 0}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 py-4 text-lg font-bold text-white shadow-lg transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none"
         >
           {isSubmitting ? <span className="animate-pulse">Enviando...</span> : "Comandar"}
-        </button>
+        </button> */}
+        <Button size="sm" variant="primary" onClick={onCommandOrder} disabled={isSubmitting || cart.length === 0} className="w-full h" >
+          {isSubmitting ? <span className="animate-pulse">Enviando...</span> : (isEditing ? "Actualizar Pedido" : "Comandar")}
+        </Button>
 
         {cart.length > 0 && (
           <button
             onClick={onCancelOrder}
             disabled={isSubmitting}
-            className="mt-3 w-full text-center text-sm text-gray-500 underline-offset-2 hover:underline disabled:opacity-50"
+            className="mt-3 w-full text-center text-sm text-gray-500 underline-offset-2 hover:underline disabled:opacity-50 dark:text-gray-400"
           >
             Cancelar pedido
           </button>

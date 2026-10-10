@@ -7,16 +7,18 @@ import { requireEmpleado, esRespuestaError } from "@/lib/auth";
 // Esto asegura que la API no se guarde en caché y siempre traiga datos frescos
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const sesion = await requireEmpleado(["Administrador"]);
     if (esRespuestaError(sesion)) return sesion;
 
+    const { searchParams } = new URL(request.url);
+    const includeAll = searchParams.get("all") === "true";
+
     // Consulta a la base de datos
     const items = await prisma.item.findMany({
       where: {
-        // Opcional: Solo traer items activos si tienes esa columna
-        // activo: true, 
+        ...(includeAll ? {} : { activo: true }),
       },
       select: {
         id: true,
@@ -25,8 +27,7 @@ export async function GET() {
         sku: true,
         unidad_code: true,
         costo_estandar: true,
-        // Puedes traer más datos si los necesitas para mostrarlos en el select
-        // codigo: true,
+        activo: true,
       },
       orderBy: {
         nombre: 'asc',

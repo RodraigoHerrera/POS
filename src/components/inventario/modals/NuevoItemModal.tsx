@@ -127,7 +127,7 @@ export default function NuevoItemModal({
                 <div className="col-span-2">
                   <Label className="text-black">Nombre del Item</Label>
                   <Input
-                    className="text-gray-dark"
+                    className="text-gray-dark "
                     type="text"
                     placeholder="Ingrese nombre completo"
                     value={form.nombre}

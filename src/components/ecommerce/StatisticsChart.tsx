@@ -198,7 +198,7 @@ export default function StatisticsChart() {
     // Colores distintos por serie (antes ambas usaban "#FF1E00" y solo se
     // diferenciaban por el trazo punteado) para que la diferencia entre
     // ventas reales y pronóstico se note de un vistazo, no solo de cerca.
-    colors: ["#FF1E00", "#F59E0B"], // Rojo = Ventas Reales, Ámbar = Pronóstico
+    colors: ["#527543", "#e7a0b2"], // Rojo = Ventas Reales, Ámbar = Pronóstico
     chart: {
       fontFamily: "Outfit, sans-serif",
       height: 310,
@@ -225,7 +225,7 @@ export default function StatisticsChart() {
     markers: {
       size: 4,
       colors: ["#fff", "#fff"],
-      strokeColors: ["#FF1E00", "#F59E0B"],
+      strokeColors: ["#e7a0b2", "#527543"],
       strokeWidth: 2,
       hover: {
         size: 7,

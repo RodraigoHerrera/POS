@@ -77,7 +77,7 @@ export default function SignUpForm() {
     // Normalizamos el nombre y la dirección utilizando la función capitalizar
     const nombreFormateado = capitalizar(nombre);
     const direccionFormateada = capitalizar(direccion);
-    const correo = `${correoLocal.trim()}@smash.com`;
+    const correo = `${correoLocal.trim()}@gmail.com`;
 
     // Realizamos una petición POST a la API para registrar la nueva sucursal
     const res = await fetch("/api/auth/register", {
@@ -175,10 +175,9 @@ export default function SignUpForm() {
                         style={{ color: "var(--color-gray-25)" }}
                       />
                       <span className="flex h-11 shrink-0 items-center whitespace-nowrap rounded-lg border border-gray-700 bg-white/5 px-3 text-sm text-gray-400">
-                        @smash.com
+                        @gmail.com
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-gray-400">No es necesario escribir &quot;@smash.com&quot;, se agrega automáticamente.</p>
                     {erroresCampo.correo && (
                       <p className="text-sm text-error-500">{erroresCampo.correo}</p>
                     )}

@@ -9,9 +9,9 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { nombre, direccion, correo, telefono, contraseña } = body;
 
-    if (!correo || !/^[a-zA-Z0-9._%+-]+@smash\.com$/i.test(correo)) {
+    if (!correo || !/^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(correo)) {
       return NextResponse.json(
-        { message: "El correo debe terminar en @smash.com" },
+        { message: "El correo debe terminar en @gmail.com" },
         { status: 400 }
       );
     }

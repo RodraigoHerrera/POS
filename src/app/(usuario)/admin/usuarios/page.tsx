@@ -74,7 +74,7 @@ export default function UsuariosSucursal() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nombre: form.nombre,
-          correo: `${form.correo.trim()}@smash.com`,
+          correo: `${form.correo.trim()}@gmail.com`,
           celular: form.celular,
           contraseña: form.contraseña,
           usuario: form.usuario,
@@ -182,12 +182,9 @@ export default function UsuariosSucursal() {
                           }
                         />
                         <span className="flex h-11 shrink-0 items-center whitespace-nowrap rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-500 dark:border-gray-700 dark:bg-white/5 dark:text-gray-400">
-                          @smash.com
+                          @gmail.com
                         </span>
                       </div>
-                      <p className="mt-1 text-xs text-gray-400">
-                        No es necesario escribir &quot;@smash.com&quot;, se agrega automáticamente.
-                      </p>
                     </div>
 
                     <div className="col-span-2">

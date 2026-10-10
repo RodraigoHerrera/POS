@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Smash POS Architecture",
+    "output": "pos-architecture.html",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "pos-flow", "label": "Point of Sale Flow", "focus": ["client", "nextjs", "prisma", "mysql"], "note": "Primary flow for order and checkout." },
+      { "id": "mrp-flow", "label": "MRP & Inventory Flow", "focus": ["nextjs", "prisma", "mysql"], "note": "Material Requirements Planning and inventory stock updates." }
+    ]
+  },
+  "components": [
+    { "id": "client", "type": "frontend", "label": "Web Client", "sublabel": "React / Next.js Admin", "pos": [50, 200], "size": [140, 60] },
+    { "id": "nextjs", "type": "backend", "label": "Next.js Server", "sublabel": "API Routes & SSR", "pos": [350, 200], "size": [140, 60] },
+    { "id": "prisma", "type": "backend", "label": "Prisma ORM", "sublabel": "Data Access Layer", "pos": [650, 200], "size": [140, 60] },
+    { "id": "mysql", "type": "database", "label": "MySQL", "sublabel": "Smash POS DB", "pos": [950, 200], "size": [140, 60] }
+  ],
+  "boundaries": [
+    { "kind": "security-group", "label": "Backend Application", "wraps": ["nextjs", "prisma", "mysql"] }
+  ],
+  "connections": [
+    { "id": "ui-to-api", "from": "client", "to": "nextjs", "label": "HTTP/REST", "variant": "emphasis" },
+    { "id": "api-to-db", "from": "nextjs", "to": "prisma", "label": "queries" },
+    { "id": "prisma-to-mysql", "from": "prisma", "to": "mysql", "label": "SQL" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Frontend", "items": ["Next.js React Application", "Tailwind CSS"] },
+    { "dot": "emerald", "title": "Backend", "items": ["Next.js API Routes", "Prisma ORM", "Bcrypt / JWT Auth"] },
+    { "dot": "slate", "title": "Database", "items": ["MySQL Server", "Inventario, Lotes, MRP, Ventas"] }
+  ]
+}

@@ -197,7 +197,7 @@ export default function PaymentMethods() {
 
               <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
                 <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-                  <span className="bg-red-600 w-1 h-6 rounded-full block"></span>
+                  <span className="bg-brand-500 w-1 h-6 rounded-full block"></span>
                   Método de Pago
                 </h3>
 

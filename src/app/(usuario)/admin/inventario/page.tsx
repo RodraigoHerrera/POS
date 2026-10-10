@@ -59,13 +59,26 @@ export default function Inventario() {
 
   return (
     <>
-      <div className="space-y-8">
-        {/* Header */}
-        <h1 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
-          Inventario
-        </h1>
+      <div className="space-y-5">
+        {/* Header con Acciones Rápidas */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-2">
+          <h1 className="font-bold text-gray-800 text-title-sm dark:text-white/90">
+            Inventario
+          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="primary" startIcon={<PlusIcon />} onClick={entradaModal.openModal}>
+              Entrada
+            </Button>
+            <Button size="sm" variant="outline" startIcon={<TrashBinIcon />} onClick={mermasModal.openModal}>
+              Mermas
+            </Button>
+            <Button size="sm" variant="outline" startIcon={<ListIcon />} onClick={kardexModal.openModal}>
+              Kardex
+            </Button>
+          </div>
+        </div>
 
-        {/* Alertas de stock (ancho completo) */}
+        {/* Alertas de stock */}
         <StockAlertsCard
           onReponer={(itemId) => {
             setPresetItemId(itemId);
@@ -74,46 +87,31 @@ export default function Inventario() {
           onVerTodos={listaItemsModal.openModal}
         />
 
-        <div className="rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/3">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
-            Compras, Consumo y Mermas
-          </h2>
-          <LineChartOne />
-        </div>
-
-        {/* Operación diaria */}
-        <div>
-          <h4 className="mb-4 font-bold text-gray-800 text-title-sm dark:text-white/90">
-            Operación diaria
-          </h4>
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Button size="md" variant="primary" startIcon={<PlusIcon />} onClick={entradaModal.openModal}>
-              Registrar entrada
-            </Button>
-            <Button size="md" variant="outline" startIcon={<TrashBinIcon />} onClick={mermasModal.openModal}>
-              Registrar mermas
-            </Button>
-            <Button size="md" variant="outline" startIcon={<ListIcon />} onClick={kardexModal.openModal}>
-              Consultar Kardex
-            </Button>
-            <Button size="md" variant="outline" startIcon={<ListIcon />} onClick={listaItemsModal.openModal}>
-              Lista de items
-            </Button>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* Gráfico */}
+          <div className="lg:col-span-2 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/3">
+            <h2 className="mb-4 text-base font-semibold text-gray-800 dark:text-white">
+              Compras, Consumo y Mermas
+            </h2>
+            <LineChartOne />
           </div>
-        </div>
 
-        {/* Catálogo y proveedores */}
-        <div>
-          <h4 className="mb-4 font-bold text-gray-800 text-title-sm dark:text-white/90">
-            Catálogo y proveedores
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Button size="sm" variant="outline" startIcon={<PlusIcon />} onClick={nuevoItemModal.openModal}>
-              Registrar nuevo item
-            </Button>
-            <Button size="sm" variant="outline" startIcon={<GroupIcon />} onClick={alertasModal.openModal}>
-              Registrar nuevo proveedor
-            </Button>
+          {/* Panel de Catálogo */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/3">
+            <h2 className="mb-4 text-base font-semibold text-gray-800 dark:text-white">
+              Gestión de Catálogo
+            </h2>
+            <div className="flex flex-col gap-3">
+              <Button size="sm" variant="outline" className="w-full" startIcon={<ListIcon />} onClick={listaItemsModal.openModal}>
+                Lista de items
+              </Button>
+              <Button size="sm" variant="outline" className="w-full" startIcon={<PlusIcon />} onClick={nuevoItemModal.openModal}>
+                Registrar nuevo item
+              </Button>
+              <Button size="sm" variant="outline" className="w-full" startIcon={<GroupIcon />} onClick={alertasModal.openModal}>
+                Registrar nuevo proveedor
+              </Button>
+            </div>
           </div>
         </div>
       </div>

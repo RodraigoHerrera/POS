@@ -1,6 +1,9 @@
 # Skill Registry
 
-This project uses the Spec-Driven Development (SDD) OpenSpec setup.
+This project uses the Spec-Driven Development (SDD) process.
+Persistence mode: openspec
+
+## Available Skills
 
 - `sdd-init`: Initialize SDD project configuration and structure.
 - `sdd-explore`: Initial exploration for changes.

@@ -66,7 +66,7 @@ export async function loginSucursal(page: Page, correo: string, password: string
   await page.goto("/");
   await page.locator('input[type="email"]').fill(correo);
   await page.locator('input[type="password"]').fill(password);
-  await page.getByRole("button", { name: "Iniciar Sesión" }).click();
+  await page.getByRole("button", { name: "Iniciar Sesión" }).click({ force: true });
   await page.waitForURL("**/usuarios");
 }
 

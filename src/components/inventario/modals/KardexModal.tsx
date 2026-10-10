@@ -167,9 +167,9 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
             {loading && <span className="text-xs text-blue-500 animate-pulse">Actualizando...</span>}
           </div>
           
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-800/50">
+          <div className="overflow-x-auto max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-600">
+            <table className="w-full relative">
+              <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10 shadow-sm">
                 <tr className="border-b border-gray-200 dark:border-gray-700">
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Fecha</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Item</th>
