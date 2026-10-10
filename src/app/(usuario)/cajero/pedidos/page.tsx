@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, ReceiptText, RefreshCw } from "lucide-react";
+import { ArrowLeft, Loader2, ReceiptText, RefreshCw, Printer } from "lucide-react";
 import TopBarCajero from "@/components/caja/TopBarCajero";
 
 interface PedidoAbierto {
@@ -101,6 +101,10 @@ export default function PedidosAbiertosPage() {
     }
   };
 
+  const handleImprimir = (pedidoId: string) => {
+    window.open(`/cajero/comanda/${pedidoId}`, "_blank");
+  };
+
   return (
     <div className="flex h-screen w-full flex-col bg-gray-50 dark:bg-gray-900">
       <TopBarCajero
@@ -178,10 +182,18 @@ export default function PedidosAbiertosPage() {
                       </p>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-3">
-                      <span className="text-lg font-bold text-gray-900 dark:text-white">
+                    <div className="flex flex-wrap shrink-0 items-center justify-end gap-2 mt-3 sm:mt-0">
+                      <span className="text-lg font-bold text-gray-900 dark:text-white mr-auto sm:mr-2">
                         Bs {pedido.total.toFixed(2)}
                       </span>
+
+                      <button
+                        onClick={() => handleImprimir(pedido.id)}
+                        title="Reimprimir Comanda"
+                        className="flex items-center justify-center rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:border-gray-300 hover:text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-200 dark:hover:bg-gray-800"
+                      >
+                        <Printer size={18} />
+                      </button>
 
                       {(pedido.estado === "PENDIENTE" || pedido.estado === "COMANDADO") && (
                         <button

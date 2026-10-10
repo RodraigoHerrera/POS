@@ -212,9 +212,9 @@ function VentasContent() {
         onCerrarCaja={() => router.push("/cajero/cierre")}
       />
 
-      <div className="flex w-full flex-1 overflow-hidden">
+      <div className="flex w-full flex-1 flex-col lg:flex-row overflow-hidden">
         {/* Catálogo: contenedor relative para anclar el drawer encima de él, no de todo el layout */}
-        <div className="relative flex-1 overflow-hidden">
+        <div className="relative flex-1 overflow-hidden h-3/5 lg:h-auto shrink-0 lg:shrink">
           <ProductCatalogGrid
             products={products}
             loading={loadingProducts}
@@ -229,8 +229,8 @@ function VentasContent() {
           />
         </div>
 
-        {/* Carrito + checkout: ancla derecha, ancho fijo */}
-        <div className="w-[384px] shrink-0">
+        {/* Carrito + checkout: ancla derecha, ancho fijo en desktop */}
+        <div className="w-full lg:w-[384px] shrink-0 h-2/5 lg:h-auto border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-800 flex flex-col">
           <CartCheckoutPanel
             cart={cart}
             onRemoveItem={handleRemoveItem}

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Plus, Minus, X } from "lucide-react";
+import Button from "@/components/ui/button/Button";
 import type { Item, ExtraOption } from "./types";
 
 interface PersonalizeDrawerProps {
@@ -178,12 +179,13 @@ export default function PersonalizeDrawer({ product, onClose, onConfirm }: Perso
         </div>
 
         <div className="shrink-0 border-t border-gray-100 p-5 dark:border-gray-800">
-          <button
+          <Button
+            size="md"
             onClick={handleConfirm}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 py-3 text-lg font-bold text-white shadow-lg transition hover:bg-brand-600"
+            className="w-full text-lg shadow-lg py-3"
           >
             + Agregar {quantity > 1 ? `${quantity} unidades` : ""}
-          </button>
+          </Button>
         </div>
       </div>
     </>

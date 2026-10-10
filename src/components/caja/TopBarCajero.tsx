@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { ArrowLeft, Clock } from "lucide-react";
 import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
+import Button from "@/components/ui/button/Button";
 
 interface TopBarCajeroProps {
   empleadoNombre: string;
@@ -70,17 +71,19 @@ export default function TopBarCajero({
   return (
     <header
       role="banner"
-      className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-gray-950"
+      className="flex flex-wrap md:flex-nowrap min-h-[3.5rem] shrink-0 items-center justify-between gap-2 md:gap-4 border-b border-gray-200 bg-white px-4 py-2 md:py-0 dark:border-gray-800 dark:bg-gray-950"
     >
-      <div className="flex items-center gap-4 min-w-0">
+      <div className="flex flex-wrap md:flex-nowrap items-center gap-2 md:gap-4 min-w-0">
         {variant === "contexto-pedido" && onVolver ? (
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={onVolver}
-            className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5"
+            startIcon={<ArrowLeft size={16} />}
+            className="rounded-lg px-2 py-1.5"
           >
-            <ArrowLeft size={16} />
             Volver al pedido
-          </button>
+          </Button>
         ) : (
           <span className="shrink-0 text-sm font-semibold text-gray-700 dark:text-gray-200">
             KUMO POS
@@ -125,7 +128,7 @@ export default function TopBarCajero({
         )}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto justify-between md:justify-end">
         <ThemeToggleButton />
         {variant === "default" && (
           <label className="flex items-center gap-2">
@@ -143,21 +146,25 @@ export default function TopBarCajero({
         )}
 
         {onVerPedidos && (
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={onVerPedidos}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+            className="px-3 py-1.5"
           >
             Pedidos abiertos
-          </button>
+          </Button>
         )}
 
         {onCerrarCaja && (
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={onCerrarCaja}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+            className="px-3 py-1.5"
           >
             Cerrar Caja
-          </button>
+          </Button>
         )}
       </div>
     </header>

@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { Search, MoreVertical } from "lucide-react";
 import ProductCardSkeleton from "@/components/ui/skeleton/ProductCardSkeleton";
+import Button from "@/components/ui/button/Button";
 import type { Item } from "./types";
 
 interface ProductCatalogGridProps {
@@ -94,12 +95,13 @@ export default function ProductCatalogGrid({
         ) : filtrados.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-gray-400">
             <p>Sin resultados para &quot;{query}&quot;</p>
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setQuery("")}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
             >
               Limpiar búsqueda
-            </button>
+            </Button>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
