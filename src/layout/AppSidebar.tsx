@@ -34,6 +34,11 @@ const navItems: NavItem[] = [
     path: "/admin",
   },
   {
+    name: "Ventas",
+    icon: <DocsIcon />,
+    path: "/admin/ventas",
+  },
+  {
     icon: <ListIcon />,
     name: "Inventario",
     path: "/admin/inventario",
@@ -358,7 +363,7 @@ const AppSidebar: React.FC = () => {
             />
           )}
         </Link>
-        <span className="ml-2 text-gray-100">KUMO POS</span>
+        <span className="ml-2 text-gray-100">SMASH POS</span>
       </div>
 
       {/*  */}
