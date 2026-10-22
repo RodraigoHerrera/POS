@@ -7,16 +7,17 @@ import { useRouter } from "next/navigation";
 import LineChartOne from "@/components/charts/line/LineChartOne";
 import StockAlertsCard from "@/components/inventario/StockAlertsCard";
 import Button from "@/components/ui/button/Button";
-import { PlusIcon, TrashBinIcon, ListIcon, GroupIcon } from "@/icons";
+import { PlusIcon, TrashBinIcon, ListIcon, GroupIcon, BoxIcon } from "@/icons";
 import { useModal } from "@/hooks/useModal";
 
-// Modales desacoplados (ajusta la ruta si los guardaste en otro lugar)
+// Modales desacoplados
 import NuevoItemModal from "@/components/inventario/modals/NuevoItemModal";
 import EntradaModal from "@/components/inventario/modals/EntradaModal";
 import MermasModal from "@/components/inventario/modals/MermasModal";
 import KardexModal from "@/components/inventario/modals/KardexModal";
 import ListaItemsModal from "@/components/inventario/modals/ListaItemsModal";
 import AlertasModal from "@/components/inventario/modals/AlertasModal";
+import ControlStockModal from "@/components/inventario/modals/ControlStockModal";
 
 export default function Inventario() {
   const router = useRouter();
@@ -28,11 +29,12 @@ export default function Inventario() {
   const nuevoItemModal = useModal();
   const listaItemsModal = useModal();
   const alertasModal = useModal();
+  const controlStockModal = useModal();
 
-  // Item preseleccionado en EntradaModal cuando se llega vía "Reponer" desde StockAlertsCard
+  // Item preseleccionado en EntradaModal cuando se llega vía "Reponer" desde StockAlertsCard o ControlStockModal
   const [presetItemId, setPresetItemId] = useState<string | undefined>(undefined);
 
-  // Opciones (las mismas que tenías)
+  // Opciones
   const categoriasOptions = useMemo(
     () => [
       { value: "vendible", label: "Vendible" },
@@ -66,6 +68,9 @@ export default function Inventario() {
             Inventario
           </h1>
           <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="outline" startIcon={<BoxIcon />} onClick={controlStockModal.openModal}>
+              Control de Stock
+            </Button>
             <Button size="sm" variant="primary" startIcon={<PlusIcon />} onClick={entradaModal.openModal}>
               Entrada
             </Button>
@@ -84,7 +89,7 @@ export default function Inventario() {
             setPresetItemId(itemId);
             entradaModal.openModal();
           }}
-          onVerTodos={listaItemsModal.openModal}
+          onVerTodos={controlStockModal.openModal}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -102,6 +107,9 @@ export default function Inventario() {
               Gestión de Catálogo
             </h2>
             <div className="flex flex-col gap-3">
+              <Button size="sm" variant="outline" className="w-full" startIcon={<BoxIcon />} onClick={controlStockModal.openModal}>
+                Control de Stock
+              </Button>
               <Button size="sm" variant="outline" className="w-full" startIcon={<ListIcon />} onClick={listaItemsModal.openModal}>
                 Lista de items
               </Button>
@@ -116,7 +124,19 @@ export default function Inventario() {
         </div>
       </div>
 
-      {/* ======= Modales (componentes separados) ======= */}
+      {/* ======= Modales ======= */}
+
+      {/* Control de Stock */}
+      <ControlStockModal
+        isOpen={controlStockModal.isOpen}
+        onClose={controlStockModal.closeModal}
+        onReponer={(itemId) => {
+          setPresetItemId(itemId);
+          controlStockModal.closeModal();
+          entradaModal.openModal();
+        }}
+        onSaved={handleDataChanged}
+      />
 
       {/* Registrar Nuevo Item */}
       <NuevoItemModal

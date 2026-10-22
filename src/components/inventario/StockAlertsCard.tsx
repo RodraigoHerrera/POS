@@ -11,8 +11,10 @@ interface ItemInventario {
   nombre: string;
   stock: number;
   stockMin: number;
+  stockMax?: number;
   unidad: string;
   sku: string | null;
+  tipo: string;
 }
 
 type Severidad = "Crítico" | "Bajo";
@@ -24,7 +26,9 @@ interface ItemAlerta extends ItemInventario {
 const MAX_FILAS = 5;
 
 type Props = {
+  /** Acción para iniciar la reposición de un ítem con stock insuficiente */
   onReponer: (itemId: string) => void;
+  /** Abre el modal completo de Control de Stock de Sucursal */
   onVerTodos?: () => void;
 };
 
@@ -37,7 +41,7 @@ export default function StockAlertsCard({ onReponer, onVerTodos }: Props) {
     try {
       setCargando(true);
       setError("");
-      const respuesta = await fetch("/api/inventarios/inventarioSucursal");
+      const respuesta = await fetch("/api/inventarios/inventarioSucursal?onlyInternal=true");
 
       if (!respuesta.ok) {
         throw new Error("Error al conectar con el servidor");
@@ -57,12 +61,17 @@ export default function StockAlertsCard({ onReponer, onVerTodos }: Props) {
     obtenerDatos();
   }, [obtenerDatos]);
 
-  // stockMin === 0 significa "sin mínimo definido", no se considera alerta
+  // Filtro estricto: solo ítems internos (!== "vendible"), con mínimo calibrado (> 0) y stock insuficiente (<= stockMin)
   const alertas: ItemAlerta[] = items
-    .filter((item) => item.stockMin > 0 && item.stock <= item.stockMin)
+    .filter(
+      (item) =>
+        item.tipo !== "vendible" &&
+        item.stockMin > 0 &&
+        item.stock <= item.stockMin
+    )
     .map((item) => ({
       ...item,
-      severidad: item.stock === 0 ? "Crítico" : ("Bajo" as Severidad),
+      severidad: item.stock <= 0 ? "Crítico" : ("Bajo" as Severidad),
     }))
     .sort((a, b) => {
       if (a.severidad !== b.severidad) return a.severidad === "Crítico" ? -1 : 1;
@@ -77,13 +86,13 @@ export default function StockAlertsCard({ onReponer, onVerTodos }: Props) {
         <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
           Alertas de stock
         </h3>
-        {alertas.length > MAX_FILAS && onVerTodos && (
+        {onVerTodos && alertas.length > 0 && (
           <button
             type="button"
             onClick={onVerTodos}
-            className="text-sm font-medium text-brand-500 hover:text-brand-600"
+            className="text-sm font-medium text-brand-500 hover:text-brand-600 transition-colors"
           >
-            Ver todos
+            Ver todos {alertas.length > MAX_FILAS ? `(${alertas.length})` : ""}
           </button>
         )}
       </div>
@@ -110,11 +119,22 @@ export default function StockAlertsCard({ onReponer, onVerTodos }: Props) {
       )}
 
       {!cargando && !error && alertas.length === 0 && (
-        <div className="mt-4 flex items-center gap-3 rounded-lg bg-success-50 px-4 py-3 dark:bg-success-500/15">
-          <CheckCircleIcon className="h-5 w-5 text-success-600 dark:text-success-500" />
-          <p className="text-sm font-medium text-success-600 dark:text-success-500">
-            Todo el stock está en niveles saludables.
-          </p>
+        <div className="mt-4 flex items-center justify-between rounded-lg bg-success-50 px-4 py-3 dark:bg-success-500/15">
+          <div className="flex items-center gap-3">
+            <CheckCircleIcon className="h-5 w-5 text-success-600 dark:text-success-500" />
+            <p className="text-sm font-medium text-success-600 dark:text-success-500">
+              Todo el stock está en niveles saludables.
+            </p>
+          </div>
+          {onVerTodos && (
+            <button
+              type="button"
+              onClick={onVerTodos}
+              className="text-xs font-semibold text-success-700 hover:underline dark:text-success-400"
+            >
+              Ver inventario
+            </button>
+          )}
         </div>
       )}
 
