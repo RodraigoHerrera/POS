@@ -49,7 +49,7 @@ export async function POST(req: Request) {
         correo: sucursal.correo,
       },
       secret,
-      { expiresIn: "8h" }
+      { expiresIn: "12h" }
     );
 
     // Respuesta con el token (opcional devolverlo en el body)
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       path: "/",
-      maxAge: 60 * 60 * 8, // 8 horas
+      maxAge: 60 * 60 * 12, // 12 horas
     });
 
     // Por seguridad, limpiar cualquier tokenEmpleado previo

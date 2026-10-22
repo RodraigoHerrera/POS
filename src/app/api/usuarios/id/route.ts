@@ -143,7 +143,7 @@ export async function POST(request: Request) {
         rol: empleado.rol,
       },
       secret,
-      { expiresIn: "2h" }
+      { expiresIn: "8h" }
     );
 
     const response = NextResponse.json({ rol: empleado.rol }, { status: 200 });
@@ -153,7 +153,7 @@ export async function POST(request: Request) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       path: "/",
-      maxAge: 60 * 60 * 2, // 2 horas
+      maxAge: 60 * 60 * 8, // 8 horas
     });
 
     return response;
