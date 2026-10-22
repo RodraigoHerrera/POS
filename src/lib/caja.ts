@@ -36,7 +36,12 @@ export async function calcularResumenCaja(caja: {
   fecha_apertura: Date;
 }): Promise<ResumenCaja> {
   const facturas = await prisma.factura.findMany({
-    where: { pedido: { caja_id: caja.id } },
+    where: {
+      pedido: {
+        caja_id: caja.id,
+        estado: "PAGADO",
+      },
+    },
     select: { importe_total: true, metodo_pago: true },
   });
 
