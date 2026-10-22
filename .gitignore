@@ -49,5 +49,14 @@ yarn.lock
 # secrets
 .env
 
+# database dumps
+*.sql
+
+# temporary / scratch directories
+scratch/
+
+# spreadsheets / raw data
+*.xlsx
+*.xls
 
 ~/
