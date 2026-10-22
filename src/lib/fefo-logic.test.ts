@@ -59,4 +59,24 @@ test('calculateFEFODeductions', async (t) => {
     const deductions = calculateFEFODeductions(lots, 0);
     assert.deepStrictEqual(deductions, []);
   });
+
+  await t.test('accurately handles fractional portions without floating point underflow', () => {
+    // 3 portions of 0.333 kg from a 1.000 kg lot leaves 0.001
+    const lots: FEFOLot[] = [{ id: 1, quantity: "1.000" }];
+    const deductions = calculateFEFODeductions(lots, "0.999");
+    assert.deepStrictEqual(deductions, [{ lotId: 1, deductedAmount: 0.999 }]);
+  });
+
+  await t.test('accepts exact match with decimal string without false insufficient stock', () => {
+    const lots: FEFOLot[] = [
+      { id: 1, quantity: "0.1" },
+      { id: 2, quantity: "0.2" }
+    ];
+    // In float math 0.1 + 0.2 === 0.30000000000000004
+    const deductions = calculateFEFODeductions(lots, "0.3");
+    assert.deepStrictEqual(deductions, [
+      { lotId: 1, deductedAmount: 0.1 },
+      { lotId: 2, deductedAmount: 0.2 }
+    ]);
+  });
 });

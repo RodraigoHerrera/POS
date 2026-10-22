@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import { serializeBigInt } from "@/lib/serialize";
@@ -54,14 +55,18 @@ export async function POST(req: Request) {
     }
 
     const resumen = await calcularResumenCaja(cajaAbierta);
-    const diferenciaEfectivo = Number(totalContado) - resumen.efectivoEsperado;
+    const contadoDec = new Prisma.Decimal(totalContado?.toString() || "0");
+    const esperadoDec = new Prisma.Decimal(resumen.efectivoEsperado?.toString() || "0");
+    const diff = contadoDec.sub(esperadoDec);
+    // Tolerancia menor a medio centavo para descartar residuos de coma flotante
+    const diferenciaEfectivo = diff.abs().lessThan(0.005) ? 0 : diff.toDecimalPlaces(2).toNumber();
 
     const cajaCerrada = await prisma.caja.update({
       where: { id: cajaAbierta.id },
       data: {
         estado: "cerrada",
         fecha_cierre: new Date(),
-        saldo_final: Number(totalContado),
+        saldo_final: contadoDec.toDecimalPlaces(2).toNumber(),
         total_ventas: resumen.totalVentas,
         ventas_efectivo: resumen.ventasPorMetodo.ventas_efectivo,
         ventas_tarjeta: resumen.ventasPorMetodo.ventas_tarjeta,

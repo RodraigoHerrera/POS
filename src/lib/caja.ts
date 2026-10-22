@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
 export const METODO_A_COLUMNA: Record<string, string> = {
   cash: "ventas_efectivo",
@@ -29,6 +30,8 @@ export interface ResumenCaja {
  * `factura` (vía `pedido.caja_id`), sin escribir nada. La usan tanto el
  * resumen en vivo (antes de contar) como el cierre real (que solo agrega
  * la persistencia encima de este mismo cálculo).
+ *
+ * Utiliza Prisma.Decimal para evitar acumulación de errores de punto flotante IEEE-754.
  */
 export async function calcularResumenCaja(caja: {
   id: bigint;
@@ -45,30 +48,44 @@ export async function calcularResumenCaja(caja: {
     select: { importe_total: true, metodo_pago: true },
   });
 
-  const ventasPorMetodo = {
-    ventas_efectivo: 0,
-    ventas_tarjeta: 0,
-    ventas_qr: 0,
-    ventas_transfer: 0,
-    ventas_giftcard: 0,
-    ventas_otros: 0,
+  const decimalesPorMetodo = {
+    ventas_efectivo: new Prisma.Decimal(0),
+    ventas_tarjeta: new Prisma.Decimal(0),
+    ventas_qr: new Prisma.Decimal(0),
+    ventas_transfer: new Prisma.Decimal(0),
+    ventas_giftcard: new Prisma.Decimal(0),
+    ventas_otros: new Prisma.Decimal(0),
   };
 
   for (const f of facturas) {
-    const columna = (METODO_A_COLUMNA[f.metodo_pago] ?? "ventas_otros") as keyof typeof ventasPorMetodo;
-    ventasPorMetodo[columna] += Number(f.importe_total);
+    const columna = (METODO_A_COLUMNA[f.metodo_pago] ?? "ventas_otros") as keyof typeof decimalesPorMetodo;
+    const importeStr = f.importe_total?.toString() ?? "0";
+    decimalesPorMetodo[columna] = decimalesPorMetodo[columna].add(new Prisma.Decimal(importeStr));
   }
 
-  const totalVentas = Object.values(ventasPorMetodo).reduce((acc, v) => acc + v, 0);
-  const saldoInicial = Number(caja.saldo_inicial);
-  const efectivoEsperado = saldoInicial + ventasPorMetodo.ventas_efectivo;
+  const saldoInicialDec = new Prisma.Decimal(caja.saldo_inicial?.toString() ?? "0");
+  let totalVentasDec = new Prisma.Decimal(0);
+  for (const val of Object.values(decimalesPorMetodo)) {
+    totalVentasDec = totalVentasDec.add(val);
+  }
+
+  const efectivoEsperadoDec = saldoInicialDec.add(decimalesPorMetodo.ventas_efectivo);
+
+  const ventasPorMetodo = {
+    ventas_efectivo: decimalesPorMetodo.ventas_efectivo.toDecimalPlaces(2).toNumber(),
+    ventas_tarjeta: decimalesPorMetodo.ventas_tarjeta.toDecimalPlaces(2).toNumber(),
+    ventas_qr: decimalesPorMetodo.ventas_qr.toDecimalPlaces(2).toNumber(),
+    ventas_transfer: decimalesPorMetodo.ventas_transfer.toDecimalPlaces(2).toNumber(),
+    ventas_giftcard: decimalesPorMetodo.ventas_giftcard.toDecimalPlaces(2).toNumber(),
+    ventas_otros: decimalesPorMetodo.ventas_otros.toDecimalPlaces(2).toNumber(),
+  };
 
   return {
     cajaId: caja.id.toString(),
-    saldoInicial,
+    saldoInicial: saldoInicialDec.toDecimalPlaces(2).toNumber(),
     fechaApertura: caja.fecha_apertura,
     ventasPorMetodo,
-    totalVentas,
-    efectivoEsperado,
+    totalVentas: totalVentasDec.toDecimalPlaces(2).toNumber(),
+    efectivoEsperado: efectivoEsperadoDec.toDecimalPlaces(2).toNumber(),
   };
 }

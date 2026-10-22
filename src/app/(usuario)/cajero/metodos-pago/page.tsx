@@ -68,7 +68,11 @@ export default function PaymentMethods() {
   useEffect(() => {
     if (selectedMethod === "cash" && amountPaid) {
       const paid = parseFloat(amountPaid);
-      const diff = paid - totalToPay;
+      if (isNaN(paid)) {
+        setChange(0);
+        return;
+      }
+      const diff = Math.round((paid - totalToPay) * 100) / 100;
       setChange(diff > 0 ? diff : 0);
     } else {
       setChange(0);
@@ -81,7 +85,9 @@ export default function PaymentMethods() {
     if (!pedidoId || totalToPay <= 0) return; // cubierto por el guard de render más abajo
 
     if (selectedMethod === "cash") {
-      if (!amountPaid || parseFloat(amountPaid) < totalToPay) {
+      const paidCents = Math.round(parseFloat(amountPaid) * 100);
+      const toPayCents = Math.round(totalToPay * 100);
+      if (!amountPaid || isNaN(paidCents) || paidCents < toPayCents) {
         return alert("El monto pagado es insuficiente o inválido.");
       }
     } else if (selectedMethod === "card") {

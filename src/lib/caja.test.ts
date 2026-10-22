@@ -95,4 +95,33 @@ describe("calcularResumenCaja", () => {
       prisma.factura.findMany = originalFindMany;
     }
   });
+
+  it("accurately sums decimal sales without floating-point precision leakage (0.10 + 0.20 = 0.30)", async () => {
+    const originalFindMany = prisma.factura.findMany;
+    prisma.factura.findMany = (async () => [
+      { importe_total: "0.10", metodo_pago: "cash" },
+      { importe_total: "0.20", metodo_pago: "cash" },
+      { importe_total: "19.99", metodo_pago: "card" },
+      { importe_total: "0.01", metodo_pago: "card" },
+    ]) as any;
+
+    try {
+      const caja = {
+        id: BigInt(100),
+        saldo_inicial: "10.00",
+        fecha_apertura: new Date(),
+      };
+
+      const resumen = await calcularResumenCaja(caja);
+
+      // In IEEE-754 binary float, 0.10 + 0.20 === 0.30000000000000004
+      // With Decimal-backed aggregation, it is strictly 0.3
+      assert.equal(resumen.ventasPorMetodo.ventas_efectivo, 0.3);
+      assert.equal(resumen.ventasPorMetodo.ventas_tarjeta, 20);
+      assert.equal(resumen.totalVentas, 20.3);
+      assert.equal(resumen.efectivoEsperado, 10.3);
+    } finally {
+      prisma.factura.findMany = originalFindMany;
+    }
+  });
 });

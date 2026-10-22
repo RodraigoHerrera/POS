@@ -246,7 +246,8 @@ export async function POST(req: Request) {
           // Si los lotes no cubren el requerimiento, el pedido NO pasa: antes
           // esto se ignoraba en silencio y el inventario quedaba sobreestimado
           // (se vendía insumo que el sistema creía seguir teniendo).
-          if (restante > 0) {
+          // Usamos tolerancia 0.0001 para evitar falsos positivos por imprecisión flotante IEEE-754.
+          if (restante > 0.0001) {
             insumosSinStock.add(insumoId.toString());
           }
         }
@@ -304,10 +305,13 @@ export async function POST(req: Request) {
       // C. Aplicar los descuentos de inventario acumulados (1 update por lote
       // tocado), con guard de stock: si el lote ya no tiene lo simulado
       // (otro pedido concurrente lo consumió), count=0 y se revierte todo.
+      // Redondeamos a 3 decimales exactos para evitar fallos falsos de 'gte' por decimales fantasma.
       for (const { id, total } of lotDecrements.values()) {
+        const roundedTotal = Number(total.toFixed(3));
+        if (roundedTotal <= 0) continue;
         const resultado = await tx.stockLoteSucursal.updateMany({
-          where: { id, cantidad: { gte: total } },
-          data: { cantidad: { decrement: total } },
+          where: { id, cantidad: { gte: roundedTotal } },
+          data: { cantidad: { decrement: roundedTotal } },
         });
         if (resultado.count === 0) {
           throw new Error("Stock insuficiente: otro pedido consumió el inventario simultáneamente, intenta de nuevo");
@@ -323,7 +327,7 @@ export async function POST(req: Request) {
             lote_id: lote.lote_id,
             tipo: 'Salida' as const,
             motivo: 'Venta' as const,
-            cantidad: lote.total,
+            cantidad: Number(lote.total.toFixed(3)),
             costo_unit: lote.costo_unit,
             referencia: `Pedido #${pedido.id}`,
           })),
@@ -332,9 +336,11 @@ export async function POST(req: Request) {
 
       // E. Actualizar el stock agregado por sucursal (1 update por insumo afectado)
       for (const [insumoIdStr, total] of inventarioDecrements) {
+        const roundedTotal = Number(total.toFixed(3));
+        if (roundedTotal <= 0) continue;
         await tx.inventarioSucursal.updateMany({
           where: { sucursal_id: sucursalBigInt, item_id: BigInt(insumoIdStr) },
-          data: { stock: { decrement: total } },
+          data: { stock: { decrement: roundedTotal } },
         });
       }
 
