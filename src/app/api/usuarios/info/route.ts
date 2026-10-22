@@ -1,24 +1,22 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { cookies } from "next/headers";
-import jwt from "jsonwebtoken";
+import { requireEmpleado, esRespuestaError } from "@/lib/auth";
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const tokenEmpleado = cookieStore.get("tokenEmpleado")?.value;
-
-    if (!tokenEmpleado) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    const sesion = await requireEmpleado();
+    if (esRespuestaError(sesion)) {
+      return NextResponse.json(
+        { error: "No autorizado", message: "No autorizado" },
+        { status: 401 }
+      );
     }
 
-    const secret = process.env.JWT_SECRET!;
-    const payload = jwt.verify(tokenEmpleado, secret) as {
-      empleadoId: string;
-    };
-
-    const empleado = await prisma.empleados.findUnique({
-      where: { id: BigInt(payload.empleadoId) },
+    const empleado = await prisma.empleados.findFirst({
+      where: {
+        id: BigInt(sesion.empleadoId),
+        sucursal_id: BigInt(sesion.sucursalId),
+      },
       select: {
         id: true,
         nombre: true,
@@ -40,7 +38,7 @@ export async function GET() {
       usuario: empleado.usuario,
     });
   } catch (error) {
-    console.error("Error leyendo tokenEmpleado:", error);
-    return NextResponse.json({ error: "Token inválido o expirado" }, { status: 401 });
+    console.error("Error leyendo información del empleado:", error);
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }

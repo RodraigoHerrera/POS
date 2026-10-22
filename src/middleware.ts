@@ -32,7 +32,10 @@ export async function middleware(request: NextRequest) {
     const validSucursal = await verifyJWT(tokenSucursal);
     if (!validSucursal) {
       console.log("🚫 tokenSucursal inválido o expirado");
-      return NextResponse.redirect(new URL("/", request.url));
+      const redirectRes = NextResponse.redirect(new URL("/", request.url));
+      redirectRes.cookies.set("tokenSucursal", "", { path: "/", maxAge: 0, httpOnly: true, sameSite: "strict" });
+      redirectRes.cookies.set("tokenEmpleado", "", { path: "/", maxAge: 0, httpOnly: true, sameSite: "strict" });
+      return redirectRes;
     }
 
     // /admin y /cajero requieren también tokenEmpleado
@@ -47,7 +50,36 @@ export async function middleware(request: NextRequest) {
       const validEmpleado = await verifyJWT(tokenEmpleado);
       if (!validEmpleado) {
         console.log("🚫 tokenEmpleado inválido o expirado");
-        return NextResponse.redirect(new URL("/usuarios", request.url));
+        const redirectRes = NextResponse.redirect(new URL("/usuarios", request.url));
+        redirectRes.cookies.set("tokenEmpleado", "", {
+          path: "/",
+          maxAge: 0,
+          httpOnly: true,
+          sameSite: "strict",
+        });
+        return redirectRes;
+      }
+
+      // Validar concordancia de sucursalId entre tokenSucursal y tokenEmpleado (SEC-01: Cross-Tenant check)
+      const sucursalId = (validSucursal as any)?.sucursalId || (validSucursal as any)?.id;
+      const empleadoSucursalId = (validEmpleado as any)?.sucursalId;
+
+      if (
+        !empleadoSucursalId ||
+        !sucursalId ||
+        (typeof sucursalId !== "string" && typeof sucursalId !== "number") ||
+        (typeof empleadoSucursalId !== "string" && typeof empleadoSucursalId !== "number") ||
+        String(empleadoSucursalId) !== String(sucursalId)
+      ) {
+        console.log("🚫 Desincronización detectada: tokenEmpleado no pertenece a la sucursal activa");
+        const redirectRes = NextResponse.redirect(new URL("/usuarios", request.url));
+        redirectRes.cookies.set("tokenEmpleado", "", {
+          path: "/",
+          maxAge: 0,
+          httpOnly: true,
+          sameSite: "strict",
+        });
+        return redirectRes;
       }
 
       // /admin es exclusivo de Administrador. /cajero acepta ambos roles
@@ -65,6 +97,32 @@ export async function middleware(request: NextRequest) {
     } else {
       // /usuarios solo necesita tokenSucursal
       console.log("✅ tokenSucursal válido:", validSucursal);
+
+      // Si el cliente envía un tokenEmpleado desincronizado o inválido, lo purgamos de inmediato
+      if (tokenEmpleado) {
+        const validEmpleado = await verifyJWT(tokenEmpleado);
+        const sucursalId = (validSucursal as any)?.sucursalId || (validSucursal as any)?.id;
+        const empleadoSucursalId = (validEmpleado as any)?.sucursalId;
+
+        if (
+          !validEmpleado ||
+          !empleadoSucursalId ||
+          !sucursalId ||
+          (typeof sucursalId !== "string" && typeof sucursalId !== "number") ||
+          (typeof empleadoSucursalId !== "string" && typeof empleadoSucursalId !== "number") ||
+          String(empleadoSucursalId) !== String(sucursalId)
+        ) {
+          console.log("🧹 Purgando tokenEmpleado desincronizado o inválido en /usuarios");
+          const res = NextResponse.next();
+          res.cookies.set("tokenEmpleado", "", {
+            path: "/",
+            maxAge: 0,
+            httpOnly: true,
+            sameSite: "strict",
+          });
+          return res;
+        }
+      }
     }
 
     return NextResponse.next();

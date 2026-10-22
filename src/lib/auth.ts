@@ -13,23 +13,32 @@ export interface SesionEmpleado extends SesionSucursal {
   rol: string;
 }
 
+export interface TokenCookieReader {
+  get(name: string): { value: string } | undefined;
+}
+
 /** Verifica solo la sesión de sucursal (sin empleado). Usado en /usuarios pre-PIN. */
-export async function obtenerSesionSucursal(): Promise<SesionSucursal | null> {
-  const tokenSucursal = (await cookies()).get("tokenSucursal")?.value;
+export async function obtenerSesionSucursal(
+  cookieReader?: TokenCookieReader
+): Promise<SesionSucursal | null> {
+  const tokenSucursal = (cookieReader ?? (await cookies())).get("tokenSucursal")?.value;
   if (!tokenSucursal) return null;
   try {
     const { payload } = await jwtVerify(tokenSucursal, secret);
     const sucursalId = (payload as any)?.sucursalId || (payload as any)?.id;
     if (!sucursalId) return null;
-    return { sucursalId };
+    if (typeof sucursalId !== "string" && typeof sucursalId !== "number") return null;
+    return { sucursalId: String(sucursalId) };
   } catch {
     return null;
   }
 }
 
 /** Verifica sucursal + empleado (con su rol). Es la sesión completa post-PIN. */
-export async function obtenerSesionEmpleado(): Promise<SesionEmpleado | null> {
-  const cookieStore = await cookies();
+export async function obtenerSesionEmpleado(
+  cookieReader?: TokenCookieReader
+): Promise<SesionEmpleado | null> {
+  const cookieStore = cookieReader ?? (await cookies());
   const tokenSucursal = cookieStore.get("tokenSucursal")?.value;
   const tokenEmpleado = cookieStore.get("tokenEmpleado")?.value;
   if (!tokenSucursal || !tokenEmpleado) return null;
@@ -41,9 +50,14 @@ export async function obtenerSesionEmpleado(): Promise<SesionEmpleado | null> {
     const { payload: payloadEmpleado } = await jwtVerify(tokenEmpleado, secret);
     const empleadoId = (payloadEmpleado as any)?.empleadoId || (payloadEmpleado as any)?.id;
     const rol = (payloadEmpleado as any)?.rol;
+    const empleadoSucursalId = (payloadEmpleado as any)?.sucursalId;
 
-    if (!sucursalId || !empleadoId || !rol) return null;
-    return { sucursalId, empleadoId, rol };
+    if (!sucursalId || !empleadoId || !rol || !empleadoSucursalId) return null;
+    if (typeof sucursalId !== "string" && typeof sucursalId !== "number") return null;
+    if (typeof empleadoSucursalId !== "string" && typeof empleadoSucursalId !== "number") return null;
+    if (String(empleadoSucursalId) !== String(sucursalId)) return null;
+
+    return { sucursalId: String(sucursalId), empleadoId: String(empleadoId), rol: String(rol) };
   } catch {
     return null;
   }
@@ -59,9 +73,10 @@ export async function obtenerSesionEmpleado(): Promise<SesionEmpleado | null> {
  * (cualquier rol). Con la lista, además exige que el rol esté en ella.
  */
 export async function requireEmpleado(
-  rolesPermitidos?: string[]
+  rolesPermitidos?: string[],
+  cookieReader?: TokenCookieReader
 ): Promise<SesionEmpleado | NextResponse> {
-  const sesion = await obtenerSesionEmpleado();
+  const sesion = await obtenerSesionEmpleado(cookieReader);
   if (!sesion) {
     return NextResponse.json({ message: "No autorizado" }, { status: 401 });
   }
@@ -74,8 +89,10 @@ export async function requireEmpleado(
   return sesion;
 }
 
-export async function requireSucursal(): Promise<SesionSucursal | NextResponse> {
-  const sesion = await obtenerSesionSucursal();
+export async function requireSucursal(
+  cookieReader?: TokenCookieReader
+): Promise<SesionSucursal | NextResponse> {
+  const sesion = await obtenerSesionSucursal(cookieReader);
   if (!sesion) {
     return NextResponse.json({ message: "No autorizado" }, { status: 401 });
   }

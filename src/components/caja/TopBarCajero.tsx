@@ -86,7 +86,7 @@ export default function TopBarCajero({
           </Button>
         ) : (
           <span className="shrink-0 text-sm font-semibold text-gray-700 dark:text-gray-200">
-            KUMO POS
+            SMASH POS
           </span>
         )}
 

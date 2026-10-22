@@ -124,6 +124,7 @@ export async function POST(request: Request) {
       {
         empleadoId: empleado.id.toString(),
         rol: empleado.rol,
+        sucursalId: sucursalId.toString(),
       },
       secret,
       { expiresIn: "8h" }
