@@ -10,7 +10,7 @@ export default function AuthLayout({
     <div className="relative p-6 bg-white z-10 sm:p-0">
       <div className="absolute inset-0 -z-10 pointer-events-none">
         <Image
-          src="/background.webp"   /* Ajusta la ruta según tu estructura de archivos */
+          src="/background-login-pos.webp"   /* Ajusta la ruta según tu estructura de archivos */
           alt="Fondo"
           fill        /* Ocupa todo el contenedor */
           style={{ objectFit: "cover" }}

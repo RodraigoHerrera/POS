@@ -29,11 +29,11 @@ export default function SignInForm() {
     let hasError = false;
 
     if (!correo) {
-      setErrorCorreo("Debe rellenar este campo");
+      setErrorCorreo("Introduce un correo válido");
       hasError = true;
     }
     if (!contraseña) {
-      setErrorContraseña("Debe rellenar este campo");
+      setErrorContraseña("Introduce una contraseña válida");
       hasError = true;
     }
 
@@ -76,7 +76,7 @@ export default function SignInForm() {
         <div>
           <div className="mb-5 sm:mb-8">
             <h1 className="mb-2 font-semibold text-brand-500 text-title-sm text-center sm:text-title-md">
-              KUMOYA POS
+              SMASH POS
             </h1>
             <p className="text-sm text-brand-25 text-center">
               ¡Hoy es un gran día para marcar la diferencia!
@@ -90,7 +90,6 @@ export default function SignInForm() {
                     Correo <span className="text-error-500">*</span>{" "}
                   </Label>
                   <Input
-                    placeholder="ejemplo@gmail.com"
                     type="email"
                     value={correo}
                     onChange={(e) => setCorreo(e.target.value)}
@@ -107,7 +106,6 @@ export default function SignInForm() {
                   <div className="relative">
                     <Input
                       type={showPassword ? "text" : "password"}
-                      placeholder="Ingrese su contraseña"
                       value={contraseña}
                       onChange={(e) => setContraseña(e.target.value)}
                       style={{ color: "var(--color-gray-25)" }}
