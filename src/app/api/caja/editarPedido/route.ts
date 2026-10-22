@@ -4,6 +4,8 @@ import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 import { errorResponse } from '@/lib/apiError';
 import { costoTeoricoDesdeRequerimientos, obtenerCostoReferenciaPorInsumo } from '@/lib/costeo';
+import { simularConsumoFEFO, applySortedStockDecrements, applySortedStockRestorations } from '@/lib/fefo';
+import { runWithRetry } from '@/lib/transactionRetry';
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -134,9 +136,12 @@ export async function POST(req: Request) {
 
     const insumoIds: bigint[] = [...new Set<bigint>(requerimientosPorItem.flat().map((r) => r.insumoId))];
     const costoReferenciaPorInsumo = await obtenerCostoReferenciaPorInsumo(sucursalBigInt, insumoIds);
+    const costoTeoricoPorItem: number[] = items.map((_, idx) =>
+      costoTeoricoDesdeRequerimientos(requerimientosPorItem[idx], costoReferenciaPorInsumo)
+    );
 
-    const resultado = await prisma.$transaction(async (tx) => {
-      // 1. REVERSE PREVIOUS STOCK
+    const resultado = await runWithRetry(async (tx) => {
+      // 1. REVERSE PREVIOUS STOCK (ordenado determinísticamente por lote_id e item_id)
       const consumos = await tx.movimientoInventario.findMany({
         where: {
           sucursal_id: sucursalBigInt,
@@ -146,41 +151,12 @@ export async function POST(req: Request) {
         },
       });
 
-      const incrementosPorInsumo = new Map<string, number>();
-      for (const mov of consumos) {
-        const cantidad = Number(mov.cantidad);
-        if (mov.lote_id !== null) {
-          await tx.stockLoteSucursal.upsert({
-            where: { sucursal_id_lote_id: { sucursal_id: sucursalBigInt, lote_id: mov.lote_id } },
-            update: { cantidad: { increment: cantidad } },
-            create: { sucursal_id: sucursalBigInt, lote_id: mov.lote_id, cantidad },
-          });
-        }
-        const key = mov.item_id.toString();
-        incrementosPorInsumo.set(key, (incrementosPorInsumo.get(key) ?? 0) + cantidad);
-      }
-
-      if (consumos.length > 0) {
-        await tx.movimientoInventario.createMany({
-          data: consumos.map((mov) => ({
-            sucursal_id: sucursalBigInt,
-            item_id: mov.item_id,
-            lote_id: mov.lote_id,
-            tipo: "Entrada" as const,
-            motivo: "Ajuste" as const,
-            cantidad: mov.cantidad,
-            costo_unit: mov.costo_unit,
-            referencia: `Reversa Edición Pedido #${pedidoBigInt}`.slice(0, 64),
-          })),
-        });
-      }
-
-      for (const [insumoIdStr, total] of incrementosPorInsumo) {
-        await tx.inventarioSucursal.updateMany({
-          where: { sucursal_id: sucursalBigInt, item_id: BigInt(insumoIdStr) },
-          data: { stock: { increment: total } },
-        });
-      }
+      await applySortedStockRestorations(
+        tx,
+        sucursalBigInt,
+        consumos,
+        `Reversa Edición Pedido #${pedidoBigInt}`
+      );
 
       // 2. DELETE OLD ITEMS
       await tx.pedidoItemExtra.deleteMany({
@@ -197,110 +173,19 @@ export async function POST(req: Request) {
         orderBy: { lote: { fecha_caducidad: 'asc' } },
       }) : [];
 
-      const lotesPorInsumo = new Map<string, { id: bigint; lote_id: bigint; costo_unit: number; restante: number }[]>();
-      for (const stockLote of lotesDisponibles) {
-        const key = stockLote.lote.item_id.toString();
-        const lista = lotesPorInsumo.get(key) ?? [];
-        lista.push({
-          id: stockLote.id,
-          lote_id: stockLote.lote_id,
-          costo_unit: Number(stockLote.lote.costo_unit),
-          restante: Number(stockLote.cantidad),
-        });
-        lotesPorInsumo.set(key, lista);
-      }
-
-      const costoPorItem: number[] = [];
-      const costoTeoricoPorItem: number[] = [];
-      const lotDecrements = new Map<string, { id: bigint; lote_id: bigint; item_id: bigint; costo_unit: number; total: number }>();
-      const inventarioDecrements = new Map<string, number>();
-      
-      const successfulItemsIndices: number[] = [];
-      const droppedItems: any[] = [];
-      let nuevoTotal = 0;
-
-      items.forEach((itemPedido: any, idx: number) => {
-        let costoAcumuladoDelItem = 0;
-        const costoTeorico = costoTeoricoDesdeRequerimientos(requerimientosPorItem[idx], costoReferenciaPorInsumo);
-        
-        let itemHasStock = true;
-        // Temporary tracking for this specific item's decrements in case we need to rollback
-        const tempLotDecrements = new Map<string, number>();
-        const tempInventarioDecrements = new Map<string, number>();
-
-        for (const { insumoId, cantidadRequerida } of requerimientosPorItem[idx]) {
-          let restante = cantidadRequerida;
-          const lotes = lotesPorInsumo.get(insumoId.toString()) ?? [];
-
-          for (const lote of lotes) {
-            if (restante <= 0) break;
-            if (lote.restante <= 0) continue;
-
-            const aDescontar = Math.min(lote.restante, restante);
-            if (aDescontar <= 0) continue;
-
-            lote.restante -= aDescontar;
-            restante -= aDescontar;
-            
-            tempLotDecrements.set(lote.id.toString(), (tempLotDecrements.get(lote.id.toString()) ?? 0) + aDescontar);
-            tempInventarioDecrements.set(insumoId.toString(), (tempInventarioDecrements.get(insumoId.toString()) ?? 0) + aDescontar);
-
-            costoAcumuladoDelItem += aDescontar * lote.costo_unit;
-          }
-
-          // Usamos tolerancia 0.0001 para evitar falsos positivos por imprecisión flotante IEEE-754.
-          if (restante > 0.0001) {
-            itemHasStock = false;
-            break;
-          }
-        }
-
-        if (itemHasStock) {
-          // Commit temp decrements to main tracking
-          for (const [loteIdStr, qty] of tempLotDecrements) {
-             const key = loteIdStr;
-             // find lote in lotesPorInsumo
-             let foundLote: any = null;
-             let foundInsumoId: any = null;
-             for (const [insumoKey, loteList] of lotesPorInsumo.entries()) {
-               const match = loteList.find(l => l.id.toString() === loteIdStr);
-               if (match) {
-                 foundLote = match;
-                 foundInsumoId = BigInt(insumoKey);
-                 break;
-               }
-             }
-             if (foundLote) {
-                const acumulado = lotDecrements.get(key) ?? { id: foundLote.id, lote_id: foundLote.lote_id, item_id: foundInsumoId, costo_unit: foundLote.costo_unit, total: 0 };
-                acumulado.total += qty;
-                lotDecrements.set(key, acumulado);
-             }
-          }
-          for (const [insumoStr, qty] of tempInventarioDecrements) {
-             inventarioDecrements.set(insumoStr, (inventarioDecrements.get(insumoStr) ?? 0) + qty);
-          }
-          
-          costoPorItem[idx] = costoAcumuladoDelItem;
-          costoTeoricoPorItem[idx] = costoTeorico;
-          successfulItemsIndices.push(idx);
-          nuevoTotal += subtotalPorItem[idx];
-        } else {
-          // Rollback lotesPorInsumo for this item
-          for (const [loteIdStr, qty] of tempLotDecrements) {
-            for (const [insumoKey, loteList] of lotesPorInsumo.entries()) {
-               const match = loteList.find(l => l.id.toString() === loteIdStr);
-               if (match) {
-                 match.restante += qty;
-                 break;
-               }
-             }
-          }
-          droppedItems.push({ ...itemPedido, index: idx, productName: productoMap.get(String(BigInt(itemPedido.producto_id)))?.nombre });
-        }
+      const simulation = simularConsumoFEFO(lotesDisponibles, requerimientosPorItem, {
+        allowPartialDrop: true,
       });
 
-      if (successfulItemsIndices.length === 0) {
-        throw new Error("No hay suficiente stock para preparar ningún item de esta actualización.");
+      const droppedItems = simulation.droppedItemsIndices.map((idx) => ({
+        ...items[idx],
+        index: idx,
+        productName: productoMap.get(String(BigInt(items[idx].producto_id)))?.nombre,
+      }));
+
+      let nuevoTotal = 0;
+      for (const idx of simulation.successfulItemsIndices) {
+        nuevoTotal += subtotalPorItem[idx];
       }
 
       // 4. UPDATE PEDIDO
@@ -320,7 +205,7 @@ export async function POST(req: Request) {
       });
 
       // 5. INSERT NEW ITEMS
-      for (const idx of successfulItemsIndices) {
+      for (const idx of simulation.successfulItemsIndices) {
         const itemPedido = items[idx];
         await tx.pedidoItem.create({
           data: {
@@ -330,7 +215,7 @@ export async function POST(req: Request) {
             precio_unit: precioUnitPorItem[idx],
             subtotal: subtotalPorItem[idx],
             notas: itemPedido.notas,
-            costo_real: costoPorItem[idx],
+            costo_real: simulation.costoPorItem[idx],
             costo_teorico: costoTeoricoPorItem[idx],
             extras: {
               create: extrasValidosPorItem[idx].map((m: any) => ({
@@ -343,46 +228,17 @@ export async function POST(req: Request) {
         });
       }
 
-      // 6. DEDUCT STOCK IN DB
-      // Redondeamos a 3 decimales exactos para evitar fallos falsos de 'gte' por decimales fantasma.
-      for (const { id, total } of lotDecrements.values()) {
-        const roundedTotal = Number(total.toFixed(3));
-        if (roundedTotal <= 0) continue;
-        const res = await tx.stockLoteSucursal.updateMany({
-          where: { id, cantidad: { gte: roundedTotal } },
-          data: { cantidad: { decrement: roundedTotal } },
-        });
-        if (res.count === 0) {
-          throw new Error("Stock insuficiente: otro pedido consumió el inventario simultáneamente, intenta de nuevo");
-        }
-      }
-
-      if (lotDecrements.size > 0) {
-        await tx.movimientoInventario.createMany({
-          data: [...lotDecrements.values()].map((lote) => ({
-            sucursal_id: sucursalBigInt,
-            item_id: lote.item_id,
-            lote_id: lote.lote_id,
-            tipo: 'Salida' as const,
-            motivo: 'Venta' as const,
-            cantidad: Number(lote.total.toFixed(3)),
-            costo_unit: lote.costo_unit,
-            referencia: `Pedido #${pedidoBigInt}`,
-          })),
-        });
-      }
-
-      for (const [insumoIdStr, total] of inventarioDecrements) {
-        const roundedTotal = Number(total.toFixed(3));
-        if (roundedTotal <= 0) continue;
-        await tx.inventarioSucursal.updateMany({
-          where: { sucursal_id: sucursalBigInt, item_id: BigInt(insumoIdStr) },
-          data: { stock: { decrement: roundedTotal } },
-        });
-      }
+      // 6. DEDUCT STOCK IN DB (ordenado determinísticamente INV-1, INV-2)
+      await applySortedStockDecrements(
+        tx,
+        sucursalBigInt,
+        simulation.lotDecrements,
+        simulation.inventarioDecrements,
+        `Pedido #${pedidoBigInt}`
+      );
 
       return { pedidoId: pedidoActualizado.id.toString(), total: nuevoTotal, droppedItems };
-    }, { timeout: 20000 });
+    }, { timeoutMs: 20000 });
 
     return NextResponse.json({
       success: true,

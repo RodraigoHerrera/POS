@@ -4,6 +4,8 @@ import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 import { errorResponse } from '@/lib/apiError';
 import { costoTeoricoDesdeRequerimientos, obtenerCostoReferenciaPorInsumo } from '@/lib/costeo';
+import { simularConsumoFEFO, applySortedStockDecrements } from '@/lib/fefo';
+import { runWithRetry } from '@/lib/transactionRetry';
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -169,14 +171,13 @@ export async function POST(req: Request) {
     // fallback, de cada insumo, independiente del FEFO. Se contrasta contra
     // el costo_real más abajo.
     const costoReferenciaPorInsumo = await obtenerCostoReferenciaPorInsumo(sucursalBigInt, insumoIds);
+    const costoTeoricoPorItem: number[] = items.map((_, idx) =>
+      costoTeoricoDesdeRequerimientos(requerimientosPorItem[idx], costoReferenciaPorInsumo)
+    );
 
-    // 5. Transacción: leer lotes, simular FEFO, validar stock y escribir todo
-    //    de forma atómica. Los decrementos por lote llevan un guard de stock
-    //    (cantidad >= descontado): si otro pedido consumió el mismo lote entre
-    //    la lectura y la escritura, la transacción falla y se revierte en vez
-    //    de dejar stock negativo.
-    const nuevoPedido = await prisma.$transaction(async (tx) => {
-
+    // 5. Transacción con reintento automático contra Deadlocks (P2034 / 1213 / 1205):
+    //    Lectura FEFO, simulación determinística y mutaciones ordenadas por id ASC (INV-1, INV-2).
+    const nuevoPedido = await runWithRetry(async (tx) => {
       // Lotes disponibles (FEFO) para todos los insumos involucrados, en una sola consulta
       const lotesDisponibles = insumoIds.length > 0
         ? await tx.stockLoteSucursal.findMany({
@@ -190,74 +191,12 @@ export async function POST(req: Request) {
           })
         : [];
 
-      // Agrupar lotes por insumo, conservando el orden FEFO
-      const lotesPorInsumo = new Map<string, { id: bigint; lote_id: bigint; costo_unit: number; restante: number }[]>();
-      for (const stockLote of lotesDisponibles) {
-        const key = stockLote.lote.item_id.toString();
-        const lista = lotesPorInsumo.get(key) ?? [];
-        lista.push({
-          id: stockLote.id,
-          lote_id: stockLote.lote_id,
-          costo_unit: Number(stockLote.lote.costo_unit),
-          restante: Number(stockLote.cantidad),
-        });
-        lotesPorInsumo.set(key, lista);
-      }
+      // Simular el consumo FEFO y validar disponibilidad
+      const simulation = simularConsumoFEFO(lotesDisponibles, requerimientosPorItem);
 
-      // Simular el consumo FEFO: acumular costo por item, decremento por lote
-      // y decremento total por insumo, todo en memoria.
-      const costoPorItem: number[] = [];
-      const costoTeoricoPorItem: number[] = [];
-      const lotDecrements = new Map<string, { id: bigint; lote_id: bigint; item_id: bigint; costo_unit: number; total: number }>();
-      const inventarioDecrements = new Map<string, number>();
-      const insumosSinStock = new Set<string>();
-
-      items.forEach((_itemPedido: any, idx: number) => {
-        let costoAcumuladoDelItem = 0;
-        costoTeoricoPorItem.push(
-          costoTeoricoDesdeRequerimientos(requerimientosPorItem[idx], costoReferenciaPorInsumo)
-        );
-
-        for (const { insumoId, cantidadRequerida } of requerimientosPorItem[idx]) {
-          let restante = cantidadRequerida;
-          const lotes = lotesPorInsumo.get(insumoId.toString()) ?? [];
-
-          for (const lote of lotes) {
-            if (restante <= 0) break;
-            if (lote.restante <= 0) continue;
-
-            const aDescontar = Math.min(lote.restante, restante);
-            if (aDescontar <= 0) continue;
-
-            lote.restante -= aDescontar;
-            restante -= aDescontar;
-
-            const key = lote.id.toString();
-            const acumulado = lotDecrements.get(key) ?? { id: lote.id, lote_id: lote.lote_id, item_id: insumoId, costo_unit: lote.costo_unit, total: 0 };
-            acumulado.total += aDescontar;
-            lotDecrements.set(key, acumulado);
-
-            const insumoKey = insumoId.toString();
-            inventarioDecrements.set(insumoKey, (inventarioDecrements.get(insumoKey) ?? 0) + aDescontar);
-
-            costoAcumuladoDelItem += aDescontar * lote.costo_unit;
-          }
-
-          // Si los lotes no cubren el requerimiento, el pedido NO pasa: antes
-          // esto se ignoraba en silencio y el inventario quedaba sobreestimado
-          // (se vendía insumo que el sistema creía seguir teniendo).
-          // Usamos tolerancia 0.0001 para evitar falsos positivos por imprecisión flotante IEEE-754.
-          if (restante > 0.0001) {
-            insumosSinStock.add(insumoId.toString());
-          }
-        }
-
-        costoPorItem.push(costoAcumuladoDelItem);
-      });
-
-      if (insumosSinStock.size > 0) {
+      if (simulation.insumosSinStock.length > 0) {
         const faltantes = await tx.item.findMany({
-          where: { id: { in: [...insumosSinStock].map((id) => BigInt(id)) } },
+          where: { id: { in: simulation.insumosSinStock } },
           select: { nombre: true },
         });
         const nombres = faltantes.map((f) => f.nombre).join(", ");
@@ -289,7 +228,7 @@ export async function POST(req: Request) {
             precio_unit: precioUnitPorItem[idx],
             subtotal: subtotalPorItem[idx],
             notas: itemPedido.notas,
-            costo_real: costoPorItem[idx],
+            costo_real: simulation.costoPorItem[idx],
             costo_teorico: costoTeoricoPorItem[idx],
             extras: {
               create: extrasValidosPorItem[idx].map((m: any) => ({
@@ -302,50 +241,17 @@ export async function POST(req: Request) {
         });
       }
 
-      // C. Aplicar los descuentos de inventario acumulados (1 update por lote
-      // tocado), con guard de stock: si el lote ya no tiene lo simulado
-      // (otro pedido concurrente lo consumió), count=0 y se revierte todo.
-      // Redondeamos a 3 decimales exactos para evitar fallos falsos de 'gte' por decimales fantasma.
-      for (const { id, total } of lotDecrements.values()) {
-        const roundedTotal = Number(total.toFixed(3));
-        if (roundedTotal <= 0) continue;
-        const resultado = await tx.stockLoteSucursal.updateMany({
-          where: { id, cantidad: { gte: roundedTotal } },
-          data: { cantidad: { decrement: roundedTotal } },
-        });
-        if (resultado.count === 0) {
-          throw new Error("Stock insuficiente: otro pedido consumió el inventario simultáneamente, intenta de nuevo");
-        }
-      }
-
-      // D. Registrar los movimientos de kardex en una sola operación
-      if (lotDecrements.size > 0) {
-        await tx.movimientoInventario.createMany({
-          data: [...lotDecrements.values()].map((lote) => ({
-            sucursal_id: sucursalBigInt,
-            item_id: lote.item_id,
-            lote_id: lote.lote_id,
-            tipo: 'Salida' as const,
-            motivo: 'Venta' as const,
-            cantidad: Number(lote.total.toFixed(3)),
-            costo_unit: lote.costo_unit,
-            referencia: `Pedido #${pedido.id}`,
-          })),
-        });
-      }
-
-      // E. Actualizar el stock agregado por sucursal (1 update por insumo afectado)
-      for (const [insumoIdStr, total] of inventarioDecrements) {
-        const roundedTotal = Number(total.toFixed(3));
-        if (roundedTotal <= 0) continue;
-        await tx.inventarioSucursal.updateMany({
-          where: { sucursal_id: sucursalBigInt, item_id: BigInt(insumoIdStr) },
-          data: { stock: { decrement: roundedTotal } },
-        });
-      }
+      // C, D, E. Aplicar descuentos ordenados determinísticamente por ID (INV-1, INV-2)
+      await applySortedStockDecrements(
+        tx,
+        sucursalBigInt,
+        simulation.lotDecrements,
+        simulation.inventarioDecrements,
+        `Pedido #${pedido.id}`
+      );
 
       return pedido;
-    }, { timeout: 15000 });
+    }, { timeoutMs: 15000 });
 
     return NextResponse.json({
       success: true,
