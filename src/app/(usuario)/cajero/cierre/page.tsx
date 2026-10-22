@@ -47,6 +47,23 @@ export default function CierreCajaPage() {
   const [observaciones, setObservaciones] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [resultado, setResultado] = useState<ResultadoCierre | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleSalir = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout?scope=empleado", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Error cerrando sesión de empleado tras cierre:", error);
+    } finally {
+      window.location.replace("/usuarios");
+    }
+  };
+
   // El resumen del sistema es material de referencia, no la tarea en sí
   // (contar el efectivo físico) — colapsado por defecto para no competir
   // por atención con la grilla de conteo.
@@ -147,8 +164,8 @@ export default function CierreCajaPage() {
             </p>
           </div>
 
-          <Button className="mt-6 w-full" onClick={() => router.push("/usuarios")}>
-            Salir
+          <Button className="mt-6 w-full" disabled={isLoggingOut} onClick={handleSalir}>
+            {isLoggingOut ? "Cerrando sesión..." : "Salir"}
           </Button>
         </div>
       </div>

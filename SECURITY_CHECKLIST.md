@@ -13,11 +13,12 @@
   - **Solución implementada:** Se incluyó obligatoriamente `sucursalId: sucursalId.toString()` en el payload del JWT `tokenEmpleado` emitido en `src/app/api/usuarios/id/route.ts`. En `src/lib/auth.ts`, `obtenerSesionEmpleado()` extrae `sucursalId` de `tokenEmpleado` y valida concordancia estricta y segura contra tipos de objeto/inyección (`typeof === 'string' | 'number'`) contra `sucursalId` de `tokenSucursal`, retornando `null` si no coincide o no existe. En `src/middleware.ts`, se implementó la validación de concordancia entre tokens para rutas protegidas (`/admin`, `/cajero`), purgando la cookie `tokenEmpleado` ante cualquier desincronización o token expirado/inválido, así como la purga preventiva inmediata en la pantalla `/usuarios`. Se refactorizó `src/app/api/usuarios/info/route.ts` para usar `requireEmpleado()` y aislar el endpoint contra tokens cruzados. Suite de pruebas unitarias implementada en `src/lib/auth.test.ts` (28 pruebas pasando).
   - **Commit:** Resuelto
 
-- [ ] **SEC-02: Falso Cierre de Sesión en Terminal Física Compartida**
+- [x] **SEC-02: Falso Cierre de Sesión en Terminal Física Compartida**
   - **Archivos:** [`src/components/header/UserDropdown.tsx`](file:///D:/cod/smashPOS/POS/src/components/header/UserDropdown.tsx) y [`src/app/(usuario)/cajero/cierre/page.tsx`](file:///D:/cod/smashPOS/POS/src/app/(usuario)/cajero/cierre/page.tsx)
   - **Problema:** Los botones "Cerrar sesión" y "Salir" solo ejecutan navegación a `/usuarios` sin llamar a la API de logout ni destruir la cookie `tokenEmpleado`.
   - **Acción:** Conectar ambos flujos a `fetch("/api/auth/logout", { method: "POST" })` para limpiar cookies antes de redirigir.
-  - **Commit:** *Pendiente*
+  - **Solución implementada:** Se refactorizó `POST /api/auth/logout` para soportar revocación granular (`scope=empleado` vs `scope=all`) con cookies estrictas RFC 6265. En `UserDropdown.tsx` y `cajero/cierre/page.tsx`, se implementaron botones interactivos con guarda `isLoggingOut` y reemplazo atómico de historial (`window.location.replace('/usuarios')`). En `middleware.ts`, se estableció la purga proactiva e incondicional de `tokenEmpleado` en `/usuarios`. Suite de 7 pruebas unitarias agregada a `src/lib/auth.test.ts` (24 pruebas totales pasando).
+  - **Commit:** Resuelto
 
 - [ ] **SEC-03: Deadlocks en InnoDB (P2034) en Pedidos Concurrentes**
   - **Archivos:** [`src/app/api/caja/registrarPedido/route.ts`](file:///D:/cod/smashPOS/POS/src/app/api/caja/registrarPedido/route.ts) y [`src/app/api/caja/editarPedido/route.ts`](file:///D:/cod/smashPOS/POS/src/app/api/caja/editarPedido/route.ts)

@@ -313,3 +313,158 @@ describe("SEC-01: Middleware Cross-Tenant Isolation Tests", () => {
   });
 });
 
+
+
+describe("SEC-02: Scoped Logout Route Tests (/api/auth/logout)", () => {
+  it("clears only tokenEmpleado when scope=empleado query parameter is provided", async () => {
+    const { NextRequest } = await import("next/server");
+    const { POST } = await import("../app/api/auth/logout/route");
+
+    const req = new NextRequest("http://localhost/api/auth/logout?scope=empleado", {
+      method: "POST",
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+
+    const body = await res.json();
+    assert.equal(body.success, true);
+    assert.equal(body.scope, "empleado");
+
+    const setCookies = res.headers.getSetCookie();
+    const empleadoCookie = setCookies.find((c) => c.startsWith("tokenEmpleado="));
+    const sucursalCookie = setCookies.find((c) => c.startsWith("tokenSucursal="));
+
+    assert.ok(empleadoCookie, "tokenEmpleado must be cleared");
+    assert.ok(empleadoCookie.includes("Max-Age=0"));
+    assert.ok(empleadoCookie.toLowerCase().includes("httponly"));
+    assert.ok(empleadoCookie.toLowerCase().includes("samesite=strict"));
+    assert.equal(sucursalCookie, undefined, "tokenSucursal must NOT be cleared when scope=empleado");
+  });
+
+  it("clears only tokenEmpleado when scope=empleado is passed in JSON body", async () => {
+    const { NextRequest } = await import("next/server");
+    const { POST } = await import("../app/api/auth/logout/route");
+
+    const req = new NextRequest("http://localhost/api/auth/logout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scope: "empleado" }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+
+    const body = await res.json();
+    assert.equal(body.scope, "empleado");
+
+    const setCookies = res.headers.getSetCookie();
+    assert.ok(setCookies.some((c) => c.startsWith("tokenEmpleado=") && c.includes("Max-Age=0")));
+    assert.ok(!setCookies.some((c) => c.startsWith("tokenSucursal=")));
+  });
+
+  it("clears both tokenEmpleado and tokenSucursal when scope=all query parameter is provided", async () => {
+    const { NextRequest } = await import("next/server");
+    const { POST } = await import("../app/api/auth/logout/route");
+
+    const req = new NextRequest("http://localhost/api/auth/logout?scope=all", {
+      method: "POST",
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+
+    const body = await res.json();
+    assert.equal(body.scope, "all");
+
+    const setCookies = res.headers.getSetCookie();
+    assert.ok(setCookies.some((c) => c.startsWith("tokenEmpleado=") && c.includes("Max-Age=0")));
+    assert.ok(setCookies.some((c) => c.startsWith("tokenSucursal=") && c.includes("Max-Age=0")));
+  });
+
+  it("defaults to scope=all and clears both cookies when no scope parameter is given", async () => {
+    const { NextRequest } = await import("next/server");
+    const { POST } = await import("../app/api/auth/logout/route");
+
+    const req = new NextRequest("http://localhost/api/auth/logout", {
+      method: "POST",
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+
+    const body = await res.json();
+    assert.equal(body.scope, "all");
+
+    const setCookies = res.headers.getSetCookie();
+    assert.ok(setCookies.some((c) => c.startsWith("tokenEmpleado=")));
+    assert.ok(setCookies.some((c) => c.startsWith("tokenSucursal=")));
+  });
+
+  it("returns 400 Bad Request when an invalid scope parameter is passed", async () => {
+    const { NextRequest } = await import("next/server");
+    const { POST } = await import("../app/api/auth/logout/route");
+
+    const req = new NextRequest("http://localhost/api/auth/logout?scope=invalid_scope", {
+      method: "POST",
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 400);
+
+    const body = await res.json();
+    assert.ok(body.error.includes("Parámetro 'scope' inválido"));
+
+    const setCookies = res.headers.getSetCookie();
+    assert.equal(setCookies.length, 0, "No cookies should be modified on 400");
+  });
+});
+
+describe("SEC-02: Middleware Proactive Purge on /usuarios Tests", () => {
+  it("unconditionally purges a valid tokenEmpleado when navigating to /usuarios", async () => {
+    const { NextRequest } = await import("next/server");
+    const { middleware } = await import("../middleware");
+
+    const tokenSucursal = jwt.sign({ sucursalId: "1" }, TEST_SECRET);
+    const validEmpleadoToken = jwt.sign(
+      { empleadoId: "42", rol: "Cajero", sucursalId: "1" },
+      TEST_SECRET
+    );
+
+    const req = new NextRequest("http://localhost/usuarios", {
+      headers: {
+        cookie: `tokenSucursal=${tokenSucursal}; tokenEmpleado=${validEmpleadoToken}`,
+      },
+    });
+
+    const res = await middleware(req);
+    assert.equal(res.status, 200);
+
+    const setCookies = res.headers.getSetCookie();
+    const purgedEmpleado = setCookies.find((c) => c.startsWith("tokenEmpleado="));
+    assert.ok(purgedEmpleado, "tokenEmpleado must be purged on /usuarios");
+    assert.ok(purgedEmpleado.includes("Max-Age=0"));
+    assert.ok(purgedEmpleado.toLowerCase().includes("httponly"));
+    assert.ok(purgedEmpleado.toLowerCase().includes("samesite=strict"));
+    assert.ok(!setCookies.some((c) => c.startsWith("tokenSucursal=")), "tokenSucursal must be kept");
+  });
+
+  it("does not attach Set-Cookie on /usuarios when tokenEmpleado is not present", async () => {
+    const { NextRequest } = await import("next/server");
+    const { middleware } = await import("../middleware");
+
+    const tokenSucursal = jwt.sign({ sucursalId: "1" }, TEST_SECRET);
+
+    const req = new NextRequest("http://localhost/usuarios", {
+      headers: {
+        cookie: `tokenSucursal=${tokenSucursal}`,
+      },
+    });
+
+    const res = await middleware(req);
+    assert.equal(res.status, 200);
+
+    const setCookies = res.headers.getSetCookie();
+    assert.equal(setCookies.length, 0, "No Set-Cookie header needed when tokenEmpleado is absent");
+  });
+});

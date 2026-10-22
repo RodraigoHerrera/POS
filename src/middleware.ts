@@ -98,30 +98,19 @@ export async function middleware(request: NextRequest) {
       // /usuarios solo necesita tokenSucursal
       console.log("✅ tokenSucursal válido:", validSucursal);
 
-      // Si el cliente envía un tokenEmpleado desincronizado o inválido, lo purgamos de inmediato
+      // Proactive Purge (SEC-02): Cualquier navegación a /usuarios destruye tokenEmpleado
+      // incondicionalmente para evitar persistencia de sesión en terminales compartidas
       if (tokenEmpleado) {
-        const validEmpleado = await verifyJWT(tokenEmpleado);
-        const sucursalId = (validSucursal as any)?.sucursalId || (validSucursal as any)?.id;
-        const empleadoSucursalId = (validEmpleado as any)?.sucursalId;
-
-        if (
-          !validEmpleado ||
-          !empleadoSucursalId ||
-          !sucursalId ||
-          (typeof sucursalId !== "string" && typeof sucursalId !== "number") ||
-          (typeof empleadoSucursalId !== "string" && typeof empleadoSucursalId !== "number") ||
-          String(empleadoSucursalId) !== String(sucursalId)
-        ) {
-          console.log("🧹 Purgando tokenEmpleado desincronizado o inválido en /usuarios");
-          const res = NextResponse.next();
-          res.cookies.set("tokenEmpleado", "", {
-            path: "/",
-            maxAge: 0,
-            httpOnly: true,
-            sameSite: "strict",
-          });
-          return res;
-        }
+        console.log("🧹 Purgando tokenEmpleado incondicionalmente en /usuarios");
+        const res = NextResponse.next();
+        res.cookies.set("tokenEmpleado", "", {
+          path: "/",
+          maxAge: 0,
+          httpOnly: true,
+          sameSite: "strict",
+          secure: process.env.NODE_ENV === "production",
+        });
+        return res;
       }
     }
 
