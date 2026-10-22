@@ -50,7 +50,7 @@ function EmpleadoPinContent() {
         if (data.rol === "Administrador") router.push("/admin");
         else if (data.rol === "Cajero") router.push("/cajero");
       } else {
-        setError(data.message || "PIN incorrectooo");
+        setError(data.error || data.message || "PIN incorrecto");
       }
     } catch (error) {
       console.error("Error en login:", error);

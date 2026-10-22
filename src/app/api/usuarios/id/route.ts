@@ -1,38 +1,17 @@
-// /app/api/usuarios/id/route.ts
 import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { cookies } from "next/headers";
-
-// Anti fuerza-bruta del PIN (4 dígitos = 10.000 combinaciones): tras
-// MAX_INTENTOS fallos seguidos sobre un mismo empleado, se bloquea ese
-// empleado por BLOQUEO_MS. En memoria por instancia: se reinicia con el
-// server, suficiente para frenar un ataque online contra este despliegue
-// de instancia única.
-const MAX_INTENTOS = 5;
-const BLOQUEO_MS = 15 * 60 * 1000;
-const intentosFallidos = new Map<string, { count: number; primerIntento: number }>();
-
-function estaBloqueado(empleadoId: string): boolean {
-  const registro = intentosFallidos.get(empleadoId);
-  if (!registro) return false;
-  if (Date.now() - registro.primerIntento > BLOQUEO_MS) {
-    intentosFallidos.delete(empleadoId);
-    return false;
-  }
-  return registro.count >= MAX_INTENTOS;
-}
-
-function registrarFallo(empleadoId: string) {
-  const ahora = Date.now();
-  const registro = intentosFallidos.get(empleadoId);
-  if (!registro || ahora - registro.primerIntento > BLOQUEO_MS) {
-    intentosFallidos.set(empleadoId, { count: 1, primerIntento: ahora });
-  } else {
-    registro.count += 1;
-  }
-}
+import { requireSucursal, esRespuestaError } from "@/lib/auth";
+import {
+  checkRateLimit,
+  isLocked,
+  recordFailure,
+  clearRateLimit,
+  rateLimitResponse,
+  getClientIp,
+  DUMMY_HASH,
+} from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
@@ -41,102 +20,106 @@ export async function POST(request: Request) {
 
     if (!id || !pin) {
       return NextResponse.json(
-        { error: "Faltan id o pin en el cuerpo de la petición" },
+        {
+          error: "Faltan id o pin en el cuerpo de la petición",
+          message: "Faltan id o pin en el cuerpo de la petición",
+        },
         { status: 400 }
       );
     }
 
-    // 👇 Next 14/15: cookies() es async en algunos entornos → hay que await
-    const cookieStore = await cookies();
-    const tokenSucursal = cookieStore.get("tokenSucursal")?.value;
+    // IP PIN Spray defense (máximo 30 peticiones por cada 5 minutos)
+    const clientIp = getClientIp(request);
+    const sprayCheck = checkRateLimit("pin:ip:" + clientIp, 30, 5 * 60 * 1000);
+    if (!sprayCheck.allowed) {
+      return rateLimitResponse(
+        sprayCheck.retryAfterSeconds,
+        "Demasiadas peticiones desde esta IP. Intenta de nuevo más tarde."
+      );
+    }
 
-    if (!tokenSucursal) {
-      console.log("🚫 No hay tokenSucursal. Debe iniciar sesión la sucursal primero.");
+    // Verificación de sesión de sucursal
+    const sucursalSesion = await requireSucursal();
+    if (esRespuestaError(sucursalSesion)) {
       return NextResponse.json(
-        { error: "No autorizado: la sucursal no ha iniciado sesión" },
+        {
+          error: "No autorizado: la sucursal no ha iniciado sesión",
+          message: "No autorizado: la sucursal no ha iniciado sesión",
+        },
         { status: 401 }
       );
     }
 
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      console.error("❌ Faltante: JWT_SECRET no está definido en el entorno");
-      return NextResponse.json(
-        { error: "Error de configuración del servidor" },
-        { status: 500 }
-      );
-    }
-
-    // Verificar tokenSucursal para extraer sucursalId
-    let sucursalPayload: jwt.JwtPayload | string;
-    try {
-      sucursalPayload = jwt.verify(tokenSucursal, secret);
-    } catch (error) {
-      console.error("❌ tokenSucursal inválido o expirado:", error);
-      return NextResponse.json(
-        { error: "Sesión de sucursal inválida o expirada" },
-        { status: 401 }
-      );
-    }
-
-    const sucursalId =
-      typeof sucursalPayload === "string"
-        ? undefined
-        : (sucursalPayload as jwt.JwtPayload)?.sucursalId;
-
+    const sucursalId = sucursalSesion.sucursalId;
     if (!sucursalId) {
       return NextResponse.json(
-        { error: "tokenSucursal no contiene sucursalId" },
+        {
+          error: "tokenSucursal no contiene sucursalId",
+          message: "tokenSucursal no contiene sucursalId",
+        },
         { status: 400 }
       );
     }
 
-    // Convertir el id a BigInt
-    const empleadoId = BigInt(id);
-    const empleado = await prisma.empleados.findUnique({
-      where: { id: empleadoId },
-    });
-
-    if (!empleado) {
-      return NextResponse.json({ error: "Empleado no encontrado" }, { status: 404 });
+    // Pre-DB Employee Lockout Check (5 fallos en 15 minutos)
+    const empleadoKey = "emp:pin:" + String(id);
+    const lockoutCheck = isLocked(empleadoKey, 5, 15 * 60 * 1000);
+    if (lockoutCheck.locked) {
+      return rateLimitResponse(
+        lockoutCheck.retryAfterSeconds,
+        "Demasiados intentos fallidos para este empleado. Intenta de nuevo en unos minutos."
+      );
     }
 
-    // Validar que el empleado pertenezca a la sucursal activa
-    if (empleado.sucursal_id.toString() !== String(sucursalId)) {
-      console.log("🚫 Empleado no pertenece a la sucursal autenticada");
+    // Consulta en base de datos protegida
+    let empleado = null;
+    try {
+      empleado = await prisma.empleados.findUnique({
+        where: { id: BigInt(id) },
+      });
+    } catch {
+      empleado = null;
+    }
+
+    const isTargetValid = !!empleado && empleado.sucursal_id.toString() === String(sucursalId);
+    const hashToCompare = empleado && isTargetValid ? empleado.contrasena : DUMMY_HASH;
+    const isValid = await bcrypt.compare(String(pin), hashToCompare);
+
+    if (!empleado || !isTargetValid || !isValid) {
+      recordFailure(empleadoKey, 15 * 60 * 1000, 5);
       return NextResponse.json(
-        { error: "Empleado no pertenece a la sucursal autenticada" },
-        { status: 403 }
+        { error: "PIN incorrecto", message: "PIN incorrecto" },
+        { status: 401 }
       );
     }
 
     // Un empleado dado de baja no puede iniciar sesión aunque conserve su PIN
     if ((empleado.estado ?? "").toLowerCase() !== "activo") {
       return NextResponse.json(
-        { error: "El empleado no está activo en esta sucursal" },
+        {
+          error: "El empleado no está activo en esta sucursal",
+          message: "El empleado no está activo en esta sucursal",
+        },
         { status: 403 }
       );
     }
 
-    const empleadoKey = empleado.id.toString();
-    if (estaBloqueado(empleadoKey)) {
+    // Restablecer el contador de fallos tras inicio de sesión exitoso
+    clearRateLimit(empleadoKey);
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      console.error("❌ Faltante: JWT_SECRET no está definido en el entorno");
       return NextResponse.json(
-        { error: "Demasiados intentos fallidos. Intenta de nuevo en unos minutos." },
-        { status: 429 }
+        {
+          error: "Error interno del servidor",
+          message: "Error interno del servidor",
+        },
+        { status: 500 }
       );
     }
 
-    // Comparar el PIN recibido con el hash almacenado
-    const isValid = await bcrypt.compare(String(pin), empleado.contrasena);
-
-    if (!isValid) {
-      registrarFallo(empleadoKey);
-      return NextResponse.json({ error: "PIN incorrecto" }, { status: 401 });
-    }
-
-    intentosFallidos.delete(empleadoKey);
-
-    // Emitir tokenEmpleado (2h)
+    // Emitir tokenEmpleado (8h)
     const tokenEmpleado = jwt.sign(
       {
         empleadoId: empleado.id.toString(),
@@ -160,7 +143,10 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("DEBUG: Error en el endpoint /usuarios/id:", error);
     return NextResponse.json(
-      { error: "Error interno del servidor" },
+      {
+        error: "Error interno del servidor",
+        message: "Error interno del servidor",
+      },
       { status: 500 }
     );
   }
