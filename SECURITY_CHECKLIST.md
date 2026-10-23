@@ -41,11 +41,12 @@
   - **Solución implementada:** Se creó el módulo `src/lib/inventario.ts` implementando `round4Decimals`, `calcularNuevoCostoPromedio` y `actualizarInventarioEntrada`. Se eliminaron las condiciones de carrera y *Lost Updates* mediante bloqueo pesimista exclusivo `SELECT id, stock, costo_promedio FROM inventarioSucursal WHERE sucursal_id = ? AND item_id = ? FOR UPDATE` precedido por un `upsert` base (`stock: 0, costo_promedio: 0`) para garantizar existencia física de la fila y neutralizar deadlocks por gap-locks o colisiones P2002. Se implementó el cálculo ponderado atómico respetando reseteo a costo de entrada ante stock no positivo (`stockActual <= 0 || stockActual + qtyEntrada <= 0`) y redondeo exacto a 4 decimales. En `src/app/api/inventarios/registrarEntrada/route.ts`, se envolvió la transacción en `runWithRetry` con timeout de 15s y se garantizó la secuencia estricta de mutación `INV-3` (`item.update` -> `lote.create` -> `stockLoteSucursal.create` -> `actualizarInventarioEntrada` -> `movimientoInventario.create`), asegurando que las mutaciones de `stockLoteSucursal` siempre precedan a `inventarioSucursal` para erradicar esperas circulares con `registrarPedido`. Suite unitaria implementada en `src/lib/inventario.test.ts` (13 pruebas pasando, 78 pruebas totales del sistema pasando).
   - **Commit:** Resuelto
 
-- [ ] **SEC-06: RCE Crítico en Next.js bajo Windows y Optimización de Imágenes**
-  - **Archivos:** [`package.json`](file:///D:/cod/smashPOS/POS/package.json)
+- [x] **SEC-06: RCE Crítico en Next.js bajo Windows y Optimización de Imágenes**
+  - **Archivos:** [`package.json`](file:///D:/cod/smashPOS/POS/package.json) y [`next.config.ts`](file:///D:/cod/smashPOS/POS/next.config.ts)
   - **Problema:** `next@15.1.12` contiene vulnerabilidades críticas de ejecución remota de código en servidores Windows ([GHSA-p293-qw3h-jr36](https://github.com/advisories/GHSA-p293-qw3h-jr36)) y en el optimizador de imágenes SVG/AVIF ([GHSA-2464-fhr4-w9xw](https://github.com/advisories/GHSA-2464-fhr4-w9xw)).
   - **Acción:** Actualizar la dependencia `next` a `>= 15.5.28` o la versión parcheada más reciente de Next.js 15.
-  - **Commit:** *Pendiente*
+  - **Solución implementada:** Se actualizó `next` y `eslint-config-next` a la versión parcheada `15.5.28`, mitigando el RCE crítico en Windows (GHSA-p293-qw3h-jr36) y vulnerabilidades del optimizador de imágenes (GHSA-2464-fhr4-w9xw). Adicionalmente, se blindó la configuración del optimizador de imágenes en `next.config.ts` estableciendo `dangerouslyAllowSVG: false`, forzando `contentDispositionType: "attachment"`, CSP estricto `contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;"` y restringiendo `remotePatterns: []` para neutralizar ataques XSS basados en vectores SVG o descargas maliciosas. Se validó la compilación de 54 rutas en producción con Next.js App Router (`npm run build`), compatibilidad de ESLint 9 (`eslint.config.mjs`) y la ejecución de la suite de pruebas unitarias (71 tests pasando satisfactoriamente).
+  - **Commit:** Resuelto
 
 ---
 
