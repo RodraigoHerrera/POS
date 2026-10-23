@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import {
   Banknote,
   CreditCard,
@@ -28,7 +28,7 @@ interface SesionCaja {
   fechaApertura: string;
 }
 
-export default function PaymentMethods() {
+function PaymentMethodsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   // Obtiene el ID del pedido, su total real y el cliente de la URL
@@ -412,3 +412,21 @@ export default function PaymentMethods() {
     </div>
   );
 }
+
+export default function PaymentMethods() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen w-full flex-col items-center justify-center gap-4 bg-gray-50 text-center dark:bg-gray-900">
+          <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            Cargando métodos de pago...
+          </p>
+        </div>
+      }
+    >
+      <PaymentMethodsContent />
+    </Suspense>
+  );
+}
+
