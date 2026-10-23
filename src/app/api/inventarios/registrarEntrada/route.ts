@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db"; // Ajusta el import según tu estructura
 import { serializeBigInt } from "@/lib/serialize";
 import { errorResponse } from "@/lib/apiError";
 import { requireEmpleado, esRespuestaError } from "@/lib/auth";
+import { runWithRetry } from "@/lib/transactionRetry";
+import { actualizarInventarioEntrada } from "@/lib/inventario";
 
 // Motivos del enum MotivoMovimiento que tienen sentido para una entrada
 // manual de inventario. Se valida ANTES de escribir: antes un motivo
@@ -21,12 +22,15 @@ export async function POST(req: Request) {
       item: item_id,
       lote: codigo_lote,
       cantidad,
-      costo_unitario: costo_unit,
+      costo_unitario,
+      costo_unit: costo_unit_alt,
       fechaVenc: fecha_vencimiento,
       referencia,
       motivo,
       proveedor: proveedor_id,
     } = body;
+
+    const costo_unit = costo_unitario !== undefined ? costo_unitario : costo_unit_alt;
 
     // Validación: costo 0 es legítimo (donaciones/promos), negativo no.
     // `costo_unit == null` cubre undefined y null sin rechazar el 0.
@@ -61,93 +65,69 @@ export async function POST(req: Request) {
       );
     }
 
-    // Todo o nada: lote + stock por lote + agregado + kardex en una sola
-    // transacción. Antes eran 4 writes sueltos y un fallo a mitad dejaba
-    // lotes fantasma sin stock ni kardex que los respalde.
-    const resultado = await prisma.$transaction(async (tx) => {
-      // 0️⃣ Registrar el proveedor preferido del item (usado luego por el MRP)
-      if (proveedor_id) {
-        await tx.item.update({
-          where: { id: BigInt(item_id) },
-          data: { proveedor_id: BigInt(proveedor_id) },
-        });
-      }
-
-      // 1️⃣ Crear el lote
-      const lote = await tx.lote.create({
-        data: {
-          item_id: BigInt(item_id),
-          codigo_lote,
-          fecha_caducidad: fecha_vencimiento ? new Date(fecha_vencimiento) : null,
-          costo_unit: costoEntrada,
-        },
-      });
-
-      // 2️⃣ Crear o Actualizar inventarioSucursal (Promedio Ponderado)
-      let inventario = await tx.inventarioSucursal.findFirst({
-        where: {
-          item_id: BigInt(item_id),
-          sucursal_id: BigInt(sucursalIdStr),
-        },
-      });
-
-      if (!inventario) {
-        inventario = await tx.inventarioSucursal.create({
-          data: {
-            item_id: BigInt(item_id),
-            sucursal_id: BigInt(sucursalIdStr),
-            stock: qtyEntrada,
-            costo_promedio: costoEntrada,
-          },
-        });
-      } else {
-        const stockActual = Number(inventario.stock);
-        const costoActual = Number(inventario.costo_promedio);
-
-        const nuevoStockTotal = stockActual + qtyEntrada;
-
-        // Fórmula: ((StockActual * CostoActual) + (Entrada * CostoEntrada)) / NuevoStockTotal
-        let nuevoCostoPromedio = costoEntrada; // Default por si el stock actual es 0
-
-        if (nuevoStockTotal > 0) {
-          const valorTotal = (stockActual * costoActual) + (qtyEntrada * costoEntrada);
-          nuevoCostoPromedio = valorTotal / nuevoStockTotal;
+    // SEC-05 & INV-3: Ejecución transaccional con reintento automático ante deadlocks.
+    // Secuencia de mutación estricta INV-3:
+    // 1. item.update (si proveedor_id)
+    // 2. lote.create
+    // 3. stockLoteSucursal.create (precede a inventarioSucursal para evitar deadlock con registrarPedido)
+    // 4. actualizarInventarioEntrada (pesimista FOR UPDATE y recálculo ponderado atómico)
+    // 5. movimientoInventario.create (kardex)
+    const resultado = await runWithRetry(
+      async (tx) => {
+        // 1️⃣ Registrar el proveedor preferido del item (usado luego por el MRP)
+        if (proveedor_id) {
+          await tx.item.update({
+            where: { id: BigInt(item_id) },
+            data: { proveedor_id: BigInt(proveedor_id) },
+          });
         }
 
-        inventario = await tx.inventarioSucursal.update({
-          where: { id: inventario.id },
+        // 2️⃣ Crear el lote
+        const lote = await tx.lote.create({
           data: {
-            stock: { increment: qtyEntrada },
-            costo_promedio: nuevoCostoPromedio,
+            item_id: BigInt(item_id),
+            codigo_lote,
+            fecha_caducidad: fecha_vencimiento ? new Date(fecha_vencimiento) : null,
+            costo_unit: costoEntrada,
           },
         });
-      }
 
-      // 3️⃣ Crear stockLoteSucursal
-      await tx.stockLoteSucursal.create({
-        data: {
-          sucursal_id: BigInt(sucursalIdStr),
-          lote_id: lote.id,
-          cantidad: qtyEntrada,
-        },
-      });
+        // 3️⃣ Crear stockLoteSucursal (INV-3: DEBE preceder a inventarioSucursal)
+        await tx.stockLoteSucursal.create({
+          data: {
+            sucursal_id: BigInt(sucursalIdStr),
+            lote_id: lote.id,
+            cantidad: qtyEntrada,
+          },
+        });
 
-      // 4️⃣ Registrar movimientoInventario
-      await tx.movimientoInventario.create({
-        data: {
-          sucursal_id: BigInt(sucursalIdStr),
-          item_id: BigInt(item_id),
-          lote_id: lote.id,
-          tipo: "Entrada",
-          motivo: motivoEntrada as "Compra" | "Ajuste" | "Traslado" | "Produccion",
-          cantidad: qtyEntrada,
-          costo_unit: costoEntrada,
-          referencia: referencia ?? `Lote-${lote.id}`,
-        },
-      });
+        // 4️⃣ Actualizar inventarioSucursal (upsert base + SELECT FOR UPDATE + recálculo ponderado)
+        const inventario = await actualizarInventarioEntrada(
+          tx,
+          sucursalIdStr,
+          item_id,
+          qtyEntrada,
+          costoEntrada
+        );
 
-      return { lote, inventario };
-    });
+        // 5️⃣ Registrar movimientoInventario
+        await tx.movimientoInventario.create({
+          data: {
+            sucursal_id: BigInt(sucursalIdStr),
+            item_id: BigInt(item_id),
+            lote_id: lote.id,
+            tipo: "Entrada",
+            motivo: motivoEntrada as "Compra" | "Ajuste" | "Traslado" | "Produccion",
+            cantidad: qtyEntrada,
+            costo_unit: costoEntrada,
+            referencia: referencia ?? `Lote-${lote.id}`,
+          },
+        });
+
+        return { lote, inventario };
+      },
+      { timeoutMs: 15000 }
+    );
 
     return NextResponse.json(
       {
@@ -157,7 +137,6 @@ export async function POST(req: Request) {
       },
       { status: 201 }
     );
-
   } catch (error) {
     return errorResponse(error, "Error al registrar la entrada de inventario");
   }
