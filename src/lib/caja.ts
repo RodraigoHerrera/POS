@@ -89,3 +89,95 @@ export async function calcularResumenCaja(caja: {
     efectivoEsperado: efectivoEsperadoDec.toDecimalPlaces(2).toNumber(),
   };
 }
+
+export interface OrderBillingValidationInput {
+  lockedOrder?: {
+    id?: bigint;
+    sucursal_id: bigint;
+    estado: string;
+    total?: unknown;
+  } | null;
+  sucursalId: bigint | string;
+  items?: any[];
+  total?: unknown;
+  metodoPago?: string;
+  recibido?: number;
+  pedidoDetail?: {
+    items?: any[];
+    total?: unknown;
+  } | null;
+  montoPagado?: unknown;
+}
+
+/**
+ * Validates order edit state invariants (INV-SEC04-1).
+ * Rejects orders that are already PAGADO or ANULADO.
+ */
+export function validateOrderEditState(
+  lockedOrder: { id?: bigint; sucursal_id?: bigint; estado: string } | null | undefined
+): void {
+  if (!lockedOrder) {
+    throw new Error("PEDIDO_NOT_FOUND");
+  }
+  if (lockedOrder.estado === "PAGADO" || lockedOrder.estado === "ANULADO") {
+    throw new Error("PEDIDO_ALREADY_CLOSED");
+  }
+}
+
+/**
+ * Validates order billing invariants (INV-SEC04-1, INV-SEC04-2).
+ * Ensures order exists, belongs to caller branch, is not already closed,
+ * contains at least one item, total is positive, and cash payment is sufficient.
+ */
+export function validateOrderForBilling(input: OrderBillingValidationInput): void {
+  const { lockedOrder, sucursalId } = input;
+
+  if (!lockedOrder || lockedOrder.sucursal_id.toString() !== sucursalId.toString()) {
+    throw new Error("Pedido no encontrado");
+  }
+
+  if (lockedOrder.estado === "PAGADO") {
+    throw new Error("El pedido ya fue pagado");
+  }
+
+  if (lockedOrder.estado === "ANULADO") {
+    throw new Error("El pedido está anulado");
+  }
+
+  const items = input.items !== undefined ? input.items : input.pedidoDetail?.items;
+  if (!items || items.length === 0) {
+    throw new Error("El pedido no contiene items para facturar.");
+  }
+
+  const totalRaw =
+    input.total !== undefined
+      ? input.total
+      : input.pedidoDetail?.total !== undefined
+      ? input.pedidoDetail.total
+      : lockedOrder.total;
+  const totalNum = Number(totalRaw);
+  if (!Number.isFinite(totalNum) || totalNum <= 0) {
+    throw new Error("El total del pedido debe ser mayor a 0");
+  }
+
+  const metodo = (input.metodoPago ?? "").toLowerCase();
+  const isCash = metodo === "cash" || metodo === "efectivo";
+  if (isCash) {
+    const recibidoRaw = input.recibido !== undefined ? input.recibido : input.montoPagado;
+    const recibidoNum = Number(recibidoRaw);
+    if (!Number.isFinite(recibidoNum) || recibidoNum < totalNum) {
+      throw new Error("Monto pagado insuficiente");
+    }
+  }
+}
+
+/**
+ * Validates that FEFO simulation fulfilled at least one item (INV-SEC04-4).
+ * Throws a stock error recognized by isDeadlockError as fail-fast.
+ */
+export function validateSimulationResults(successfulItemsCount: number): void {
+  if (successfulItemsCount === 0) {
+    throw new Error("No hay suficiente stock para preparar ningún item de esta actualización.");
+  }
+}
+

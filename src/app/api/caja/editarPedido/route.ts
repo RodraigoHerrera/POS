@@ -6,6 +6,7 @@ import { errorResponse } from '@/lib/apiError';
 import { costoTeoricoDesdeRequerimientos, obtenerCostoReferenciaPorInsumo } from '@/lib/costeo';
 import { simularConsumoFEFO, applySortedStockDecrements, applySortedStockRestorations } from '@/lib/fefo';
 import { runWithRetry } from '@/lib/transactionRetry';
+import { validateOrderEditState, validateSimulationResults } from '@/lib/caja';
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -53,22 +54,6 @@ export async function POST(req: Request) {
 
     const sucursalBigInt = BigInt(sucursalId);
     const pedidoBigInt = BigInt(pedidoId);
-
-    // Fetch existing order to check state
-    const existingOrder = await prisma.pedido.findUnique({
-      where: { id: pedidoBigInt, sucursal_id: sucursalBigInt },
-    });
-
-    if (!existingOrder) {
-      return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 });
-    }
-
-    if (existingOrder.estado === 'PAGADO' || existingOrder.estado === 'ANULADO') {
-      return NextResponse.json({ error: `El pedido está ${existingOrder.estado} y no puede ser editado.` }, { status: 409 });
-    }
-
-    const isCorrection = existingOrder.estado === 'COMANDADO';
-    const newState = existingOrder.estado; // Preserve state (PENDIENTE or COMANDADO)
 
     // PRE-CALCULATION for new items
     const productoIds: bigint[] = [...new Set<bigint>(items.map((i: any) => BigInt(i.producto_id)))];
@@ -141,7 +126,25 @@ export async function POST(req: Request) {
     );
 
     const resultado = await runWithRetry(async (tx) => {
-      // 1. REVERSE PREVIOUS STOCK (ordenado determinísticamente por lote_id e item_id)
+      // 1. PESSIMISTIC ROW LOCK & CLOSED STATE GUARD (INV-SEC04-3, INV-SEC04-1)
+      const lockedOrders = await tx.$queryRaw<Array<{ id: bigint; sucursal_id: bigint; estado: string; observaciones: string | null }>>`
+        SELECT id, sucursal_id, estado, observaciones
+        FROM \`pedido\`
+        WHERE id = ${pedidoBigInt} AND sucursal_id = ${sucursalBigInt}
+        FOR UPDATE
+      `;
+      const lockedOrder = lockedOrders[0];
+
+      if (!lockedOrder) {
+        throw new Error("PEDIDO_NOT_FOUND");
+      }
+
+      validateOrderEditState(lockedOrder);
+
+      const isCorrection = lockedOrder.estado === 'COMANDADO';
+      const newState = lockedOrder.estado;
+
+      // 2. REVERSE PREVIOUS STOCK (ordenado determinísticamente por lote_id e item_id)
       const consumos = await tx.movimientoInventario.findMany({
         where: {
           sucursal_id: sucursalBigInt,
@@ -158,7 +161,7 @@ export async function POST(req: Request) {
         `Reversa Edición Pedido #${pedidoBigInt}`
       );
 
-      // 2. DELETE OLD ITEMS
+      // 3. DELETE OLD ITEMS
       await tx.pedidoItemExtra.deleteMany({
         where: { pedido_item: { pedido_id: pedidoBigInt } },
       });
@@ -166,7 +169,7 @@ export async function POST(req: Request) {
         where: { pedido_id: pedidoBigInt },
       });
 
-      // 3. APPLY NEW STOCK (SIMULATE FEFO AND WRITE)
+      // 4. APPLY NEW STOCK (SIMULATE FEFO AND WRITE)
       const lotesDisponibles = insumoIds.length > 0 ? await tx.stockLoteSucursal.findMany({
         where: { sucursal_id: sucursalBigInt, lote: { item_id: { in: insumoIds } }, cantidad: { gt: 0 } },
         include: { lote: true },
@@ -176,6 +179,9 @@ export async function POST(req: Request) {
       const simulation = simularConsumoFEFO(lotesDisponibles, requerimientosPorItem, {
         allowPartialDrop: true,
       });
+
+      // CRITICAL GUARD INV-SEC04-4: Fail fast and non-destructively abort if zero items fulfilled
+      validateSimulationResults(simulation.successfulItemsIndices.length);
 
       const droppedItems = simulation.droppedItemsIndices.map((idx) => ({
         ...items[idx],
@@ -188,23 +194,32 @@ export async function POST(req: Request) {
         nuevoTotal += subtotalPorItem[idx];
       }
 
-      // 4. UPDATE PEDIDO
+      // 5. UPDATE PEDIDO WITH STATE IMMUTABILITY GUARD
+      const observacionesBase = lockedOrder.observaciones || '';
       const observacionesUpdate = isCorrection 
-        ? `${existingOrder.observaciones}\n[Corrección por edición - ${new Date().toLocaleString()}]`
-        : existingOrder.observaciones;
+        ? `${observacionesBase}\n[Corrección por edición - ${new Date().toLocaleString()}]`.trim()
+        : observacionesBase;
 
-      const pedidoActualizado = await tx.pedido.update({
-        where: { id: pedidoBigInt },
+      const updateResult = await tx.pedido.updateMany({
+        where: {
+          id: pedidoBigInt,
+          sucursal_id: sucursalBigInt,
+          estado: { notIn: ['PAGADO', 'ANULADO'] }
+        },
         data: {
           mesa: mesa,
           cliente_nombre: cliente,
-          estado: newState,
+          estado: newState as any,
           total: nuevoTotal,
           observaciones: observacionesUpdate
         }
       });
 
-      // 5. INSERT NEW ITEMS
+      if (updateResult.count === 0) {
+        throw new Error("CONCURRENT_STATE_CHANGE");
+      }
+
+      // 6. INSERT NEW ITEMS
       for (const idx of simulation.successfulItemsIndices) {
         const itemPedido = items[idx];
         await tx.pedidoItem.create({
@@ -228,7 +243,7 @@ export async function POST(req: Request) {
         });
       }
 
-      // 6. DEDUCT STOCK IN DB (ordenado determinísticamente INV-1, INV-2)
+      // 7. DEDUCT STOCK IN DB (ordenado determinísticamente INV-1, INV-2)
       await applySortedStockDecrements(
         tx,
         sucursalBigInt,
@@ -237,7 +252,7 @@ export async function POST(req: Request) {
         `Pedido #${pedidoBigInt}`
       );
 
-      return { pedidoId: pedidoActualizado.id.toString(), total: nuevoTotal, droppedItems };
+      return { pedidoId: pedidoBigInt.toString(), total: nuevoTotal, droppedItems, isCorrection };
     }, { timeoutMs: 20000 });
 
     return NextResponse.json({
@@ -245,11 +260,27 @@ export async function POST(req: Request) {
       pedidoId: resultado.pedidoId,
       total: resultado.total,
       droppedItems: resultado.droppedItems,
-      isCorrection,
+      isCorrection: resultado.isCorrection,
       message: 'Pedido actualizado'
     });
 
   } catch (error: any) {
+    if (error?.message === "PEDIDO_NOT_FOUND" || error?.message === "Pedido no encontrado") {
+      return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
+    }
+    if (
+      error?.message === "PEDIDO_ALREADY_CLOSED" ||
+      error?.message === "CONCURRENT_STATE_CHANGE" ||
+      error?.message === "El pedido ya fue pagado o anulado y no puede ser editado."
+    ) {
+      return NextResponse.json({ error: "El pedido ya fue pagado o anulado y no puede ser editado." }, { status: 409 });
+    }
+    if (
+      error?.message === "ALL_ITEMS_OUT_OF_STOCK" ||
+      error?.message === "No hay suficiente stock para preparar ningún item de esta actualización."
+    ) {
+      return NextResponse.json({ error: "No hay suficiente stock para preparar ningún item de esta actualización." }, { status: 409 });
+    }
     if (typeof error?.message === "string" && (error.message.startsWith("Stock insuficiente") || error.message.startsWith("No hay suficiente stock"))) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }

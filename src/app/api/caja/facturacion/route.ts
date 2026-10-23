@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db'; // Asegúrate de usar la ruta correcta a tu instancia de prisma
+import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 import { errorResponse } from '@/lib/apiError';
+import { runWithRetry } from '@/lib/transactionRetry';
+import { validateOrderForBilling } from '@/lib/caja';
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -13,7 +15,7 @@ export async function POST(req: Request) {
       pedidoId, 
       metodoPago, 
       montoPagado, // Solo relevante para efectivo
-      facturacion: { nit, razonSocial }, 
+      facturacion: { nit, razonSocial } = {}, 
       detallesPago 
     } = body;
 
@@ -55,10 +57,18 @@ export async function POST(req: Request) {
 
     const cajaId = cajaAbierta.id;
 
-    // 2. Transacción Gigante (Cobro + Factura + Reportes)
-    const resultado = await prisma.$transaction(async (tx) => {
-      
-      // A. Obtener el pedido actual CON datos profundos para el reporte
+    // 2. Transacción Protegida con Retry y Bloqueo Pesimista (Cobro + Factura + Reportes)
+    const resultado = await runWithRetry(async (tx) => {
+      // A. PESSIMISTIC ROW LOCK ACQUISITION (INV-SEC04-3)
+      const lockedOrders = await tx.$queryRaw<Array<{ id: bigint; sucursal_id: bigint; estado: string; total: any }>>`
+        SELECT id, sucursal_id, estado, total
+        FROM \`pedido\`
+        WHERE id = ${BigInt(pedidoId)}
+        FOR UPDATE
+      `;
+      const lockedOrder = lockedOrders[0];
+
+      // B. DEEP ORDER READ UNDER LOCK
       // Necesitamos: Producto (para nombre y categoria) -> Item Inventario (para SKU)
       const pedido = await tx.pedido.findUnique({
         where: { id: BigInt(pedidoId) },
@@ -76,39 +86,33 @@ export async function POST(req: Request) {
         }
       });
 
-      if (!pedido) throw new Error("Pedido no encontrado");
-      // El pedido debe ser de la MISMA sucursal que cobra: sin este check un
-      // cajero de otra sucursal podía facturarlo, y el ingreso caía en su caja
-      // mientras historialVentas lo registraba en la sucursal original.
-      if (pedido.sucursal_id.toString() !== String(sucursalId)) {
+      // Validar invariantes de facturación (INV-SEC04-1, INV-SEC04-2)
+      validateOrderForBilling({
+        lockedOrder,
+        sucursalId,
+        items: pedido?.items,
+        total: pedido?.total,
+        metodoPago,
+        recibido: montoPagado !== undefined ? Number(montoPagado) : undefined,
+        pedidoDetail: pedido ? { items: pedido.items, total: pedido.total } : null,
+        montoPagado,
+      });
+
+      if (!pedido) {
         throw new Error("Pedido no encontrado");
       }
-      if (pedido.estado === 'PAGADO') throw new Error("El pedido ya fue pagado");
-      if (pedido.estado === 'ANULADO') throw new Error("El pedido está anulado");
 
-      // En efectivo, lo recibido debe cubrir el total (el cambio se calcula
-      // sobre esto mismo y se devuelve al frontend).
-      if (metodoPago === 'cash') {
-        const recibido = Number(montoPagado);
-        if (!Number.isFinite(recibido) || recibido < Number(pedido.total)) {
-          throw new Error("Monto pagado insuficiente");
-        }
-      }
-
-      // B. Actualizar Estado del Pedido — con guard atómico: si una anulación
-      // concurrente ganó entre la lectura de arriba y este update, count=0 y
-      // el cobro se revierte completo (no se factura un pedido anulado).
+      // C. Actualizar Estado del Pedido — con guard atómico (INV-SEC04-1)
       const transicion = await tx.pedido.updateMany({
         where: { id: BigInt(pedidoId), estado: { notIn: ['PAGADO', 'ANULADO'] } },
         data: {
           estado: 'PAGADO',
           caja_id: cajaId,
-          // Podrías guardar el método de pago aquí también si agregas el campo al modelo pedido
         }
       });
       if (transicion.count === 0) throw new Error("El pedido ya fue pagado o anulado");
 
-      // C. Registrar Movimiento de Caja (Ingreso de Dinero Físico)
+      // D. Registrar Movimiento de Caja (Ingreso de Dinero Físico)
       if (metodoPago === 'cash') {
         await tx.movimientoCaja.create({
           data: {
@@ -120,7 +124,7 @@ export async function POST(req: Request) {
         });
       }
 
-      // D. Generar la FACTURA
+      // E. Generar la FACTURA (Snapshot no vacío garantizado)
       const nuevaFactura = await tx.factura.create({
         data: {
           pedido_id: BigInt(pedidoId),
@@ -138,11 +142,9 @@ export async function POST(req: Request) {
         }
       });
 
-      // E. GENERAR HISTORIAL DE VENTAS (Data Warehouse Operativo)
-      // Esto alimenta tus gráficos y reportes sin tener que hacer joins complejos después
+      // F. GENERAR HISTORIAL DE VENTAS (Data Warehouse Operativo)
       for (const item of pedido.items) {
-          
-          const costoTotal = Number(item.costo_real || 0); // Costo calculado en FEFO (route anterior)
+          const costoTotal = Number(item.costo_real || 0); // Costo calculado en FEFO
           const costoTeoricoTotal = Number(item.costo_teorico || 0); // Receta (BOM) x costo_promedio
           const ventaTotal = Number(item.subtotal);
           const cantidad = item.cantidad;
@@ -160,7 +162,6 @@ export async function POST(req: Request) {
                   // Datos del Producto (Snapshot)
                   producto_id: item.producto_id,
                   producto_nombre: item.producto.nombre,
-                  // Intentamos sacar el SKU del inventario, si no existe ponemos S/N
                   sku_producto: item.producto.item_inventario?.sku || "S/N",
                   categoria: item.producto.categoria,
 
@@ -185,7 +186,7 @@ export async function POST(req: Request) {
       }
 
       return nuevaFactura;
-    });
+    }, { timeoutMs: 20000 });
 
     const cambio = metodoPago === 'cash'
       ? Number(montoPagado) - Number(resultado.importe_total)
@@ -199,23 +200,34 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    if (error.message === "Pedido no encontrado") {
-      return NextResponse.json({ error: error.message }, { status: 404 });
+    if (error.message === "Pedido no encontrado" || error.message === "PEDIDO_NOT_FOUND") {
+      return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
     }
     if (
       error.message === "El pedido ya fue pagado" ||
       error.message === "El pedido está anulado" ||
-      error.message === "El pedido ya fue pagado o anulado"
+      error.message === "El pedido ya fue pagado o anulado" ||
+      error.message === "PEDIDO_ALREADY_CLOSED" ||
+      error.code === 'P2002'
     ) {
-      return NextResponse.json({ error: error.message }, { status: 409 });
+      return NextResponse.json({ 
+        error: error.message === "El pedido está anulado" ? "El pedido está anulado" : "El pedido ya fue pagado" 
+      }, { status: 409 });
     }
     if (error.message === "Monto pagado insuficiente") {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    // Carrera de doble cobro: factura.pedido_id es @unique, el segundo insert
-    // concurrente cae aquí con P2002 en vez de duplicar la factura.
-    if (error.code === 'P2002') {
-      return NextResponse.json({ error: "El pedido ya fue pagado" }, { status: 409 });
+    if (
+      error.message === "El pedido no contiene items para facturar." ||
+      error.message === "NO_ITEMS_TO_INVOICE"
+    ) {
+      return NextResponse.json({ error: "El pedido no contiene items para facturar." }, { status: 400 });
+    }
+    if (
+      error.message === "El total del pedido debe ser mayor a 0" ||
+      error.message === "INVALID_ORDER_TOTAL"
+    ) {
+      return NextResponse.json({ error: "El total del pedido debe ser mayor a 0" }, { status: 400 });
     }
     return errorResponse(error, "Error al procesar el cobro");
   }
