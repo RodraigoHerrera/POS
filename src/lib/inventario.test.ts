@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  round4Decimals,
+  round6Decimals,
   calcularNuevoCostoPromedio,
   actualizarInventarioEntrada,
 } from './inventario';
@@ -9,21 +9,27 @@ import { isDeadlockError } from './transactionRetry';
 
 describe('SEC-05: Weighted Average Cost & Inventory Intake Concurrency', () => {
 
-  describe('round4Decimals', () => {
-    it('rounds to exactly 4 decimal places', () => {
-      assert.equal(round4Decimals(10.12345), 10.1235);
-      assert.equal(round4Decimals(10.12344), 10.1234);
-      assert.equal(round4Decimals(5), 5);
-      assert.equal(round4Decimals(0), 0);
+  describe('round6Decimals', () => {
+    it('rounds to at most 6 decimal places', () => {
+      assert.equal(round6Decimals(1.0000004), 1);
+      assert.equal(round6Decimals(0.0000004), 0);
+      assert.equal(round6Decimals(2), 2);
+      assert.equal(round6Decimals(5), 5);
+      assert.equal(round6Decimals(0), 0);
     });
 
     it('resolves floating point boundary values accurately', () => {
       // Classic IEEE-754 precision check
-      assert.equal(round4Decimals(0.1 + 0.2), 0.3);
-      assert.equal(round4Decimals(1 / 3), 0.3333);
-      assert.equal(round4Decimals(2 / 3), 0.6667);
-      assert.equal(round4Decimals(0.00004), 0);
-      assert.equal(round4Decimals(0.00005), 0.0001);
+      assert.equal(round6Decimals(0.1 + 0.2), 0.3);
+      assert.equal(round6Decimals(1 / 3), 0.333333);
+      assert.equal(round6Decimals(2 / 3), 0.666667);
+    });
+
+    it('follows toFixed behavior on binary-inexact ties (observed values)', () => {
+      // Observed: these ties fall below the midpoint in binary, so they round down.
+      assert.equal(round6Decimals(0.0000005), 0);
+      assert.equal(round6Decimals(0.1234565), 0.123456);
+      assert.equal(round6Decimals(10.1234565), 10.123456);
     });
   });
 
@@ -35,13 +41,20 @@ describe('SEC-05: Weighted Average Cost & Inventory Intake Concurrency', () => {
     });
 
     it('computes asymmetrical quantities and fractional costs', () => {
-      // 10 units @ 15.5 + 20 units @ 18.25 = 520 / 30 = 17.333333... -> 17.3333
+      // 10 units @ 15.5 + 20 units @ 18.25 = 520 / 30 = 17.333333... -> 17.333333
       const cost1 = calcularNuevoCostoPromedio(10, 15.5, 20, 18.25);
-      assert.equal(cost1, 17.3333);
+      assert.equal(cost1, 17.333333);
 
       // 3.5 units @ 12.3456 + 1.5 units @ 20.9876 = 74.691 / 5 = 14.9382
       const cost2 = calcularNuevoCostoPromedio(3.5, 12.3456, 1.5, 20.9876);
       assert.equal(cost2, 14.9382);
+    });
+
+    it('preserves per-gram costs at 6 decimals', () => {
+      // Observed: 5.27 / 1500 = 0.0035133... -> 0.003513
+      assert.equal(calcularNuevoCostoPromedio(1000, 0.00347, 500, 0.0036), 0.003513);
+      // Reset path keeps 0.00347 (not rounded to 0.0035)
+      assert.equal(calcularNuevoCostoPromedio(0, 0, 1000, 0.00347), 0.00347);
     });
 
     it('handles zero-cost promotional intake (donations / bonuses)', () => {
@@ -163,7 +176,7 @@ describe('SEC-05: Weighted Average Cost & Inventory Intake Concurrency', () => {
       // 15.5 units @ 10.25 + 4.5 units @ 20.5
       // Total value: (15.5 * 10.25) + (4.5 * 20.5) = 158.875 + 92.25 = 251.125
       // Total stock: 20
-      // New average cost: 251.125 / 20 = 12.55625 -> 12.5563
+      // New average cost: 251.125 / 20 = 12.55625 (kept at 6 decimals)
       const result = await actualizarInventarioEntrada(
         mockTx,
         BigInt(1),
@@ -173,7 +186,7 @@ describe('SEC-05: Weighted Average Cost & Inventory Intake Concurrency', () => {
       );
 
       assert.equal(result.stock, 20);
-      assert.equal(result.costo_promedio, 12.5563);
+      assert.equal(result.costo_promedio, 12.55625);
     });
 
     it('rejects if locked query returns empty array', async () => {

@@ -104,7 +104,7 @@ model item {
   // valor "congela" el teórico frente a fluctuaciones de compra, aislando la
   // brecha real-vs-teórico a causas operativas (merma, sobre-porcionamiento)
   // en lugar de variación de precio de mercado.
-  costo_estandar Decimal? @db.Decimal(18, 4)
+  costo_estandar Decimal? @db.Decimal(18, 6)
 
   // Relaciones
   receta_vendible   receta?
@@ -160,7 +160,7 @@ model inventarioSucursal {
   item           item       @relation(fields: [item_id], references: [id])
   item_id        BigInt
   stock          Decimal    @db.Decimal(18, 3)
-  costo_promedio Decimal    @db.Decimal(18, 4)
+  costo_promedio Decimal    @db.Decimal(18, 6)
   stock_min      Decimal    @default(0) @db.Decimal(18, 3)
   stock_max      Decimal    @default(0) @db.Decimal(18, 3)
 
@@ -177,7 +177,7 @@ model lote {
   item_id          BigInt
   codigo_lote      String  @db.VarChar(64)
   fecha_caducidad  DateTime?
-  costo_unit       Decimal @db.Decimal(18, 4)
+  costo_unit       Decimal @db.Decimal(18, 6)
   creado_en        DateTime @default(now())
 
   stocks_por_sucursal stockLoteSucursal[]
@@ -214,7 +214,7 @@ model movimientoInventario {
   tipo        TipoMovimiento
   motivo      MotivoMovimiento
   cantidad    Decimal    @db.Decimal(18, 3)
-  costo_unit  Decimal?   @db.Decimal(18, 4)
+  costo_unit  Decimal?   @db.Decimal(18, 6)
   referencia  String?    @db.VarChar(64)
   creado_en   DateTime   @default(now())
 
@@ -266,7 +266,7 @@ model ordenCompraItem {
   item             item        @relation(fields: [item_id], references: [id])
   item_id          BigInt
   cantidad         Decimal     @db.Decimal(18, 3)
-  costo_unit       Decimal     @db.Decimal(18, 4)
+  costo_unit       Decimal     @db.Decimal(18, 6)
 
   @@index([orden_compra_id])
 }

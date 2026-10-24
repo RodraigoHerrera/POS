@@ -7,6 +7,7 @@ import Input from "@/components/form/input/InputField";
 import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import TableRowSkeleton from "@/components/ui/skeleton/TableRowSkeleton";
+import { formatCostoUnitario } from "@/lib/costo";
 
 // --- Interfaces ---
 interface KardexMovement {
@@ -215,7 +216,7 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
                         {mov.tipo === 'Entrada' ? '+' : '-'}{mov.cantidad} <span className="text-xs font-normal text-gray-500">{mov.unidad}</span>
                       </td>
                       <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-300">
-                        {mov.costo_unitario.toFixed(2)}
+                        {formatCostoUnitario(mov.costo_unitario)}
                       </td>
                       <td className="px-4 py-3 text-sm text-right font-medium text-gray-800 dark:text-white">
                         {mov.total_movimiento}

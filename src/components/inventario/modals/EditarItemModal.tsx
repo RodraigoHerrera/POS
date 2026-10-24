@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { Modal } from "@/components/ui/modal";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
+import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
+import { opcionesUnidad } from "@/lib/unidad";
 
 type Props = {
   isOpen: boolean;
@@ -36,6 +38,12 @@ export default function EditarItemModal({
       });
     }
   }, [item]);
+
+  // Derived from the item's original code so a legacy unit stays selectable.
+  const opciones = useMemo(
+    () => opcionesUnidad(item?.unidad_code),
+    [item?.unidad_code]
+  );
 
   const handleText =
     (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -108,11 +116,11 @@ export default function EditarItemModal({
 
               <div className="col-span-2 lg:col-span-1">
                 <Label className="text-black">Unidad de Medida</Label>
-                <Input
-                  className="text-gray-dark"
-                  type="text"
+                <Select
                   value={form.unidad_code}
-                  onChange={handleText("unidad_code")}
+                  options={opciones}
+                  placeholder="Seleccione una unidad"
+                  onChange={(v) => setForm((p) => ({ ...p, unidad_code: v }))}
                 />
                 <p className="mt-1 text-xs text-gray-400">
                   Solo se guardará si el ítem no tiene historial.

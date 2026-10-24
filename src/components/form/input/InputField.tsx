@@ -12,7 +12,7 @@ interface InputProps {
   style?: React.CSSProperties;
   min?: string;
   max?: string;
-  step?: number;
+  step?: number | "any";
   disabled?: boolean;
   readOnly?: boolean;
   success?: boolean;

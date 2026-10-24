@@ -127,7 +127,7 @@ export default function MermasModal({ isOpen, onClose, onSaved }: Props) {
 
                 <div className="col-span-2 lg:col-span-1">
                   <Label className="text-black">Cantidad Perdida</Label>
-                  <Input className="text-gray-dark" type="number" placeholder="Cantidad" onChange={handleText("cantidad")} />
+                  <Input className="text-gray-dark" type="number" step="any" placeholder="Cantidad" onChange={handleText("cantidad")} />
                 </div>
 
                 <div className="col-span-2 lg:col-span-1">

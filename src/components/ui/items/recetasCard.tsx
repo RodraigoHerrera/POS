@@ -445,7 +445,7 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
                                 <input 
                                     type="number" 
                                     min="0"
-                                    step="0.01"
+                                    step="any"
                                     className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                     placeholder="0.00"
                                     value={insumo.cantidad}
@@ -553,7 +553,7 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
                       <input
                         type="number"
                         min="0"
-                        step="0.01"
+                        step="any"
                         className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                         placeholder="0.00"
                         value={extra.precio}

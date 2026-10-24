@@ -8,6 +8,7 @@ import Input from "@/components/form/input/InputField";
 import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import DatePicker from '@/components/form/date-picker';
+import { hintUnidad } from "@/lib/unidad";
 
 type Option = { value: string; label: string };
 
@@ -26,6 +27,8 @@ export default function EntradaModal({ isOpen, onClose, onSaved, presetItemId }:
   // Estados para las listas dinámicas
   const [itemsOptions, setItemsOptions] = useState<Option[]>([]);
   const [provOptions, setProvOptions] = useState<Option[]>([]);
+  // id de item -> unidad_code crudo (se normaliza al mostrar)
+  const [unidades, setUnidades] = useState<Record<string, string>>({});
 
   const [payload, setPayload] = useState({
     item: "",
@@ -57,10 +60,15 @@ export default function EntradaModal({ isOpen, onClose, onSaved, presetItemId }:
           const provData = await provRes.ok ? await provRes.json() : [];
 
           // Mapeamos la respuesta de la BD al formato del Select { value, label }
-          const mappedItems = itemsData.filter((i: any) => i.tipo !== "vendible").map((i: any) => ({ 
-            value: i.id.toString(), // o i._id 
+          const nonVendible = itemsData.filter((i: any) => i.tipo !== "vendible");
+          const mappedItems = nonVendible.map((i: any) => ({
+            value: i.id.toString(), // o i._id
             label: i.nombre // o i.descripcion
           }));
+          const mappedUnidades: Record<string, string> = {};
+          for (const i of nonVendible) {
+            mappedUnidades[i.id.toString()] = i.unidad_code ?? "";
+          }
 
           const mappedProv = provData.map((p: any) => ({ 
             value: p.id.toString(), 
@@ -69,6 +77,7 @@ export default function EntradaModal({ isOpen, onClose, onSaved, presetItemId }:
           }));
 
           setItemsOptions(mappedItems);
+          setUnidades(mappedUnidades);
           setProvOptions(mappedProv);
 
           // Preselecciona el item venido de "Reponer" (StockAlertsCard) una vez cargadas las opciones
@@ -141,6 +150,9 @@ export default function EntradaModal({ isOpen, onClose, onSaved, presetItemId }:
       { value: "Traslado", label: "Transferencia" },
   ];
 
+  // Derivado en render: sin hint si no hay item o no está en la lista cargada
+  const hintCantidad = hintUnidad(payload.item, unidades);
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-[700px] m-4">
       <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
@@ -210,8 +222,9 @@ export default function EntradaModal({ isOpen, onClose, onSaved, presetItemId }:
                   <Input 
                     className="text-gray-dark" 
                     type="number" 
-                    placeholder="Ingrese cantidad" 
-                    onChange={handleText("cantidad")} 
+                    placeholder="Ingrese cantidad" step="any" 
+                    onChange={handleText("cantidad")}
+                    hint={hintCantidad}
                   />
                 </div>
 
@@ -220,7 +233,7 @@ export default function EntradaModal({ isOpen, onClose, onSaved, presetItemId }:
                   <Input 
                     className="text-gray-dark" 
                     type="number" 
-                    placeholder="Ingrese el costo" 
+                    placeholder="Ingrese el costo" step="any" 
                     onChange={handleText("costo_unitario")} 
                   />
                 </div>

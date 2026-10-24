@@ -227,7 +227,7 @@ export default function ListaItemsModal({ isOpen, onClose, categoriasOptions }: 
                             <input
                               type="number"
                               min="0"
-                              step="0.01"
+                              step="any"
                               defaultValue={item.costo_estandar ?? ""}
                               placeholder="auto"
                               onBlur={(e) => {

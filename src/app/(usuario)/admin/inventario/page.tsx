@@ -19,6 +19,11 @@ import ListaItemsModal from "@/components/inventario/modals/ListaItemsModal";
 import AlertasModal from "@/components/inventario/modals/AlertasModal";
 import ControlStockModal from "@/components/inventario/modals/ControlStockModal";
 
+import { opcionesUnidad } from "@/lib/unidad";
+
+// Static catalog hoisted out of render (single shared source in lib/unidad).
+const UNIDADES = opcionesUnidad();
+
 export default function Inventario() {
   const router = useRouter();
 
@@ -41,17 +46,6 @@ export default function Inventario() {
       { value: "insumo", label: "Insumo" },
       { value: "prep", label: "Preparación" },
       { value: "oficina", label: "Oficina" },
-    ],
-    []
-  );
-
-  const unidadesOptions = useMemo(
-    () => [
-      { value: "unidad", label: "Unidad" },
-      { value: "caja", label: "Caja" },
-      { value: "paquete", label: "Paquete" },
-      { value: "litro", label: "Litro" },
-      { value: "kilogramo", label: "Kilogramo" },
     ],
     []
   );
@@ -143,7 +137,7 @@ export default function Inventario() {
         isOpen={nuevoItemModal.isOpen}
         onClose={nuevoItemModal.closeModal}
         categoriasOptions={categoriasOptions}
-        unidadesOptions={unidadesOptions}
+        unidadesOptions={UNIDADES}
         onCreated={handleDataChanged}
       />
 

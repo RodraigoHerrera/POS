@@ -1,10 +1,10 @@
 import { Prisma } from '@prisma/client';
 
 /**
- * Rounds a numeric value to 4 decimal places.
+ * Rounds a numeric value to 6 decimal places.
  */
-export function round4Decimals(value: number): number {
-  return Number(value.toFixed(4));
+export function round6Decimals(value: number): number {
+  return Number(value.toFixed(6));
 }
 
 /**
@@ -13,10 +13,10 @@ export function round4Decimals(value: number): number {
  *
  * Rules:
  * - If current stock is <= 0 or cumulative stock (stockActual + qtyEntrada) <= 0,
- *   cost is reset to the intake unit cost rounded to 4 decimals.
+ *   cost is reset to the intake unit cost rounded to 6 decimals.
  * - Otherwise, computes the weighted average:
  *   ((stockActual * costoActual) + (qtyEntrada * costoEntrada)) / (stockActual + qtyEntrada)
- *   rounded to 4 decimals.
+ *   rounded to 6 decimals.
  */
 export function calcularNuevoCostoPromedio(
   stockActual: number,
@@ -25,14 +25,14 @@ export function calcularNuevoCostoPromedio(
   costoEntrada: number
 ): number {
   if (stockActual <= 0 || (stockActual + qtyEntrada) <= 0) {
-    return round4Decimals(costoEntrada);
+    return round6Decimals(costoEntrada);
   }
 
   const nuevoCosto =
     (stockActual * costoActual + qtyEntrada * costoEntrada) /
     (stockActual + qtyEntrada);
 
-  return round4Decimals(nuevoCosto);
+  return round6Decimals(nuevoCosto);
 }
 
 /**
