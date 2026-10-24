@@ -30,6 +30,7 @@ model empleados {
   sucursal    sucursales  @relation(fields: [sucursal_id], references: [id])
   cajas caja[] // Relación inversa
   pedidos_atendidos pedido[]
+  auditorias_entrada auditoriaEntrada[]
 
   @@index([sucursal_id])
   @@index([correo])
@@ -55,6 +56,7 @@ model sucursales {
   cajas caja[] // Relación inversa
   pedidos       pedido[]
   mrp_corridas  mrpCorrida[]
+  auditorias_entrada auditoriaEntrada[]
 }
 
 // ==========================================
@@ -184,6 +186,7 @@ model lote {
   movimientos         movimientoInventario[]
   prod_consumos       produccionItem[]      @relation("ProduccionLoteConsumido")
   prod_generado       produccion[]          @relation("ProduccionLoteGenerado")
+  auditorias_entrada  auditoriaEntrada[]
 
   @@index([item_id, fecha_caducidad])
   @@unique([item_id, codigo_lote])
@@ -221,6 +224,8 @@ model movimientoInventario {
   @@index([sucursal_id, item_id, creado_en])
   @@index([lote_id])
   @@index([tipo, creado_en])
+
+  auditorias_entrada auditoriaEntrada[]
 }
 
 // ==========================================
@@ -618,4 +623,29 @@ model mrpNecesidadInsumo {
 
   @@index([corrida_id])
   @@index([item_id])
+}
+
+// ==========================================
+// Auditoria de edicion de entradas (una fila por campo modificado)
+// ==========================================
+model auditoriaEntrada {
+  id             BigInt   @id @default(autoincrement())
+  movimiento_id  BigInt
+  lote_id        BigInt
+  sucursal_id    BigInt
+  empleado_id    BigInt
+  campo          String   @db.VarChar(32) // codigo_lote | fecha_caducidad | referencia | cantidad | costo_unit
+  valor_anterior String?  @db.VarChar(255)
+  valor_nuevo    String?  @db.VarChar(255)
+  creado_en      DateTime @default(now())
+
+  movimiento movimientoInventario @relation(fields: [movimiento_id], references: [id])
+  lote       lote                 @relation(fields: [lote_id], references: [id])
+  sucursal   sucursales           @relation(fields: [sucursal_id], references: [id])
+  empleado   empleados            @relation(fields: [empleado_id], references: [id])
+
+  @@index([movimiento_id, creado_en])
+  @@index([lote_id])
+  @@index([sucursal_id, creado_en])
+  @@index([empleado_id])
 }
