@@ -220,6 +220,7 @@ model movimientoInventario {
   costo_unit  Decimal?   @db.Decimal(18, 6)
   referencia  String?    @db.VarChar(64)
   creado_en   DateTime   @default(now())
+  anulado_en  DateTime?
 
   @@index([sucursal_id, item_id, creado_en])
   @@index([lote_id])

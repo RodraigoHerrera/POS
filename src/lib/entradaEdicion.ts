@@ -120,6 +120,8 @@ export interface EstadoEdicionEntrada {
   consumosProduccionLote: number;
   /** Quantity of stockLoteSucursal for this sucursal; null when the row does not exist. */
   cantidadStockLote: number | null;
+  /** The movement was voided (anulado_en is set); voided entries are never editable. */
+  anulado?: boolean;
 }
 
 export interface Editabilidad {
@@ -135,6 +137,7 @@ export interface Editabilidad {
  */
 export function evaluarEditabilidad(e: EstadoEdicionEntrada): Editabilidad {
   const editable =
+    !e.anulado &&
     e.tipo === "Entrada" &&
     e.loteId !== null &&
     (MOTIVOS_ENTRADA_EDITABLES as readonly string[]).includes(e.motivo) &&
@@ -331,6 +334,7 @@ interface MovimientoBloqueado {
   cantidad: unknown;
   costo_unit: unknown;
   referencia: string | null;
+  anulado_en?: Date | null;
 }
 
 interface LoteBloqueado {
@@ -348,7 +352,7 @@ async function bloquearMovimientoYLote(
   tx: Prisma.TransactionClient,
   p: ParametrosEdicionEntrada
 ): Promise<{ mov: MovimientoBloqueado; lote: LoteBloqueado }> {
-  const movs = await tx.$queryRaw<MovimientoBloqueado[]>`SELECT id, sucursal_id, item_id, lote_id, tipo, motivo, cantidad, costo_unit, referencia FROM \`movimientoInventario\` WHERE id = ${p.movimientoId} FOR UPDATE`;
+  const movs = await tx.$queryRaw<MovimientoBloqueado[]>`SELECT id, sucursal_id, item_id, lote_id, tipo, motivo, cantidad, costo_unit, referencia, anulado_en FROM \`movimientoInventario\` WHERE id = ${p.movimientoId} FOR UPDATE`;
   const mov = movs?.[0];
   if (!mov || BigInt(mov.sucursal_id) !== p.sucursalId) {
     throw new EdicionEntradaError("ENTRADA_NO_ENCONTRADA");
@@ -366,6 +370,7 @@ async function bloquearMovimientoYLote(
     totalMovimientosLote: 1,
     consumosProduccionLote: 0,
     cantidadStockLote: aNumero(mov.cantidad),
+    anulado: mov.anulado_en != null,
   });
   if (!previa.editable || mov.lote_id === null) {
     throw new EdicionEntradaError("ENTRADA_NO_EDITABLE");
@@ -450,6 +455,7 @@ export async function ejecutarEdicionEntradaTx(
     totalMovimientosLote: agregado._count._all,
     consumosProduccionLote: consumos,
     cantidadStockLote: bloqueos?.stockLote ? aNumero(bloqueos.stockLote.cantidad) : null,
+    anulado: mov.anulado_en != null,
   });
   if (!estado.editable) throw new EdicionEntradaError("ENTRADA_NO_EDITABLE");
   if (cambiaCantidadOCosto && !estado.cantidadCostoEditables) {

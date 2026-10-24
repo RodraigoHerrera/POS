@@ -174,6 +174,14 @@ describe("ejecutarEdicionEntradaTx - access and eligibility", () => {
     }
   });
 
+  it("rejects a voided entry with 409 before locking the lote", async () => {
+    const { tx, secuencia } = crearTx({
+      movimiento: { ...movimientoBase, anulado_en: new Date("2026-10-01T00:00:00.000Z") },
+    });
+    await rechazadoCon(ejecutarEdicionEntradaTx(tx, parametros({ referencia: "X" })), "ENTRADA_NO_EDITABLE");
+    assert.deepEqual(secuencia, ["lock:movimientoInventario"]);
+  });
+
   it("rejects a restoration Ajuste that is not the originating movement", async () => {
     const { tx, secuencia } = crearTx({
       movimiento: { ...movimientoBase, motivo: "Ajuste" },

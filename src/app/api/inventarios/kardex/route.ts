@@ -66,6 +66,7 @@ export async function GET(req: Request) {
           motivo: mov.motivo,
           loteId: mov.lote_id,
           cantidad: parseFloat(mov.cantidad.toString()),
+          anulado: mov.anulado_en !== null,
         },
         mov.lote_id ? estadoLotes.get(mov.lote_id.toString()) : undefined
       );
@@ -96,6 +97,8 @@ export async function GET(req: Request) {
       fecha_caducidad: mov.lote?.fecha_caducidad ? mov.lote.fecha_caducidad.toISOString().split('T')[0] : null,
       editable: flags.editable,
       cantidad_costo_editables: flags.cantidadCostoEditables,
+      anulado: flags.anulado,
+      anulable: flags.anulable,
       };
     });
 

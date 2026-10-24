@@ -34,6 +34,7 @@ export async function GET() {
       WHERE sucursal_id = ${sucursalId}
         AND creado_en >= ${inicio}
         AND motivo IN ('Compra', 'Venta', 'Merma')
+        AND anulado_en IS NULL
       GROUP BY YEAR(creado_en), MONTH(creado_en), motivo
     `;
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { Modal } from "@/components/ui/modal";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
@@ -8,6 +9,7 @@ import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import TableRowSkeleton from "@/components/ui/skeleton/TableRowSkeleton";
 import { formatCostoUnitario } from "@/lib/costo";
+import { mensajeErrorApi } from "@/lib/respuestaApi";
 import EditarEntradaForm from "./EditarEntradaForm";
 
 // --- Interfaces ---
@@ -29,6 +31,8 @@ interface KardexMovement {
   fecha_caducidad: string | null;
   editable: boolean;
   cantidad_costo_editables: boolean;
+  anulado: boolean;
+  anulable: boolean;
 }
 
 type Option = { value: string; label: string };
@@ -45,6 +49,9 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
   const [movimientos, setMovimientos] = useState<KardexMovement[]>([]);
   const [loading, setLoading] = useState(false);
   const [editando, setEditando] = useState<KardexMovement | null>(null);
+  const [anulando, setAnulando] = useState<KardexMovement | null>(null);
+  const [motivoAnulacion, setMotivoAnulacion] = useState("");
+  const [isAnulando, setIsAnulando] = useState(false);
   
   const [filtros, setFiltros] = useState({
     item: "",
@@ -106,9 +113,41 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
     alert("Generando reporte PDF...");
   };
 
-  // Al cerrar se descarta la edición en curso para reabrir siempre en la tabla
+  const cancelarAnulacion = () => {
+    setAnulando(null);
+    setMotivoAnulacion("");
+  };
+
+  const confirmarAnulacion = async () => {
+    if (!anulando) return;
+    try {
+      setIsAnulando(true);
+      const res = await fetch(`/api/inventarios/entradas/${anulando.id}/anular`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ motivo: motivoAnulacion }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        toast.error(mensajeErrorApi(data, "No se pudo anular la entrada"));
+        return;
+      }
+      toast.success("Entrada anulada");
+      cancelarAnulacion();
+      fetchKardex();
+    } catch (error) {
+      console.error(error);
+      toast.error("Error de conexión al anular la entrada");
+    } finally {
+      setIsAnulando(false);
+    }
+  };
+
+  // Al cerrar se descarta la edición o anulación en curso para reabrir siempre en la tabla
   const handleClose = () => {
     setEditando(null);
+    cancelarAnulacion();
     onClose();
   };
 
@@ -125,6 +164,41 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
               fetchKardex();
             }}
           />
+        ) : anulando ? (
+        <div className="px-2 pr-14">
+          <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
+            Anular entrada
+          </h4>
+          <p className="mb-4 text-sm text-gray-600 dark:text-gray-300">
+            Se anulará la entrada de{" "}
+            <span className="font-medium">
+              {anulando.cantidad} {anulando.unidad}
+            </span>{" "}
+            de <span className="font-medium">{anulando.item}</span> (lote {anulando.lote}). El
+            stock y el costo promedio se revertirán, pero el movimiento seguirá visible en el
+            kardex como anulado. Esta acción no se puede deshacer.
+          </p>
+          <Label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Motivo (opcional)
+          </Label>
+          <textarea
+            value={motivoAnulacion}
+            onChange={(e) => setMotivoAnulacion(e.target.value)}
+            maxLength={255}
+            rows={3}
+            disabled={isAnulando}
+            placeholder="Ej. Error de digitación"
+            className="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+          />
+          <div className="flex justify-end gap-2 mt-6">
+            <Button variant="outline" onClick={cancelarAnulacion} disabled={isAnulando}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmarAnulacion} disabled={isAnulando}>
+              {isAnulando ? "Anulando..." : "Confirmar anulación"}
+            </Button>
+          </div>
+        </div>
         ) : (
         <>
         {/* Encabezado */}
@@ -216,7 +290,10 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
                   </tr>
                 ) : (
                   movimientosFiltrados.map((mov) => (
-                    <tr key={mov.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                    <tr
+                      key={mov.id}
+                      className={`hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${mov.anulado ? "line-through text-gray-400 dark:text-gray-500" : ""}`}
+                    >
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
                         {new Date(mov.fecha).toLocaleDateString()} <span className="text-xs text-gray-400">{new Date(mov.fecha).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                       </td>
@@ -231,6 +308,11 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
                           {mov.tipo}
                         </span>
                         <div className="text-xs text-gray-500 mt-0.5">{mov.motivo}</div>
+                        {mov.anulado && (
+                          <span className="mt-1 inline-flex items-center rounded bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700 no-underline dark:bg-gray-700 dark:text-gray-200">
+                            Anulada
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                         {mov.lote}
@@ -246,11 +328,18 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
                         {mov.total_movimiento}
                       </td>
                       <td className="px-4 py-3 text-sm text-right">
-                        {mov.editable && (
-                          <Button size="sm" variant="outline" onClick={() => setEditando(mov)}>
-                            Editar
-                          </Button>
-                        )}
+                        <div className="flex justify-end gap-2">
+                          {mov.editable && (
+                            <Button size="sm" variant="outline" onClick={() => setEditando(mov)}>
+                              Editar
+                            </Button>
+                          )}
+                          {mov.anulable && (
+                            <Button size="sm" variant="outline" onClick={() => setAnulando(mov)}>
+                              Anular
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))

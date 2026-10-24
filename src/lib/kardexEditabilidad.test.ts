@@ -26,22 +26,36 @@ const estadoSinTocar = {
   cantidadStock: 10,
 };
 
+const SIN_ACCIONES = {
+  editable: false,
+  cantidadCostoEditables: false,
+  anulado: false,
+  anulable: false,
+};
+
 describe("calcularFlagsKardex", () => {
   it("manual Compra untouched -> both true", () => {
     assert.deepEqual(calcularFlagsKardex(fila({}), estadoSinTocar), {
       editable: true,
       cantidadCostoEditables: true,
+      anulado: false,
+      anulable: true,
     });
   });
 
   it("manual Compra consumed -> metadata only", () => {
     const r = calcularFlagsKardex(fila({}), { ...estadoSinTocar, cantidadStock: 4 });
-    assert.deepEqual(r, { editable: true, cantidadCostoEditables: false });
+    assert.deepEqual(r, {
+      editable: true,
+      cantidadCostoEditables: false,
+      anulado: false,
+      anulable: false,
+    });
   });
 
   it("Produccion -> neither", () => {
     const r = calcularFlagsKardex(fila({ motivo: "Produccion" }), estadoSinTocar);
-    assert.deepEqual(r, { editable: false, cantidadCostoEditables: false });
+    assert.deepEqual(r, SIN_ACCIONES);
   });
 
   it("restoration Ajuste (not first movement) -> neither", () => {
@@ -49,18 +63,32 @@ describe("calcularFlagsKardex", () => {
       ...estadoSinTocar,
       totalMovimientos: 2,
     });
-    assert.deepEqual(r, { editable: false, cantidadCostoEditables: false });
+    assert.deepEqual(r, SIN_ACCIONES);
   });
 
   it("Salida -> neither", () => {
     const r = calcularFlagsKardex(fila({ tipo: "Salida" }), estadoSinTocar);
-    assert.deepEqual(r, { editable: false, cantidadCostoEditables: false });
+    assert.deepEqual(r, SIN_ACCIONES);
   });
 
   it("row without lote or state -> neither", () => {
-    assert.deepEqual(calcularFlagsKardex(fila({ loteId: null }), undefined), {
-      editable: false,
-      cantidadCostoEditables: false,
+    assert.deepEqual(calcularFlagsKardex(fila({ loteId: null }), undefined), SIN_ACCIONES);
+  });
+
+  it("voided entry -> flagged anulado, neither editable nor voidable", () => {
+    const r = calcularFlagsKardex(fila({ anulado: true }), { ...estadoSinTocar, cantidadStock: 0 });
+    assert.deepEqual(r, { ...SIN_ACCIONES, anulado: true });
+  });
+
+  it("voided entry stays blocked even if the lote looks untouched", () => {
+    const r = calcularFlagsKardex(fila({ anulado: true }), estadoSinTocar);
+    assert.deepEqual(r, { ...SIN_ACCIONES, anulado: true });
+  });
+
+  it("voided state without lote state is still reported as anulado", () => {
+    assert.deepEqual(calcularFlagsKardex(fila({ anulado: true }), undefined), {
+      ...SIN_ACCIONES,
+      anulado: true,
     });
   });
 });

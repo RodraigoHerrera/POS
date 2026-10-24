@@ -4,6 +4,7 @@ import {
   MOTIVOS_ENTRADA_EDITABLES,
   type Editabilidad,
 } from "./entradaEdicion";
+import { evaluarAnulabilidad } from "./entradaAnulacion";
 
 export interface EstadoLoteKardex {
   primerMovimientoId: bigint | null;
@@ -19,6 +20,14 @@ export interface FilaKardexEditable {
   motivo: string;
   loteId: bigint | null;
   cantidad: number;
+  /** The movement was voided (anulado_en is set). */
+  anulado?: boolean;
+}
+
+export interface FlagsKardex extends Editabilidad {
+  anulado: boolean;
+  /** The entry can be voided (untouched manual entry that is not voided yet). */
+  anulable: boolean;
 }
 
 export type MapaEstadoLotes = Map<string, EstadoLoteKardex>;
@@ -96,9 +105,12 @@ export async function cargarEstadoEdicionLotes(
 export function calcularFlagsKardex(
   fila: FilaKardexEditable,
   estado: EstadoLoteKardex | undefined
-): Editabilidad {
-  if (!estado) return { editable: false, cantidadCostoEditables: false };
-  return evaluarEditabilidad({
+): FlagsKardex {
+  const anulado = fila.anulado === true;
+  if (!estado) {
+    return { editable: false, cantidadCostoEditables: false, anulado, anulable: false };
+  }
+  const entrada = {
     tipo: fila.tipo,
     motivo: fila.motivo,
     loteId: fila.loteId,
@@ -108,5 +120,11 @@ export function calcularFlagsKardex(
     totalMovimientosLote: estado.totalMovimientos,
     consumosProduccionLote: estado.consumosProduccion,
     cantidadStockLote: estado.cantidadStock,
-  });
+    anulado,
+  };
+  return {
+    ...evaluarEditabilidad(entrada),
+    anulado,
+    anulable: evaluarAnulabilidad(entrada).anulable,
+  };
 }
