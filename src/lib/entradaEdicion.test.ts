@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { ValidationError } from "./validation";
+import { isDeadlockError } from "./transactionRetry";
 import {
   validarEdicionEntrada,
   evaluarEditabilidad,
@@ -10,6 +11,8 @@ import {
   recalcularCostoPromedioDesdeLotes,
   construirRegistrosAuditoria,
   CambioEntrada,
+  EdicionEntradaError,
+  mapearErrorEdicion,
 } from "./entradaEdicion";
 
 describe("validarEdicionEntrada", () => {
@@ -356,5 +359,80 @@ describe("construirRegistrosAuditoria", () => {
 
   it("returns no rows when there are no changes", () => {
     assert.equal(construirRegistrosAuditoria([], ctx).length, 0);
+  });
+});
+
+describe("EdicionEntradaError", () => {
+  it("carries codigo and status and survives instanceof", () => {
+    const e = new EdicionEntradaError("ENTRADA_NO_ENCONTRADA");
+    assert.ok(e instanceof EdicionEntradaError);
+    assert.ok(e instanceof Error);
+    assert.equal(e.codigo, "ENTRADA_NO_ENCONTRADA");
+    assert.equal(e.status, 404);
+    assert.equal(e.message, "Entrada no encontrada");
+  });
+
+  it("maps every codigo to its status and design message", () => {
+    const noEditable = new EdicionEntradaError("ENTRADA_NO_EDITABLE");
+    assert.equal(noEditable.status, 409);
+    assert.equal(noEditable.message, "Este movimiento no es una entrada editable");
+    const tocado = new EdicionEntradaError("CANTIDAD_COSTO_NO_EDITABLES");
+    assert.equal(tocado.status, 409);
+    assert.equal(
+      tocado.message,
+      "El lote ya tuvo movimientos: solo se pueden editar código de lote, vencimiento y referencia"
+    );
+  });
+
+  it("never produces messages that the deadlock detector or stock guard could match", () => {
+    for (const codigo of [
+      "ENTRADA_NO_ENCONTRADA",
+      "ENTRADA_NO_EDITABLE",
+      "CANTIDAD_COSTO_NO_EDITABLES",
+    ] as const) {
+      const { message } = new EdicionEntradaError(codigo);
+      assert.equal(isDeadlockError(new Error(message)), false);
+      assert.ok(!/deadlock|1213|1205/i.test(message));
+      assert.ok(!message.startsWith("Stock insuficiente"));
+    }
+  });
+});
+
+describe("mapearErrorEdicion", () => {
+  it("maps EdicionEntradaError to its status and message", () => {
+    const r = mapearErrorEdicion(new EdicionEntradaError("ENTRADA_NO_EDITABLE"));
+    assert.equal(r.status, 409);
+    assert.deepEqual(r.body, { message: "Este movimiento no es una entrada editable" });
+  });
+
+  it("maps a Prisma P2002 on codigo_lote to 409", () => {
+    const r = mapearErrorEdicion(
+      Object.assign(new Error("Unique constraint failed"), {
+        code: "P2002",
+        meta: { target: "lote_item_id_codigo_lote_key" },
+      })
+    );
+    assert.equal(r.status, 409);
+    assert.deepEqual(r.body, { message: "Ya existe un lote con ese código para este item" });
+  });
+
+  it("does not treat a P2002 on another constraint as a codigo collision", () => {
+    const r = mapearErrorEdicion(
+      Object.assign(new Error("x"), { code: "P2002", meta: { target: "otra_cosa" } })
+    );
+    assert.equal(r.status, 500);
+  });
+
+  it("maps ValidationError to 400", () => {
+    const r = mapearErrorEdicion(new ValidationError("Cantidad inválida", "cantidad"));
+    assert.equal(r.status, 400);
+    assert.deepEqual(r.body, { error: "Cantidad inválida", message: "Cantidad inválida" });
+  });
+
+  it("maps unknown errors to a sanitized 500", () => {
+    const r = mapearErrorEdicion(new Error("SELECT secret FROM x"));
+    assert.equal(r.status, 500);
+    assert.deepEqual(r.body, { error: "Error al editar la entrada" });
+    assert.equal(mapearErrorEdicion("raw").status, 500);
   });
 });

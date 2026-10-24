@@ -244,3 +244,277 @@ export function construirRegistrosAuditoria(
     valor_nuevo: cambio.nuevo,
   }));
 }
+
+export type CodigoErrorEdicion =
+  | "ENTRADA_NO_ENCONTRADA"
+  | "ENTRADA_NO_EDITABLE"
+  | "CANTIDAD_COSTO_NO_EDITABLES";
+
+// Messages must never contain "deadlock", "1213" or "1205" (isDeadlockError
+// matches on substrings) nor start with "Stock insuficiente".
+const ERRORES_EDICION: Record<CodigoErrorEdicion, { status: 404 | 409; message: string }> = {
+  ENTRADA_NO_ENCONTRADA: { status: 404, message: "Entrada no encontrada" },
+  ENTRADA_NO_EDITABLE: { status: 409, message: "Este movimiento no es una entrada editable" },
+  CANTIDAD_COSTO_NO_EDITABLES: {
+    status: 409,
+    message:
+      "El lote ya tuvo movimientos: solo se pueden editar código de lote, vencimiento y referencia",
+  },
+};
+
+export class EdicionEntradaError extends Error {
+  readonly codigo: CodigoErrorEdicion;
+  readonly status: 404 | 409;
+
+  constructor(codigo: CodigoErrorEdicion) {
+    super(ERRORES_EDICION[codigo].message);
+    this.name = "EdicionEntradaError";
+    this.codigo = codigo;
+    this.status = ERRORES_EDICION[codigo].status;
+    Object.setPrototypeOf(this, EdicionEntradaError.prototype);
+  }
+}
+
+export interface RespuestaErrorEdicion {
+  status: number;
+  body: Record<string, string>;
+}
+
+/** Pure translation of any error thrown by the edit flow into an HTTP status and body. */
+export function mapearErrorEdicion(error: unknown): RespuestaErrorEdicion {
+  if (error instanceof EdicionEntradaError) {
+    return { status: error.status, body: { message: error.message } };
+  }
+  if (error instanceof ValidationError) {
+    return { status: 400, body: { error: error.message, message: error.message } };
+  }
+  const prismaError = error as { code?: unknown; meta?: { target?: unknown } } | null;
+  if (
+    typeof prismaError === "object" &&
+    prismaError !== null &&
+    prismaError.code === "P2002" &&
+    String(prismaError.meta?.target ?? "").includes("codigo_lote")
+  ) {
+    return {
+      status: 409,
+      body: { message: "Ya existe un lote con ese código para este item" },
+    };
+  }
+  return { status: 500, body: { error: "Error al editar la entrada" } };
+}
+
+export interface ParametrosEdicionEntrada {
+  movimientoId: bigint;
+  sucursalId: bigint;
+  empleadoId: bigint;
+  solicitud: EdicionEntradaSolicitada;
+}
+
+export type ResultadoEdicionEntrada =
+  | { sinCambios: true }
+  | {
+      sinCambios: false;
+      cambios: CambioEntrada[];
+      inventario?: { stock: number; costo_promedio: number };
+    };
+
+const aNumero = (v: unknown): number =>
+  Number((v as { toString(): string } | null)?.toString() ?? v ?? 0);
+
+interface MovimientoBloqueado {
+  id: bigint;
+  sucursal_id: bigint;
+  item_id: bigint;
+  lote_id: bigint | null;
+  tipo: string;
+  motivo: string;
+  cantidad: unknown;
+  costo_unit: unknown;
+  referencia: string | null;
+}
+
+interface LoteBloqueado {
+  id: bigint;
+  codigo_lote: string;
+  fecha_caducidad: Date | null;
+  costo_unit: unknown;
+}
+
+/**
+ * Phase A, steps 1-2: FOR UPDATE locks on the movement and its lote.
+ * The movement must exist in the session sucursal and be a plausible entrada.
+ */
+async function bloquearMovimientoYLote(
+  tx: Prisma.TransactionClient,
+  p: ParametrosEdicionEntrada
+): Promise<{ mov: MovimientoBloqueado; lote: LoteBloqueado }> {
+  const movs = await tx.$queryRaw<MovimientoBloqueado[]>`SELECT id, sucursal_id, item_id, lote_id, tipo, motivo, cantidad, costo_unit, referencia FROM \`movimientoInventario\` WHERE id = ${p.movimientoId} FOR UPDATE`;
+  const mov = movs?.[0];
+  if (!mov || BigInt(mov.sucursal_id) !== p.sucursalId) {
+    throw new EdicionEntradaError("ENTRADA_NO_ENCONTRADA");
+  }
+
+  // Facts only known after the locks (Phase B) are stubbed optimistically: this
+  // only rejects movements that can never be editable, before locking the lote.
+  const previa = evaluarEditabilidad({
+    tipo: mov.tipo,
+    motivo: mov.motivo,
+    loteId: mov.lote_id,
+    movimientoId: BigInt(mov.id),
+    cantidadMovimiento: aNumero(mov.cantidad),
+    primerMovimientoLoteId: BigInt(mov.id),
+    totalMovimientosLote: 1,
+    consumosProduccionLote: 0,
+    cantidadStockLote: aNumero(mov.cantidad),
+  });
+  if (!previa.editable || mov.lote_id === null) {
+    throw new EdicionEntradaError("ENTRADA_NO_EDITABLE");
+  }
+
+  const lotes = await tx.$queryRaw<LoteBloqueado[]>`SELECT id, item_id, codigo_lote, fecha_caducidad, costo_unit FROM \`lote\` WHERE id = ${mov.lote_id} FOR UPDATE`;
+  if (!lotes?.[0]) throw new EdicionEntradaError("ENTRADA_NO_ENCONTRADA");
+  return { mov, lote: lotes[0] };
+}
+
+/** Phase A, steps 3-4 (only when quantity/cost change): stockLote, then inventarioSucursal. */
+async function bloquearStockEInventario(
+  tx: Prisma.TransactionClient,
+  p: ParametrosEdicionEntrada,
+  mov: MovimientoBloqueado
+) {
+  const stocks = await tx.$queryRaw<Array<{ id: bigint; cantidad: unknown }>>`SELECT id, cantidad FROM \`stockLoteSucursal\` WHERE sucursal_id = ${p.sucursalId} AND lote_id = ${mov.lote_id} FOR UPDATE`;
+  const inventarios = await tx.$queryRaw<
+    Array<{ id: bigint; stock: unknown; costo_promedio: unknown }>
+  >`SELECT id, stock, costo_promedio FROM \`inventarioSucursal\` WHERE sucursal_id = ${p.sucursalId} AND item_id = ${mov.item_id} FOR UPDATE`;
+  if (!inventarios?.[0]) throw new Error("INVENTARIO_SUCURSAL_NOT_FOUND");
+  return { stockLote: stocks?.[0] ?? null, inventario: inventarios[0] };
+}
+
+/**
+ * Atomic edit of a manual entrada. Must run inside runWithRetry.
+ * Phase A: FOR UPDATE locks (movimiento, lote, then stockLoteSucursal and
+ * inventarioSucursal only when quantity or cost change).
+ * Phase B: plain consistent reads, only after the last lock.
+ * Phase C: writes and audit rows. No Prisma write happens before Phase B ends,
+ * because Prisma update calls issue their own SELECTs.
+ */
+export async function ejecutarEdicionEntradaTx(
+  tx: Prisma.TransactionClient,
+  p: ParametrosEdicionEntrada
+): Promise<ResultadoEdicionEntrada> {
+  const { mov, lote } = await bloquearMovimientoYLote(tx, p);
+  const loteId = BigInt(lote.id);
+  const cantidadActual = aNumero(mov.cantidad);
+  const costoActual = aNumero(mov.costo_unit);
+
+  const cambios = calcularCambiosEntrada(
+    {
+      codigo_lote: lote.codigo_lote,
+      fecha_caducidad: lote.fecha_caducidad,
+      referencia: mov.referencia,
+      cantidad: cantidadActual,
+      costo_unit: costoActual,
+    },
+    p.solicitud
+  );
+  if (cambios.length === 0) return { sinCambios: true };
+
+  const cambiaCantidad = cambios.some((c) => c.campo === "cantidad");
+  const cambiaCosto = cambios.some((c) => c.campo === "costo_unit");
+  const cambiaCantidadOCosto = cambiaCantidad || cambiaCosto;
+  const nuevaCantidad = cambiaCantidad
+    ? round3Decimals(p.solicitud.cantidad as number)
+    : cantidadActual;
+  const nuevoCosto = cambiaCosto ? round6Decimals(p.solicitud.costo_unit as number) : costoActual;
+  if (nuevaCantidad <= 0) {
+    throw new ValidationError("Cantidad debe ser un número mayor a 0", "cantidad");
+  }
+
+  const bloqueos = cambiaCantidadOCosto ? await bloquearStockEInventario(tx, p, mov) : null;
+
+  // Phase B: every plain read happens after the last lock.
+  const agregado = await tx.movimientoInventario.aggregate({
+    where: { lote_id: loteId },
+    _min: { id: true },
+    _count: { _all: true },
+  });
+  const consumos: number = await tx.produccionItem.count({ where: { lote_consumido_id: loteId } });
+
+  const estado = evaluarEditabilidad({
+    tipo: mov.tipo,
+    motivo: mov.motivo,
+    loteId,
+    movimientoId: BigInt(mov.id),
+    cantidadMovimiento: cantidadActual,
+    primerMovimientoLoteId: agregado._min.id ?? null,
+    totalMovimientosLote: agregado._count._all,
+    consumosProduccionLote: consumos,
+    cantidadStockLote: bloqueos?.stockLote ? aNumero(bloqueos.stockLote.cantidad) : null,
+  });
+  if (!estado.editable) throw new EdicionEntradaError("ENTRADA_NO_EDITABLE");
+  if (cambiaCantidadOCosto && !estado.cantidadCostoEditables) {
+    throw new EdicionEntradaError("CANTIDAD_COSTO_NO_EDITABLES");
+  }
+
+  let inventario: { stock: number; costo_promedio: number } | undefined;
+  if (bloqueos) {
+    const lotesItem: Array<{ lote_id: bigint; cantidad: unknown; lote: { costo_unit: unknown } }> =
+      await tx.stockLoteSucursal.findMany({
+        where: { sucursal_id: p.sucursalId, lote: { item_id: mov.item_id }, cantidad: { gt: 0 } },
+        select: { lote_id: true, cantidad: true, lote: { select: { costo_unit: true } } },
+      });
+    inventario = {
+      stock: round3Decimals(aNumero(bloqueos.inventario.stock) - cantidadActual + nuevaCantidad),
+      costo_promedio: recalcularCostoPromedioDesdeLotes(
+        lotesItem.map((l) => ({
+          lote_id: BigInt(l.lote_id),
+          cantidad: aNumero(l.cantidad),
+          costo_unit: aNumero(l.lote.costo_unit),
+        })),
+        { lote_id: loteId, cantidad: nuevaCantidad, costo_unit: nuevoCosto }
+      ),
+    };
+  }
+
+  // Phase C: writes.
+  const datosLote: Prisma.loteUpdateInput = {};
+  const datosMovimiento: Prisma.movimientoInventarioUpdateInput = {};
+  for (const cambio of cambios) {
+    if (cambio.campo === "codigo_lote") datosLote.codigo_lote = cambio.nuevo as string;
+    if (cambio.campo === "fecha_caducidad") {
+      datosLote.fecha_caducidad = cambio.nuevo ? new Date(`${cambio.nuevo}T00:00:00.000Z`) : null;
+    }
+    if (cambio.campo === "referencia") datosMovimiento.referencia = cambio.nuevo;
+  }
+  if (cambiaCosto) {
+    datosLote.costo_unit = nuevoCosto;
+    datosMovimiento.costo_unit = nuevoCosto;
+  }
+  if (cambiaCantidad) datosMovimiento.cantidad = nuevaCantidad;
+
+  if (Object.keys(datosLote).length > 0) {
+    await tx.lote.update({ where: { id: loteId }, data: datosLote });
+  }
+  if (Object.keys(datosMovimiento).length > 0) {
+    await tx.movimientoInventario.update({ where: { id: p.movimientoId }, data: datosMovimiento });
+  }
+  if (bloqueos && inventario) {
+    if (cambiaCantidad) {
+      await tx.stockLoteSucursal.update({
+        where: { id: bloqueos.stockLote!.id },
+        data: { cantidad: nuevaCantidad },
+      });
+    }
+    await tx.inventarioSucursal.update({ where: { id: bloqueos.inventario.id }, data: inventario });
+  }
+  await tx.auditoriaEntrada.createMany({
+    data: construirRegistrosAuditoria(cambios, {
+      movimientoId: p.movimientoId,
+      loteId,
+      sucursalId: p.sucursalId,
+      empleadoId: p.empleadoId,
+    }),
+  });
+
+  return { sinCambios: false, cambios, ...(inventario ? { inventario } : {}) };
+}
