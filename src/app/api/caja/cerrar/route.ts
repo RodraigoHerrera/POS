@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
-import { cookies } from "next/headers";
-import { jwtVerify } from "jose";
 import { serializeBigInt } from "@/lib/serialize";
 import { calcularResumenCaja } from "@/lib/caja";
 import { errorResponse } from "@/lib/apiError";
-
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+import { requireEmpleado, esRespuestaError } from "@/lib/auth";
+import {
+  parseNonNegativeNumber,
+  ValidationError,
+  validationErrorResponse,
+} from "@/lib/validation";
 
 // POST /api/caja/cerrar  { totalContado: number, observaciones?: string }
 // Cierra la caja abierta del empleado actual: agrega las ventas facturadas
@@ -19,28 +21,12 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const { totalContado, observaciones } = body;
 
-    if (totalContado === undefined || totalContado === null || Number.isNaN(Number(totalContado))) {
-      return NextResponse.json({ message: "Falta totalContado" }, { status: 400 });
-    }
+    // Validación fail-fast de cotas no negativas al inicio del handler
+    const validTotalContado = parseNonNegativeNumber(totalContado, "totalContado");
 
-    const cookieStore = await cookies();
-    const tokenSucursal = cookieStore.get("tokenSucursal")?.value;
-    const tokenEmpleado = cookieStore.get("tokenEmpleado")?.value;
-    if (!tokenSucursal || !tokenEmpleado) {
-      return NextResponse.json({ message: "Sesión no válida o expirada" }, { status: 401 });
-    }
-
-    let sucursalId: string;
-    let empleadoId: string;
-    try {
-      const payloadSucursal = await jwtVerify(tokenSucursal, secret);
-      sucursalId = (payloadSucursal.payload as any)?.sucursalId || (payloadSucursal.payload as any)?.id;
-
-      const payloadEmpleado = await jwtVerify(tokenEmpleado, secret);
-      empleadoId = (payloadEmpleado.payload as any)?.empleadoId || (payloadEmpleado.payload as any)?.id;
-    } catch {
-      return NextResponse.json({ message: "Error verificando tokens" }, { status: 403 });
-    }
+    const sesion = await requireEmpleado(["Cajero", "Administrador"]);
+    if (esRespuestaError(sesion)) return sesion;
+    const { sucursalId, empleadoId } = sesion;
 
     const cajaAbierta = await prisma.caja.findFirst({
       where: {
@@ -55,7 +41,7 @@ export async function POST(req: Request) {
     }
 
     const resumen = await calcularResumenCaja(cajaAbierta);
-    const contadoDec = new Prisma.Decimal(totalContado?.toString() || "0");
+    const contadoDec = new Prisma.Decimal(validTotalContado.toString());
     const esperadoDec = new Prisma.Decimal(resumen.efectivoEsperado?.toString() || "0");
     const diff = contadoDec.sub(esperadoDec);
     // Tolerancia menor a medio centavo para descartar residuos de coma flotante
@@ -87,7 +73,7 @@ export async function POST(req: Request) {
         totalVentas: resumen.totalVentas,
         ventasPorMetodo: resumen.ventasPorMetodo,
         efectivoEsperado: resumen.efectivoEsperado,
-        totalContado: Number(totalContado),
+        totalContado: validTotalContado,
         diferenciaEfectivo,
       })
     );
@@ -97,6 +83,9 @@ export async function POST(req: Request) {
 
     return response;
   } catch (error) {
+    if (error instanceof ValidationError) {
+      return validationErrorResponse(error);
+    }
     return errorResponse(error, "Error al cerrar la caja");
   }
 }
