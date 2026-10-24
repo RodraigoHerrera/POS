@@ -9,6 +9,7 @@ import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import DatePicker from '@/components/form/date-picker';
 import { hintUnidad } from "@/lib/unidad";
+import { mensajeErrorApi } from "@/lib/respuestaApi";
 
 type Option = { value: string; label: string };
 
@@ -126,15 +127,20 @@ export default function EntradaModal({ isOpen, onClose, onSaved, presetItemId }:
         method: 'POST',
         body: JSON.stringify(payload)
       });
-      
-      console.log("Guardando payload:", payload);
-      
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        toast.error(mensajeErrorApi(data, "No se pudo registrar la entrada"));
+        return;
+      }
+
       toast.success('Operación exitosa');
       onSaved?.();
       onClose();
       // Resetear form si es necesario
     } catch (error) {
       console.error(error);
+      toast.error("Error de conexión al registrar la entrada");
     } finally {
       setIsSaving(false);
     }

@@ -8,6 +8,7 @@ import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import TableRowSkeleton from "@/components/ui/skeleton/TableRowSkeleton";
 import { formatCostoUnitario } from "@/lib/costo";
+import EditarEntradaForm from "./EditarEntradaForm";
 
 // --- Interfaces ---
 interface KardexMovement {
@@ -24,6 +25,10 @@ interface KardexMovement {
   total_movimiento: string;
   lote: string;
   vencimiento: string;
+  referencia_original: string | null;
+  fecha_caducidad: string | null;
+  editable: boolean;
+  cantidad_costo_editables: boolean;
 }
 
 type Option = { value: string; label: string };
@@ -39,6 +44,7 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
   // --- Estados ---
   const [movimientos, setMovimientos] = useState<KardexMovement[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editando, setEditando] = useState<KardexMovement | null>(null);
   
   const [filtros, setFiltros] = useState({
     item: "",
@@ -100,10 +106,27 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
     alert("Generando reporte PDF...");
   };
 
+  // Al cerrar se descarta la edición en curso para reabrir siempre en la tabla
+  const handleClose = () => {
+    setEditando(null);
+    onClose();
+  };
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-[1100px] m-4">
+    <Modal isOpen={isOpen} onClose={handleClose} className="max-w-[1100px] m-4">
       <div className="no-scrollbar relative w-full max-w-[1100px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
-        
+        {editando ? (
+          <EditarEntradaForm
+            key={editando.id}
+            entrada={editando}
+            onCancel={() => setEditando(null)}
+            onSaved={() => {
+              setEditando(null);
+              fetchKardex();
+            }}
+          />
+        ) : (
+        <>
         {/* Encabezado */}
         <div className="px-2 pr-14 mb-6">
           <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
@@ -179,14 +202,15 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Cantidad</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Costo Unit.</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Total</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                 {loading && movimientosFiltrados.length === 0 ? (
-                  Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} columns={7} />)
+                  Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} columns={8} />)
                 ) : movimientosFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                       No se encontraron movimientos registrados.
                     </td>
                   </tr>
@@ -221,6 +245,13 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
                       <td className="px-4 py-3 text-sm text-right font-medium text-gray-800 dark:text-white">
                         {mov.total_movimiento}
                       </td>
+                      <td className="px-4 py-3 text-sm text-right">
+                        {mov.editable && (
+                          <Button size="sm" variant="outline" onClick={() => setEditando(mov)}>
+                            Editar
+                          </Button>
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -230,10 +261,12 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
         </div>
 
         <div className="flex justify-end mt-6">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={handleClose}>
             Cerrar
           </Button>
         </div>
+        </>
+        )}
       </div>
     </Modal>
   );
