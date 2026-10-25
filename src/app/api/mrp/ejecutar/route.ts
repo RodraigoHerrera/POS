@@ -7,11 +7,16 @@ import { construirSerieDiaria, pronosticarDemandaDiaria } from "@/lib/mrp/foreca
 import { explotarMPS, type TipoItemReceta } from "@/lib/mrp/explosion";
 import { calcularNecesidadNeta } from "@/lib/mrp/necesidad";
 import { agruparPorProveedor } from "@/lib/mrp/ordenes";
+import { corridaReciente, MENSAJE_CORRIDA_RECIENTE } from "@/lib/mrp/corridaReciente";
+import { runWithRetry } from "@/lib/transactionRetry";
 import {
   cargarRecetasRecursivo,
   obtenerVentasDiariasPorProducto,
   obtenerEntradasProgramadas,
+  obtenerStockPorItem,
 } from "@/lib/mrp/data";
+
+class CorridaRecienteError extends Error {}
 
 // Días de historia de historialVentas usados para pronosticar.
 const LOOKBACK_DIAS = 60;
@@ -127,6 +132,20 @@ export async function POST(req: Request) {
 
     const recetaMap = await cargarRecetasRecursivo(itemVendibleIds);
 
+    // Stock de preps en la sucursal: se netea antes de explotar a insumos y se
+    // comparte (se consume) entre todos los productos de la corrida.
+    const prepIds = new Set<bigint>();
+    for (const [idPadre, receta] of recetaMap) {
+      if (tipoPorItemVendible.get(idPadre) === "prep") prepIds.add(BigInt(idPadre));
+      for (const ins of receta.insumos) {
+        if (ins.itemInsumoTipo === "prep") prepIds.add(BigInt(ins.itemInsumoId));
+      }
+    }
+    for (const [id, tipo] of tipoPorItemVendible) {
+      if (tipo === "prep") prepIds.add(BigInt(id));
+    }
+    const stockPreps = await obtenerStockPorItem(sucursalBigInt, [...prepIds]);
+
     const brutaTotalPorItem = new Map<string, number>();
     const nivelPorItem = new Map<string, number>();
     const mapeWeightedSum = new Map<string, number>();
@@ -134,11 +153,18 @@ export async function POST(req: Request) {
 
     for (const l of lineasExplotables) {
       const tipo = tipoPorItemVendible.get(l.itemVendibleId.toString()) ?? "vendible";
-      const { requerimientos, advertencias } = explotarMPS(
+      const { requerimientos, advertencias, prepsDeStock } = explotarMPS(
         [{ itemId: l.itemVendibleId.toString(), tipo, cantidad: l.mpsQty }],
-        recetaMap
+        recetaMap,
+        stockPreps
       );
       advertenciasGlobales.push(...advertencias);
+      for (const p of prepsDeStock) {
+        advertenciasGlobales.push({
+          itemId: p.itemId,
+          mensaje: `Se cubrieron ${Number(p.cantidad.toFixed(3))} unidades del prep "${p.itemId}" con stock existente (para "${l.nombre}"); solo se explotó el resto a insumos`,
+        });
+      }
 
       for (const r of requerimientos) {
         brutaTotalPorItem.set(r.itemId, (brutaTotalPorItem.get(r.itemId) ?? 0) + r.cantidadBruta);
@@ -262,7 +288,30 @@ export async function POST(req: Request) {
     );
 
     // 6. PERSISTENCIA (una sola transacción: corrida + detalle + OC Borrador)
-    const resultadoTx = await prisma.$transaction(async (tx) => {
+    // Se serializa por sucursal (lock de fila) y se rechaza una corrida muy
+    // reciente (doble clic / dos admins). Las OC Borrador de corridas previas
+    // se anulan: la nueva corrida las reemplaza.
+    const resultadoTx = await runWithRetry(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM \`sucursales\` WHERE id = ${sucursalBigInt} FOR UPDATE`;
+
+      const ultima = await tx.mrpCorrida.findFirst({
+        where: { sucursal_id: sucursalBigInt },
+        orderBy: { creado_en: "desc" },
+        select: { creado_en: true },
+      });
+      if (corridaReciente(ultima?.creado_en, new Date())) {
+        throw new CorridaRecienteError(MENSAJE_CORRIDA_RECIENTE);
+      }
+
+      const anuladas = await tx.ordenCompra.updateMany({
+        where: {
+          sucursal_id: sucursalBigInt,
+          estado: "Borrador",
+          mrp_corrida_id: { not: null },
+        },
+        data: { estado: "Anulada" },
+      });
+
       const corrida = await tx.mrpCorrida.create({
         data: {
           sucursal_id: sucursalBigInt,
@@ -330,7 +379,7 @@ export async function POST(req: Request) {
         ordenesCreadas.push(oc);
       }
 
-      return { corrida, ordenesCreadas };
+      return { corrida, ordenesCreadas, ordenesAnuladas: anuladas.count };
     });
 
     return NextResponse.json(
@@ -341,11 +390,15 @@ export async function POST(req: Request) {
         forecast: forecastLineas,
         necesidades,
         ordenesGeneradas: resultadoTx.ordenesCreadas,
+        ordenesAnuladas: resultadoTx.ordenesAnuladas,
         sinProveedor,
         advertencias: advertenciasGlobales,
       })
     );
   } catch (error: any) {
+    if (error instanceof CorridaRecienteError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
     return errorResponse(error, "Error al ejecutar el MRP");
   }
 }

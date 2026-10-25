@@ -39,17 +39,27 @@ export interface AdvertenciaExplosion {
 export interface ExplosionResultado {
   requerimientos: RequerimientoExplosion[];
   advertencias: AdvertenciaExplosion[];
+  /** Cantidad de cada prep cubierta con stock disponible (no se explotó a insumos). */
+  prepsDeStock: { itemId: string; cantidad: number }[];
 }
 
 const MAX_NIVELES = 10; // guard contra ciclos / profundidad excesiva (prep A -> prep B -> prep A)
 
+/**
+ * `stockPreps` (opcional): stock disponible por prep, en la misma unidad que
+ * los requerimientos. Se CONSUME (muta) a medida que se cubren requerimientos,
+ * de modo que pasar el mismo mapa a varias llamadas de una corrida garantiza
+ * que el mismo stock no se use dos veces.
+ */
 export function explotarMPS(
   mps: { itemId: string; tipo: TipoItemReceta; cantidad: number }[],
-  recetas: MapaRecetas
+  recetas: MapaRecetas,
+  stockPreps?: Map<string, number>
 ): ExplosionResultado {
   const acumulado = new Map<string, number>();
   const nivelMinimoPorItem = new Map<string, number>();
   const advertencias: AdvertenciaExplosion[] = [];
+  const prepsDeStock = new Map<string, number>();
 
   function acumular(itemId: string, cantidad: number, nivel: number) {
     acumulado.set(itemId, (acumulado.get(itemId) ?? 0) + cantidad);
@@ -80,6 +90,17 @@ export function explotarMPS(
       });
       acumular(itemId, cantidadRequerida, nivel);
       return;
+    }
+
+    if (tipo === "prep" && stockPreps) {
+      const disponible = stockPreps.get(itemId) ?? 0;
+      const consumido = Math.min(Math.max(disponible, 0), cantidadRequerida);
+      if (consumido > 0) {
+        stockPreps.set(itemId, disponible - consumido);
+        prepsDeStock.set(itemId, (prepsDeStock.get(itemId) ?? 0) + consumido);
+        cantidadRequerida -= consumido;
+        if (cantidadRequerida <= 1e-9) return;
+      }
     }
 
     const receta = recetas.get(itemId);
@@ -131,5 +152,9 @@ export function explotarMPS(
     })
   );
 
-  return { requerimientos, advertencias };
+  return {
+    requerimientos,
+    advertencias,
+    prepsDeStock: [...prepsDeStock.entries()].map(([itemId, cantidad]) => ({ itemId, cantidad })),
+  };
 }
