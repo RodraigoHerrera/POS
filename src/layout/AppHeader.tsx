@@ -93,14 +93,14 @@ const AppHeader: React.FC = () => {
               width={60}
               height={20}
               className="dark:hidden"
-              src="./images/logo/logo-kumo-dark.svg"
+              src="/images/logo/logo-kumo-dark.svg"
               alt="Logo"
             />
             <Image
               width={60}
               height={20}
               className="hidden dark:block"
-              src="./images/logo/logo-kumo.svg"
+              src="/images/logo/logo-kumo.svg"
               alt="Logo"
             />
           </Link>
