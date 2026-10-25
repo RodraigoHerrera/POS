@@ -40,18 +40,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "No tienes una caja abierta en esta sucursal" }, { status: 404 });
     }
 
-    const resumen = await calcularResumenCaja(cajaAbierta);
+    // El nombre del cajero solo es para el ticket: se busca ANTES de cerrar la
+    // caja y nunca bloquea el cierre si falla (el ticket muestra "N/A").
+    const [resumen, empleado] = await Promise.all([
+      calcularResumenCaja(cajaAbierta),
+      prisma.empleados
+        .findUnique({
+          where: { id: BigInt(empleadoId) },
+          select: { nombre: true },
+        })
+        .catch(() => null),
+    ]);
     const contadoDec = new Prisma.Decimal(validTotalContado.toString());
     const esperadoDec = new Prisma.Decimal(resumen.efectivoEsperado?.toString() || "0");
     const diff = contadoDec.sub(esperadoDec);
     // Tolerancia menor a medio centavo para descartar residuos de coma flotante
     const diferenciaEfectivo = diff.abs().lessThan(0.005) ? 0 : diff.toDecimalPlaces(2).toNumber();
 
+    const fechaCierre = new Date();
     const cajaCerrada = await prisma.caja.update({
       where: { id: cajaAbierta.id },
       data: {
         estado: "cerrada",
-        fecha_cierre: new Date(),
+        fecha_cierre: fechaCierre,
         saldo_final: contadoDec.toDecimalPlaces(2).toNumber(),
         total_ventas: resumen.totalVentas,
         ventas_efectivo: resumen.ventasPorMetodo.ventas_efectivo,
@@ -65,11 +76,17 @@ export async function POST(req: Request) {
       },
     });
 
+    // Datos para el ticket de cierre (la cookie de caja se limpia abajo, así que
+    // el cliente arma el ticket con esta respuesta).
     const response = NextResponse.json(
       serializeBigInt({
         success: true,
         message: "Caja cerrada correctamente",
         cajaId: cajaCerrada.id,
+        empleadoNombre: empleado?.nombre ?? "",
+        fechaApertura: cajaCerrada.fecha_apertura,
+        fechaCierre,
+        saldoInicial: resumen.saldoInicial,
         totalVentas: resumen.totalVentas,
         ventasPorMetodo: resumen.ventasPorMetodo,
         efectivoEsperado: resumen.efectivoEsperado,
