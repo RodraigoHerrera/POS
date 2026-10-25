@@ -3,6 +3,8 @@ import { loginSucursal, seleccionarEmpleadoYPin, abrirCaja, cerrarCaja } from ".
 import { SMOKE } from "./smokeEnv";
 
 const APERTURA = 100;
+const CONTADO = APERTURA + SMOKE.precio;
+const bs = (monto: number) => `Bs ${monto.toFixed(2)}`;
 
 test("caja: abrir -> vender -> cerrar -> ticket de cierre imprimible", async ({ page }) => {
   page.on("dialog", (d) => d.accept());
@@ -27,7 +29,7 @@ test("caja: abrir -> vender -> cerrar -> ticket de cierre imprimible", async ({ 
   await page.getByRole("button", { name: "Confirmar Cobro" }).click();
   await page.waitForURL(/\/cajero\/ventas/);
 
-  await cerrarCaja(page, APERTURA + SMOKE.precio);
+  await cerrarCaja(page, CONTADO);
 
   // Ticket en pantalla
   const imprimir = page.getByRole("button", { name: "Imprimir" });
@@ -41,11 +43,11 @@ test("caja: abrir -> vender -> cerrar -> ticket de cierre imprimible", async ({ 
     await expect(page.getByText(metodo, { exact: true })).toBeVisible();
   }
   const fila = (etiqueta: string) => page.getByText(etiqueta, { exact: true }).locator("xpath=..");
-  await expect(fila("Caja abierta con")).toContainText("Bs 100.00");
-  await expect(fila("Efectivo esperado")).toContainText("Bs 150.00");
-  await expect(fila("Caja cerrada con")).toContainText("Bs 150.00");
-  await expect(fila("Total ventas")).toContainText("Bs 50.00");
-  await expect(fila("Exacta")).toContainText("Bs 0.00");
+  await expect(fila("Caja abierta con")).toContainText(bs(APERTURA));
+  await expect(fila("Efectivo esperado")).toContainText(bs(CONTADO));
+  await expect(fila("Caja cerrada con")).toContainText(bs(CONTADO));
+  await expect(fila("Total ventas")).toContainText(bs(SMOKE.precio));
+  await expect(fila("Exacta")).toContainText(bs(0));
   await expect(imprimir).toBeVisible();
   await expect(salir).toBeVisible();
 

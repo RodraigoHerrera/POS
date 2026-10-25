@@ -50,8 +50,8 @@ Unit tests cannot verify UI + API + DB integration or the print view (e.g. the "
 
 ## Review
 - Native review (high risk, 4 lenses) approved and acknowledged 2026-10-25; no blocking findings. Non-blocking follow-ups:
-  - R4/R3 tsconfig-restore-on-signal (WARNING): `run.ts` restores tsconfig.json only in `finally`; Ctrl+C leaves next dev's tsconfig changes. Add SIGINT/SIGTERM handlers or restore from backup on next run.
-  - R2/R3 hardcoded-receipt-amounts (WARNING): build expected "Bs" strings from `APERTURA` / `SMOKE.precio`.
+  - R4/R3 tsconfig-restore-on-signal (WARNING, FIXED 2026-10-25: SIGINT/SIGTERM handlers restore tsconfig; SIGINT at 45s left tsconfig clean, no orphan server on 3100): `run.ts` restores tsconfig.json only in `finally`; Ctrl+C leaves next dev's tsconfig changes. Add SIGINT/SIGTERM handlers or restore from backup on next run.
+  - R2/R3 hardcoded-receipt-amounts (WARNING, FIXED 2026-10-25: amounts built from APERTURA/SMOKE.precio; npm run test:smoke 2/2): build expected "Bs" strings from `APERTURA` / `SMOKE.precio`.
   - R4 push-failure-misdiagnosis: report `prisma db push` status/error instead of always blaming CREATE DATABASE privilege.
   - R3 argv-shell-unquoted: `spawnSync` with `shell: true` splits args with spaces.
   - R3 truncate-not-transactional: re-enable FK checks in `finally` instead of `$transaction`.
@@ -59,4 +59,4 @@ Unit tests cannot verify UI + API + DB integration or the print view (e.g. the "
   - R2 misc: repeated `__printCalls` window cast; guard messages name DATABASE_URL even when SMOKE_DATABASE_URL is used; bare `_test` name message.
 
 ## Next step
-Follow-ups above (start with the two WARNINGs). Smoke suite is on demand only (`npm run test:smoke`).
+Commit the two WARNING fixes (uncommitted, not reviewed). Remaining SUGGESTION follow-ups above. Smoke suite is on demand only (`npm run test:smoke`).
