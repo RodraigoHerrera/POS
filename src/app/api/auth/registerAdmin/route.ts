@@ -1,11 +1,50 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcrypt";
+import { serializeBigInt } from "@/lib/serialize";
+import { obtenerSesionSucursal, obtenerSesionEmpleado } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { sucursal_id, nombre, correo, celular, contraseña } = body;
+    let { nombre, correo, celular, contraseña, usuario, rol } = body;
+
+    if (!correo || !/^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(correo)) {
+      return NextResponse.json(
+        { message: "El correo debe terminar en @gmail.com" },
+        { status: 400 }
+      );
+    }
+
+    const sesionSucursal = await obtenerSesionSucursal();
+    if (!sesionSucursal) {
+      return NextResponse.json({ message: "Token inválido" }, { status: 403 });
+    }
+    const sucursalIdStr = sesionSucursal.sucursalId;
+
+    // Este endpoint sirve para dos casos:
+    //  1) Bootstrap: la sucursal recién se creó (signup/newadmin) y todavía
+    //     no tiene NINGÚN empleado — se permite sin tokenEmpleado, pero se
+    //     fuerza rol "Administrador" sin importar lo que mande el body.
+    //  2) Gestión normal (/admin/usuarios): la sucursal ya tiene empleados,
+    //     así que se exige una sesión de empleado con rol Administrador —
+    //     de lo contrario, cualquiera con solo tokenSucursal podría crearse
+    //     un admin nuevo o agregar empleados sin permiso.
+    const totalEmpleados = await prisma.empleados.count({
+      where: { sucursal_id: BigInt(sucursalIdStr) },
+    });
+
+    if (totalEmpleados === 0) {
+      rol = "Administrador";
+    } else {
+      const sesionEmpleado = await obtenerSesionEmpleado();
+      if (!sesionEmpleado || sesionEmpleado.rol !== "Administrador") {
+        return NextResponse.json(
+          { message: "Solo un administrador puede registrar nuevos empleados" },
+          { status: 403 }
+        );
+      }
+    }
 
     // Verificar si ya existe un administrador con el correo proporcionado
     const existingAdmin = await prisma.empleados.findUnique({
@@ -25,27 +64,22 @@ export async function POST(req: Request) {
     // Crear el nuevo administrador en la base de datos
     const nuevoAdmin = await prisma.empleados.create({
       data: {
-        sucursal_id: BigInt(sucursal_id), // Cambia esto según tu lógica de negocio
-        rol: "admin",
+        sucursal_id: BigInt(sucursalIdStr),
+        rol,
         nombre,
         correo,
         celular,
         contrasena: hashedPassword,
         creado: new Date(),
-        estado: "activo", // Ajusta el valor según tu lógica de negocio
+        estado: "Activo", // Ajusta el valor según tu lógica de negocio
+        usuario,
       },
     });
 
     return NextResponse.json(
       {
         message: "Administrador registrado con éxito",
-        admin: {
-          ...nuevoAdmin,
-          // Con esto evitamos posibles problemas con campos bigint
-          id: nuevoAdmin.id.toString(),
-          sucursal_id: nuevoAdmin.sucursal_id.toString(),
-          creado: nuevoAdmin.creado.toISOString(),
-        },
+        admin: serializeBigInt(nuevoAdmin),
       },
       { status: 201 }
     );
@@ -54,6 +88,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { message: "Error interno del servidor" },
       { status: 500 }
+      
     );
   }
 }

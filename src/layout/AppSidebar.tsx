@@ -16,6 +16,7 @@ import {
   PlugInIcon,
   TableIcon,
   UserCircleIcon,
+  DocsIcon,
 } from "../icons/index";
 
 type NavItem = {
@@ -33,34 +34,58 @@ const navItems: NavItem[] = [
     path: "/admin",
   },
   {
-    icon: <CalenderIcon />,
-    name: "Calendario",
-    path: "/calendar",
+    name: "Ventas",
+    icon: <DocsIcon />,
+    path: "/admin/ventas",
+  },
+  {
+    icon: <ListIcon />,
+    name: "Inventario",
+    path: "/admin/inventario",
+  },
+  {
+    icon: <PieChartIcon />,
+    name: "Producción",
+    path: "/admin/produccion",
+  },
+  {
+    icon: <BoxCubeIcon />,
+    name: "Planificación (MRP)",
+    path: "/admin/mrp",
   },
   {
     icon: <UserCircleIcon />,
     name: "Usuarios",
-    path: "/profile",
-  },
-
-  {
-    name: "Informes",
-    icon: <ListIcon />,
-    subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
-  },
-  {
-    name: "Contabilidad",
-    icon: <TableIcon />,
-    subItems: [{ name: "Basic Tables", path: "/basic-tables", pro: false }],
+    path: "/admin/usuarios",
   },
   {
     name: "Menú",
     icon: <PageIcon />,
     subItems: [
-      { name: "Blank Page", path: "/blank", pro: false },
-      { name: "404 Error", path: "/error-404", pro: false },
+      { name: "Recetas", path: "/admin/recetas", pro: false },
+      { name: "Modificar Menu", path: "/admin/menu", pro: false },
     ],
   },
+  {
+    name: "Informes",
+    icon: <DocsIcon />,
+    subItems: [{ name: "Reporte de Ventas", path: "/admin/informes/reporte-ventas", pro: false },
+      { name: "Reporte de Gastos", path: "/admin/informes/reporte-gastos", pro: false },
+      { name: "Reporte de Inventario", path: "/admin/informes/reporte-inventario", pro: false },
+      { name: "Reporte de Clientes", path: "/admin/informes/reporte-clientes", pro: false },
+      { name: "Reporte de Proveedores", path: "/admin/informes/reporte-proveedores", pro: false },
+    ],
+  },
+  {
+    name: "Contabilidad",
+    icon: <TableIcon />,
+    subItems: [{ name: "Impuestos", path: "/admin/impuestos", pro: false },
+      { name: "Gastos", path: "/admin/gastos", pro: false },
+      { name: "Balance General", path: "/admin/balance-general", pro: false },
+      
+    ],
+  },
+  
 ];
 
 const othersItems: NavItem[] = [
@@ -145,6 +170,7 @@ const AppSidebar: React.FC = () => {
             nav.path && (
               <Link
                 href={nav.path}
+                prefetch={true}
                 className={`menu-item group ${
                   isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
                 }`}
@@ -182,6 +208,7 @@ const AppSidebar: React.FC = () => {
                   <li key={subItem.name}>
                     <Link
                       href={subItem.path}
+                      prefetch={true}
                       className={`menu-dropdown-item ${
                         isActive(subItem.path)
                           ? "menu-dropdown-item-active"
@@ -314,29 +341,29 @@ const AppSidebar: React.FC = () => {
             <>
               <Image
                 className="dark:hidden"
-                src="/images/logo/logo-smash.svg"
-                alt="Logo"
+                src="/images/logo/logo-kumo.svg"
+                alt="LogoO"
                 width={80}
                 height={10}
               />
               <Image
                 className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="Logo"
-                width={150}
-                height={40}
+                src="/images/logo/logo-kumo-dark.svg"
+                alt="LogoOO"
+                width={80}
+                height={10}
               />
             </>
           ) : (
             <Image
-              src="/images/logo/logo-icon.svg"
-              alt="Logo"
+              src="/images/logo/logo-kumo.svg"
+              alt="LogoOO"
               width={32}
               height={32}
             />
           )}
         </Link>
-        <span className="ml-2 text-gray-900 dark:text-gray-100">SMASH POS</span>
+        <span className="ml-2 text-gray-100">SMASH POS</span>
       </div>
 
       {/*  */}
@@ -345,7 +372,7 @@ const AppSidebar: React.FC = () => {
           <div className="flex flex-col gap-4">
             <div>
               <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-950 ${
+                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-950 dark:text-gray-300 ${
                   !isExpanded && !isHovered
                     ? "lg:justify-center"
                     : "justify-start"
@@ -360,7 +387,7 @@ const AppSidebar: React.FC = () => {
               {renderMenuItems(navItems, "main")}
             </div>
 
-            <div className="">
+            {/* <div className="">
               <h2
                 className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-950 ${
                   !isExpanded && !isHovered
@@ -375,7 +402,7 @@ const AppSidebar: React.FC = () => {
                 )}
               </h2>
               {renderMenuItems(othersItems, "others")}
-            </div>
+            </div> */}
           </div>
         </nav>
         {isExpanded || isHovered || isMobileOpen }

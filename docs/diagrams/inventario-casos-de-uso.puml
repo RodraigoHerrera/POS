@@ -1,0 +1,51 @@
+@startuml inventario-casos-de-uso
+left to right direction
+skinparam packageStyle rect
+skinparam usecase {
+  BackgroundColor #F4F1FF
+  BorderColor #6C5CE7
+}
+skinparam actorStyle awesome
+
+actor "Administrador" as Admin
+actor "Sistema (Venta)" as Sistema
+
+rectangle "Módulo de Inventario" {
+  usecase "Registrar nuevo item" as UC1
+  usecase "Ver lista de items" as UC2
+  usecase "Fijar costo estándar" as UC3
+  usecase "Registrar entrada\n(compra / recepción)" as UC4
+  usecase "Registrar mermas" as UC5
+  usecase "Ver alertas de stock" as UC6
+  usecase "Reponer item" as UC7
+  usecase "Consultar Kardex" as UC8
+  usecase "Ver movimientos mensuales\n(compras / consumo / mermas)" as UC9
+  usecase "Registrar proveedor" as UC10
+  usecase "Editar receta (BOM)" as UC11
+  usecase "Editar extras (modificadores)" as UC12
+  usecase "Descontar inventario (FEFO)" as UC13
+  usecase "Registrar movimiento\nde Kardex" as UC14
+}
+
+Admin --> UC1
+Admin --> UC2
+Admin --> UC4
+Admin --> UC5
+Admin --> UC6
+Admin --> UC8
+Admin --> UC9
+Admin --> UC10
+Admin --> UC11
+Admin --> UC12
+
+Sistema --> UC13
+
+UC3 .> UC2 : <<extend>>
+UC7 .> UC6 : <<extend>>
+UC7 .> UC4 : <<include>>
+
+UC4 .> UC14 : <<include>>
+UC5 .> UC14 : <<include>>
+UC13 .> UC14 : <<include>>
+
+@enduml

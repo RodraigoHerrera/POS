@@ -6,6 +6,7 @@ import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -28,11 +29,11 @@ export default function SignInForm() {
     let hasError = false;
 
     if (!correo) {
-      setErrorCorreo("Debe rellenar este campo");
+      setErrorCorreo("Introduce un correo válido");
       hasError = true;
     }
     if (!contraseña) {
-      setErrorContraseña("Debe rellenar este campo");
+      setErrorContraseña("Introduce una contraseña válida");
       hasError = true;
     }
 
@@ -49,7 +50,9 @@ export default function SignInForm() {
       body: JSON.stringify({ correo, contraseña }),
     });
 
+
     if (res.ok) {
+      toast.success('Operación exitosa');
       router.push("/usuarios");
     } else {
       const error = await res.json();
@@ -60,7 +63,7 @@ export default function SignInForm() {
 
   return (
     <div className="bg-[#0C0C0F]/95 p-6 rounded shadow w-full max-w-lg">
-      <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
+      {/* <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
         <Link
           href="/admin"
           className="inline-flex items-center text-sm text-gray-25 transition-colors hover:text-gray-400 dark:text-gray-400 dark:hover:text-gray-300"
@@ -68,7 +71,7 @@ export default function SignInForm() {
           <ChevronLeftIcon />
           Back to dashboard
         </Link>
-      </div>
+      </div> */}
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
           <div className="mb-5 sm:mb-8">
@@ -87,10 +90,10 @@ export default function SignInForm() {
                     Correo <span className="text-error-500">*</span>{" "}
                   </Label>
                   <Input
-                    placeholder="info@gmail.com"
                     type="email"
                     value={correo}
                     onChange={(e) => setCorreo(e.target.value)}
+                    style={{ color: "var(--color-gray-25)" }}
                   />
                   {errorCorreo && (
                     <p className="mt-1 text-sm text-error-500">{errorCorreo}</p>
@@ -103,9 +106,9 @@ export default function SignInForm() {
                   <div className="relative">
                     <Input
                       type={showPassword ? "text" : "password"}
-                      placeholder="Ingrese su contraseña"
                       value={contraseña}
                       onChange={(e) => setContraseña(e.target.value)}
+                      style={{ color: "var(--color-gray-25)" }}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
@@ -135,7 +138,7 @@ export default function SignInForm() {
 
             <div className="mt-5">
               <p className="text-sm font-normal text-center text-gray-25 dark:text-gray-400 sm:text-start">
-                ¿No tienes una cuenta? {""}
+                ¿Sucursal nueva? {""}
                 <Link
                   href="/signup"
                   className="text-brand-600 hover:text-brand-500 dark:text-brand-400"

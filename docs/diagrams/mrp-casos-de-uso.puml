@@ -1,0 +1,47 @@
+@startuml mrp-casos-de-uso
+left to right direction
+skinparam packageStyle rect
+skinparam usecase {
+  BackgroundColor #F4F1FF
+  BorderColor #6C5CE7
+}
+skinparam actorStyle awesome
+
+actor "Administrador" as Admin
+
+rectangle "Módulo de Planificación (MRP)" {
+  usecase "Ejecutar MRP\n(horizonte en días)" as UC1
+  usecase "Pronosticar demanda" as UC2
+  usecase "Calcular MPS y explosión\nde materiales (BOM)" as UC3
+  usecase "Netear necesidades\n(stock vs. necesidad bruta)" as UC4
+  usecase "Generar órdenes de compra\n(Borrador)" as UC5
+  usecase "Resolver insumos\nsin proveedor" as UC6
+  usecase "Ver resultado de la corrida\n(pronóstico, necesidades, OC)" as UC7
+  usecase "Ver historial de corridas" as UC8
+  usecase "Ver detalle de corrida anterior" as UC9
+}
+
+Admin --> UC1
+Admin --> UC8
+
+UC1 .> UC2 : <<include>>
+UC1 .> UC3 : <<include>>
+UC1 .> UC4 : <<include>>
+UC1 .> UC5 : <<include>>
+UC1 .> UC7 : <<include>>
+
+UC9 .> UC8 : <<extend>>
+UC9 .> UC7 : <<include>>
+
+UC6 .> UC5 : <<extend>>
+
+note right of UC6
+  Insumos con necesidad neta > 0
+  pero sin proveedor asignado:
+  no se genera OC. Se resuelve
+  registrando una entrada con
+  proveedor en el módulo de
+  Inventario.
+end note
+
+@enduml

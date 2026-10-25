@@ -90,17 +90,17 @@ const AppHeader: React.FC = () => {
 
           <Link href="/" className="lg:hidden">
             <Image
-              width={154}
-              height={32}
+              width={60}
+              height={20}
               className="dark:hidden"
-              src="./images/logo/logo.svg"
+              src="./images/logo/logo-kumo-dark.svg"
               alt="Logo"
             />
             <Image
-              width={154}
-              height={32}
+              width={60}
+              height={20}
               className="hidden dark:block"
-              src="./images/logo/logo-dark.svg"
+              src="./images/logo/logo-kumo.svg"
               alt="Logo"
             />
           </Link>
@@ -126,9 +126,9 @@ const AppHeader: React.FC = () => {
             </svg>
           </button>
 
-          <div className="hidden lg:block">
+          {/* <div className="hidden lg:block"> */}
             {/* <!-- Search Form --> */}
-            <form>
+            {/* <form>
               <div className="relative">
                 
                 <input
@@ -159,7 +159,7 @@ const AppHeader: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
+          </div> */}
         </div>
         
         <div
@@ -172,7 +172,7 @@ const AppHeader: React.FC = () => {
             <ThemeToggleButton />
             {/* <!-- Dark Mode Toggler --> */}
 
-           <NotificationDropdown /> 
+           {/* <NotificationDropdown />  */}
             {/* <!-- Notification Menu Area --> */}
           </div>
           {/* <!-- User Area --> */}

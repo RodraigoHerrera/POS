@@ -7,6 +7,12 @@ export const metadata: Metadata = {
   // other metadata
 };
 
+import { Suspense } from "react";
+
 export default function newAdmin() {
-   return <AdminForm />;
+   return (
+     <Suspense fallback={<div>Cargando...</div>}>
+       <AdminForm />
+     </Suspense>
+   );
 }

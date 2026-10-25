@@ -1,0 +1,95 @@
+@startuml mrp-actividades
+title Procedimiento de Planificación de Materiales (MRP)
+skinparam activity {
+  BackgroundColor #F4F1FF
+  BorderColor #6C5CE7
+  DiamondBackgroundColor #FFF3CD
+  DiamondBorderColor #E0A800
+}
+
+start
+
+:Administrador define\nhorizonte de planificación\n(1-60 días, ej. 7);
+:Ejecutar MRP;
+
+partition "1. Pronóstico de demanda" {
+  :Recuperar historial diario de ventas\nde los últimos 60 días por producto;
+  if (¿Historial >= 14 días\ncon datos?) then (sí)
+    :Excluir el día de hoy\n(venta parcial / incompleta);
+    :Calcular nivel de demanda\ncon suavización exponencial\n(alpha = 0.3);
+    :Backtesting walk-forward\n(pronóstico vs. real día a día);
+    :Calcular MAPE (error %\nde pronóstico) por producto;
+  else (no, < 14 días)
+    :Calcular promedio simple\nde la historia disponible;
+    :Marcar pronóstico como\n"baja confianza" (sin MAPE);
+  endif
+  if (¿Historial = 0 días?) then (sí)
+    :Marcar producto como\n"sin datos" (demanda = 0);
+  else (no)
+  endif
+  :Proyectar demanda diaria\nsobre el horizonte elegido\n(Plan Maestro de Producción / MPS);
+}
+
+partition "2. Explosión de materiales (BOM)" {
+  :Tomar cada producto del MPS;
+  repeat
+    :Obtener receta del producto\n(vendible -> preparado -> insumo);
+    if (¿Ciclo detectado en receta\n(A necesita B y B necesita A)?) then (sí)
+      :Cortar esa rama\ny registrar advertencia;
+    else (no)
+      if (¿Preparado sin receta\nestándar definida?) then (sí)
+        :Registrar advertencia y\ntratarlo como necesidad directa;
+      else (no)
+        :Calcular necesidad bruta del insumo\n= cantidad x (1 / (1 - %merma));
+        :Acumular necesidad del insumo\n(sumar across todos los productos\nque lo consumen);
+        :Calcular MAPE ponderado del insumo\n(promedio de MAPE de productos\nque lo consumen);
+      endif
+    endif
+  repeat while (¿Quedan niveles de receta\npor explotar? (máx. 10 niveles)) is (sí)
+  ->no;
+}
+
+partition "3. Neteo de necesidades" {
+  :Para cada insumo, obtener\nstock actual y entregas\nprogramadas (OC en tránsito);
+  if (¿MAPE disponible\npara el insumo?) then (sí)
+    :Calcular sigma = MAPE% x\ndemanda diaria del insumo;
+    :Stock de seguridad =\nmáx(stock mínimo,\nZ x sigma x raíz(lead time));
+  else (no)
+    :Stock de seguridad =\nstock mínimo configurado;
+  endif
+  :Necesidad neta = máx(0,\nnecesidad bruta - stock actual\n- entregas programadas\n+ stock de seguridad);
+  if (¿Insumo tiene vida útil\n(perecedero) definida?) then (sí)
+    if (¿Necesidad neta supera\nlo consumible antes de vencer?) then (sí)
+      :Limitar necesidad neta al tope\nde caducidad y marcar\n"tope de caducidad aplicado";
+    else (no)
+    endif
+  else (no)
+  endif
+}
+
+partition "4. Generación de órdenes de compra" {
+  if (¿Necesidad neta > 0?) then (sí)
+    if (¿Insumo tiene proveedor\nasignado?) then (sí)
+      :Calcular fecha sugerida de emisión\n= hoy + máx(0, horizonte - lead time);
+      :Agrupar necesidades por proveedor\n(política lote por lote);
+      :Generar Orden de Compra\nen estado "Borrador";
+    else (no)
+      :Marcar insumo como\n"sin proveedor asignado"\n(no se genera OC);
+      note right
+        Se resuelve manualmente
+        registrando una entrada con
+        proveedor en el módulo
+        de Inventario.
+      end note
+    endif
+  else (no)
+    :Insumo sin necesidad,\nno requiere acción;
+  endif
+}
+
+:Guardar la corrida\n(pronóstico, necesidades,\nórdenes generadas)\npara trazabilidad/historial;
+:Mostrar resultados al\nAdministrador;
+
+stop
+
+@enduml

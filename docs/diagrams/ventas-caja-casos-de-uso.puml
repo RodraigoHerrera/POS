@@ -1,0 +1,57 @@
+@startuml ventas-caja-casos-de-uso
+left to right direction
+skinparam packageStyle rect
+skinparam usecase {
+  BackgroundColor #F4F1FF
+  BorderColor #6C5CE7
+}
+skinparam actorStyle awesome
+
+actor "Cajero" as Cajero
+
+rectangle "Módulo de Ventas (Caja)" {
+  usecase "Abrir caja\n(contar denominaciones)" as UC1
+  usecase "Buscar producto\nen el catálogo" as UC2
+  usecase "Agregar producto\nal pedido" as UC3
+  usecase "Personalizar producto\n(cantidad, extras, notas)" as UC4
+  usecase "Editar cliente del pedido" as UC5
+  usecase "Quitar producto del pedido" as UC6
+  usecase "Cancelar pedido" as UC7
+  usecase "Comandar pedido\n(enviar a cocina)" as UC8
+  usecase "Elegir método de pago" as UC9
+  usecase "Calcular cambio\n(efectivo)" as UC10
+  usecase "Confirmar cobro" as UC11
+  usecase "Volver al pedido\n(sin cobrar)" as UC12
+  usecase "Cerrar caja\n(contar denominaciones)" as UC13
+}
+
+Cajero --> UC1
+Cajero --> UC2
+Cajero --> UC3
+Cajero --> UC5
+Cajero --> UC6
+Cajero --> UC7
+Cajero --> UC8
+Cajero --> UC9
+Cajero --> UC11
+Cajero --> UC12
+Cajero --> UC13
+
+UC4 .> UC3 : <<extend>>
+UC10 .> UC11 : <<include>>
+
+note right of UC8
+  Por cada item del pedido, explota
+  la receta (BOM) y descuenta
+  inventario vía FEFO — ver módulo
+  de Inventario ("Descontar
+  inventario (FEFO)").
+end note
+
+note right of UC11
+  Genera la factura, registra el
+  historial de ventas y, si fue en
+  efectivo, el movimiento de caja.
+end note
+
+@enduml

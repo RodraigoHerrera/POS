@@ -38,3 +38,25 @@ next-env.d.ts
 
 package-lock.json
 yarn.lock
+.gstack/
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# secrets
+.env
+
+# database dumps
+*.sql
+
+# temporary / scratch directories
+scratch/
+
+# spreadsheets / raw data
+*.xlsx
+*.xls
+
+~/

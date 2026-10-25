@@ -9,6 +9,7 @@ interface ButtonProps {
   onClick?: () => void; // Click handler
   disabled?: boolean; // Disabled state
   className?: string; // Disabled state
+  "aria-label"?: string; // Accesibilidad: texto alternativo cuando children no es suficientemente descriptivo
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -20,11 +21,12 @@ const Button: React.FC<ButtonProps> = ({
   onClick,
   className = "",
   disabled = false,
+  "aria-label": ariaLabel,
 }) => {
   // Size Classes
   const sizeClasses = {
     sm: "px-4 py-3 text-sm",
-    md: "px-5 py-3.5 text-sm",
+    md: "px-5 py-2 text-md",
   };
 
   // Variant Classes
@@ -32,7 +34,7 @@ const Button: React.FC<ButtonProps> = ({
     primary:
       "bg-brand-500 text-white hover:text-brand-50 shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300",
     outline:
-      "bg-white text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03] dark:hover:text-gray-300",
+      "bg-white text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-brand-600 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03] dark:hover:text-gray-300",
   };
 
   return (
@@ -44,6 +46,7 @@ const Button: React.FC<ButtonProps> = ({
       }`}
       onClick={onClick}
       disabled={disabled}
+      aria-label={ariaLabel}
     >
       {startIcon && <span className="flex items-center">{startIcon}</span>}
       {children}

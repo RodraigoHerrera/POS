@@ -1,0 +1,40 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Next.js 15.1, TypeScript, TailwindCSS, Prisma, Playwright
+  Architecture: App Router, two-stage JWT Auth, Prisma ORM, MySQL
+  Testing: Playwright (e2e)
+  Style: ESLint, Prettier, strict TypeScript
+
+capabilities:
+  capture_prompt: false
+
+testing:
+  runner: playwright
+  unit: false
+  e2e: true
+  command: "npm run test:e2e"
+  coverage: false
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    guidelines:
+      - Follow existing code patterns, convert BigInt to string before JSON
+      - Use FEFO pattern for inventory deduction
+    tdd: false
+    test_command: "npm run test:e2e"
+  verify:
+    test_command: "npm run test:e2e"
+    build_command: "npm run build"
+    coverage_threshold: 0

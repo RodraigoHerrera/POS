@@ -8,14 +8,19 @@ import Link from "next/link"; // Componente de navegación de Next.js para enlac
 import React, { useState } from "react"; // Importación de React y hook useState para manejo de estados
 import { useRouter } from "next/navigation"; // Hook de Next.js para manejar la navegación programática
 import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
 export default function AdminForm() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [nombre, setNombre] = useState("");
-  const [correo, setCorreo] = useState("");
+  const [usuario, setUsuario] = useState("");
+  // Solo se captura la parte local del correo; el dominio "@smash.com" es fijo
+  // y se concatena al enviar (ver handleSubmit).
+  const [correoLocal, setCorreoLocal] = useState("");
   const [celular, setCelular] = useState("");
   const [contraseña, setContraseña] = useState("");
+  const [confirmarContraseña, setConfirmarContraseña] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [erroresCampo, setErroresCampo] = useState<{ [key: string]: string }>({});
@@ -38,10 +43,12 @@ export default function AdminForm() {
 
     if (!nombre) nuevosErrores.nombre = "El nombre es obligatorio";
 
-    if (!correo) {
+    if (!usuario) nuevosErrores.usuario = "El nombre de usuario es obligatorio";
+
+    if (!correoLocal) {
       nuevosErrores.correo = "El correo es obligatorio";
-    } else if (!/^[\w.+\-]+@gmail\.com$/i.test(correo)) {
-      nuevosErrores.correo = "El correo debe terminar en @gmail.com";
+    } else if (!/^[\w.+-]+$/.test(correoLocal)) {
+      nuevosErrores.correo = "El correo solo puede contener letras, números, puntos, guiones y guion bajo";
     }
 
     if (!celular) {
@@ -56,6 +63,10 @@ export default function AdminForm() {
       nuevosErrores.contraseña = "La contraseña debe tener al menos 8 caracteres";
     }
 
+    if (confirmarContraseña !== contraseña) {
+      nuevosErrores.confirmarContraseña = "Las contraseñas no coinciden";
+    }
+
     if (Object.keys(nuevosErrores).length > 0) {
       setErroresCampo(nuevosErrores);
       setIsLoading(false);
@@ -65,6 +76,7 @@ export default function AdminForm() {
     setErroresCampo({});
 
     const nombreFormateado = capitalizar(nombre);
+    const correo = `${correoLocal.trim()}@gmail.com`;
 
     const res = await fetch("/api/auth/registerAdmin", {
       method: "POST",
@@ -77,12 +89,16 @@ export default function AdminForm() {
         correo,
         celular,
         contraseña,
+        usuario,
+        rol: "Administrador",
       }),
+      
     });
 
     const data = await res.json();
 
     if (res.ok) {
+      toast.success('Operación exitosa');
       router.push("/");
     } else {
       setError(data.message || "Ocurrió un error al registrar el administrador");
@@ -93,7 +109,7 @@ export default function AdminForm() {
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar bg-[#0C0C0F]/95 p-6 rounded shadow max-w-lg">
       {/* Enlace para volver al dashboard */}
-      <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
+      {/* <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
         <Link
           href="/admin"
           className="inline-flex items-center text-sm text-gray-300 transition-colors hover:text-gray-400"
@@ -101,7 +117,7 @@ export default function AdminForm() {
           <ChevronLeftIcon />
           Volver al dashboard
         </Link>
-      </div>
+      </div> */}
 
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         {/* Encabezado */}
@@ -118,19 +134,37 @@ export default function AdminForm() {
         <form onSubmit={handleSubmit}>
           <div className="space-y-5">
             {/* Nombre */}
-            <div>
-              <Label>
-                Nombre<span className="text-error-500">*</span>
-              </Label>
-              <Input
-                type="text"
-                placeholder="Nombre completo"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-              />
-              {erroresCampo.nombre && (
-                <p className="text-sm text-error-500">{erroresCampo.nombre}</p>
-              )}
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div className="sm:col-span-1">
+                <Label>
+                  Nombre Completo<span className="text-error-500">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="Nombre completo"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  style={{ color: "var(--color-gray-25)" }}
+                />
+                {erroresCampo.nombre && (
+                  <p className="text-sm text-error-500">{erroresCampo.nombre}</p>
+                )}
+              </div>
+              <div className="sm:col-span-1">
+                <Label>
+                  Nombre de Usuario<span className="text-error-500">*</span>
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="Nombre de usuario"
+                  value={usuario}
+                  onChange={(e) => setUsuario(e.target.value)}
+                  style={{ color: "var(--color-gray-25)" }}
+                />
+                {erroresCampo.usuario && (
+                  <p className="text-sm text-error-500">{erroresCampo.usuario}</p>
+                )}
+              </div>
             </div>
 
             {/* Correo y Celular */}
@@ -139,12 +173,19 @@ export default function AdminForm() {
                 <Label>
                   Correo<span className="text-error-500">*</span>
                 </Label>
-                <Input
-                  type="email"
-                  placeholder="Correo electrónico"
-                  value={correo}
-                  onChange={(e) => setCorreo(e.target.value)}
-                />
+                <div className="flex items-stretch gap-2">
+                  <Input
+                    type="text"
+                    placeholder="ejemplo"
+                    value={correoLocal}
+                    onChange={(e) => setCorreoLocal(e.target.value.split("@")[0])}
+                    style={{ color: "var(--color-gray-25)" }}
+                  />
+                  <span className="flex h-11 shrink-0 items-center whitespace-nowrap rounded-lg border border-gray-700 bg-white/5 px-3 text-sm text-gray-400">
+                    @gmail.com
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-gray-400">No es necesario escribir &quot;@gmail.com&quot;, se agrega automáticamente.</p>
                 {erroresCampo.correo && (
                   <p className="text-sm text-error-500">{erroresCampo.correo}</p>
                 )}
@@ -159,6 +200,7 @@ export default function AdminForm() {
                   placeholder="Número de celular"
                   value={celular}
                   onChange={(e) => setCelular(e.target.value)}
+                  style={{ color: "var(--color-gray-25)" }}
                 />
                 {erroresCampo.celular && (
                   <p className="text-sm text-error-500">{erroresCampo.celular}</p>
@@ -177,6 +219,7 @@ export default function AdminForm() {
                   type={showPassword ? "text" : "password"}
                   value={contraseña}
                   onChange={(e) => setContraseña(e.target.value)}
+                  style={{ color: "var(--color-gray-25)" }}
                 />
                 <span
                   onClick={() => setShowPassword(!showPassword)}
@@ -191,6 +234,34 @@ export default function AdminForm() {
               </div>
               {erroresCampo.contraseña && (
                 <p className="text-sm text-error-500">{erroresCampo.contraseña}</p>
+              )}
+            </div>
+
+            <div>
+              <Label>
+                Confirmar Contraseña<span className="text-error-500">*</span>
+              </Label>
+              <div className="relative">
+                <Input
+                  placeholder="Confirma tu contraseña"
+                  type={showPassword ? "text" : "password"}
+                  value={confirmarContraseña}
+                  onChange={(e) => setConfirmarContraseña(e.target.value)}
+                  style={{ color: "var(--color-gray-25)" }}
+                />
+                <span
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
+                >
+                  {showPassword ? (
+                    <EyeIcon className="fill-gray-200 " />
+                  ) : (
+                    <EyeCloseIcon className="fill-gray-200 " />
+                  )}
+                </span>
+              </div>
+              {erroresCampo.confirmarContraseña && (
+                <p className="text-sm text-error-500">{erroresCampo.confirmarContraseña}</p>
               )}
             </div>
 
