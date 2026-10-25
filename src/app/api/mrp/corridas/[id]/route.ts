@@ -17,8 +17,9 @@ export async function GET(
     const sucursalId = sesion.sucursalId;
 
     const { id } = await context.params;
-    const corrida = await prisma.mrpCorrida.findUnique({
-      where: { id: parseCorridaId(id) },
+    // La sucursal va en el where: una corrida de otra sucursal ni se carga.
+    const corrida = await prisma.mrpCorrida.findFirst({
+      where: { id: parseCorridaId(id), sucursal_id: BigInt(sucursalId) },
       include: {
         forecastDetalle: { include: { producto: { select: { nombre: true } } } },
         necesidades: { include: { item: { select: { nombre: true, unidad_code: true } } } },
@@ -31,7 +32,7 @@ export async function GET(
       },
     });
 
-    if (!corrida || corrida.sucursal_id.toString() !== sucursalId) {
+    if (!corrida) {
       return NextResponse.json({ error: "Corrida no encontrada" }, { status: 404 });
     }
 

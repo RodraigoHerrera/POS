@@ -70,5 +70,10 @@ The 2026-10-25 MRP audit (Engram `pos/mrp/audit`) left MEDIUM findings and revie
   - R3-ceil-epsilon-zero (SUGGESTION): `cantidadOrden` can yield 0 for a positive need <= 1e-9 on whole-unit items.
   - R3-merma-dedupe-key (SUGGESTION): merma warning dedupe key ignores the parent recipe.
 
+## Security hardening (2026-10-25)
+- Recent-run check now also runs BEFORE the heavy computation (cheap findFirst); the in-transaction locked check stays as the race guarantee.
+- Per-branch rate limit on `POST /api/mrp/ejecutar`: 5 runs / 60 s → 429 with Retry-After (`src/lib/mrp/limiteEjecucion.ts`, reuses `src/lib/rate-limit.ts`; in-memory, per server process). TDD: RED (module missing) → GREEN; mrp tests 47/47; tsc/eslint clean.
+- `corridas/[id]`: branch filter moved into the query (`findFirst` with `sucursal_id`), so another branch's run is never loaded.
+
 ## Next step
 - Manual smoke of `POST /api/mrp/ejecutar` against a dev DB to confirm the `INTERVAL ? SECOND` raw query and `GROUP BY dia` alias under the server's sql_mode; then commit (conventional commits) and open PR.

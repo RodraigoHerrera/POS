@@ -12,6 +12,7 @@ import {
   MENSAJE_CORRIDA_RECIENTE,
 } from "@/lib/mrp/corridaReciente";
 import { respuestaDeError } from "@/lib/mrp/respuestaError";
+import { verificarLimiteMrp } from "@/lib/mrp/limiteEjecucion";
 import { parseHorizonteDias } from "@/lib/mrp/validacion";
 import { claveDia, inicioDiaLocal, obtenerZonaMrp, sumarDias } from "@/lib/mrp/zonaHoraria";
 import { runWithRetry } from "@/lib/transactionRetry";
@@ -39,8 +40,23 @@ export async function POST(req: Request) {
     const horizonteDias = parseHorizonteDias(body?.horizonteDias);
     const alpha = Number(body?.alpha) > 0 && Number(body.alpha) <= 1 ? Number(body.alpha) : 0.3;
 
+    const limite = verificarLimiteMrp(sucursalId);
+    if (limite) return limite;
+
     const sucursalBigInt = BigInt(sucursalId);
     const hoy = new Date();
+
+    // Chequeo barato ANTES del cálculo pesado: una corrida reciente se rechaza
+    // sin leer historia ni explotar recetas. El chequeo dentro de la
+    // transacción (con lock) sigue siendo la garantía frente a carreras.
+    const ultimaCorrida = await prisma.mrpCorrida.findFirst({
+      where: { sucursal_id: sucursalBigInt },
+      orderBy: { creado_en: "desc" },
+      select: { creado_en: true },
+    });
+    if (corridaReciente(ultimaCorrida?.creado_en, hoy)) {
+      throw new CorridaRecienteError(MENSAJE_CORRIDA_RECIENTE);
+    }
     // Días de negocio en la zona MRP_TZ (misma definición para agrupar ventas
     // y recorrer la serie). `desde` = inicio del día local hace LOOKBACK_DIAS.
     const tz = obtenerZonaMrp();
