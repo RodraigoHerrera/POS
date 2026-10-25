@@ -3,28 +3,21 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
-interface Empleado {
-  id: number;
-  nombre: string;
-  fotoUrl: string;
-  rol: string;
-  estado: string;
-  usuario: string;
-}
+import type { EmpleadoKiosco } from "@/lib/empleadosKiosco";
 
 export default function EmpleadoSelector() {
-  const [empleados, setEmpleados] = useState<Empleado[]>([]);
+  const [empleados, setEmpleados] = useState<EmpleadoKiosco[]>([]);
   const router = useRouter();
 
   useEffect(() => {
     const fetchEmpleados = async () => {
       try {
-        const res = await fetch("/api/usuarios", {
+        // El endpoint ya devuelve solo empleados activos de la sucursal
+        const res = await fetch("/api/usuarios/kiosco", {
           credentials: "include",
         });
         const data = await res.json();
         setEmpleados(data);
-        console.log(data);
       } catch (error) {
         console.error("Error al obtener empleados:", error);
       }
@@ -34,13 +27,10 @@ export default function EmpleadoSelector() {
 
   const colores = ["bg-brand-20", "bg-brand-600"];
 
-  // Filtrar solo empleados activos
-  const empleadosActivos = empleados.filter(empleado => empleado.estado === "activo" || empleado.estado === "Activo");
-
   return (
-    
+
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 max-w-6xl mx-auto">
-      {empleadosActivos.map((empleado, index) => (
+      {empleados.map((empleado, index) => (
         <div
           key={empleado.id}
           className={`rounded-2xl p-3 cursor-pointer transition-transform hover:scale-105 ${
@@ -50,7 +40,7 @@ export default function EmpleadoSelector() {
         >
           <Image
             src={empleado.fotoUrl}
-            alt={empleado.nombre}
+            alt={empleado.usuario}
             width={300}
             height={300}
             className="rounded-md w-full h-auto object-cover"
