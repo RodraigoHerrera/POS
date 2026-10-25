@@ -75,23 +75,36 @@
 
 ## 🟡 Accesibilidad y experiencia de uso
 
-- [ ] **UX-1 — Las tarjetas de empleado no se pueden usar con teclado.**
+- [x] **UX-1 — Las tarjetas de empleado no se pueden usar con teclado.**
+  ✅ **Hecho:** cada tarjeta es un `<button type="button">` con anillo `focus-visible` (`ring-brand-500` + offset); la foto pasa a `alt=""` porque el texto visible ya da el nombre accesible. La ruta sale de `rutaPinEmpleado(id)` (`empleadosKiosco.ts`), que codifica el id.
+  **Evidencia:** RED 2 fallando (`rutaPinEmpleado is not a function`) → GREEN 17/17 en `empleadosKiosco.test.ts`; `tsc --noEmit` y `eslint` sin errores. Revisión nativa (riesgo alto, 4 lentes) aprobada y acknowledged 2026-10-25. Sugerencias no bloqueantes: R3-button-p-content-model (`<p>` dentro de `<button>` no es HTML válido; cambiar a `<span className="block ...">` junto con UX-3), R3-component-wiring-untested (no hay herramientas para testear componentes). Pendiente: smoke manual con Tab/Enter en el navegador.
   `UserChoice.tsx:44` usa `<div onClick>`. **Corrección:** `<button>` con foco visible.
 
-- [ ] **UX-2 — El input de PIN no está preparado para un TPV táctil.**
+- [x] **UX-2 — El input de PIN no está preparado para un TPV táctil.**
+  ✅ **Hecho (opción B, decidida por el usuario):** `autoComplete="off"`, `autoFocus` y `aria-label="PIN"`. **Sin `inputMode="numeric"`:** los empleados se crean desde `AdminForm.tsx` con una contraseña libre de ≥ 8 caracteres (`registerAdmin` la hashea tal cual), así que un teclado solo numérico dejaría afuera a quien tenga letras. Pasar a PIN numérico (validar dígitos al crear + reset de los existentes) queda como decisión de producto aparte.
+  **Evidencia:** cambio solo de atributos, sin lógica testeable con `node:test`; `tsc --noEmit` y `eslint` sin errores. Revisión nativa (riesgo medio) aprobada y acknowledged 2026-10-25; sugerencia no bloqueante R3-pin-input-attrs-untested. Pendiente: smoke manual en el TPV.
   Agregar `inputMode="numeric"`, `autoComplete="off"`, `autoFocus` y `aria-label`.
 
-- [ ] **UX-3 — Faltan los estados de carga, lista vacía y error en la selección de empleado.**
+- [x] **UX-3 — Faltan los estados de carga, lista vacía y error en la selección de empleado.**
+  ✅ **Hecho:** `estadoSeleccionEmpleados(lista)` (`empleadosKiosco.ts`) devuelve `error` / `vacio` / `lista`; `UserChoice` muestra "Cargando empleados..." (`role="status"`) mientras el estado es `null`, el error con `role="alert"` y un mensaje para la lista vacía. También se cambió el `<p>` dentro del `<button>` por `<span className="block">` (sugerencia R3-button-p-content-model de UX-1).
+  **Evidencia:** RED 3 fallando (`estadoSeleccionEmpleados is not a function`) → GREEN 20/20 en `empleadosKiosco.test.ts`; `tsc --noEmit` y `eslint` sin errores. Revisión nativa (riesgo alto, 4 lentes) aprobada y acknowledged 2026-10-25. Sugerencias no bloqueantes: R2-null-overloaded-loading-vs-error (`null` significa "cargando" en el estado y "error" en el helper; se podría agregar `{ tipo: "cargando" }`), R3-component-render-branches-untested. Pendiente: smoke manual de los tres estados.
 
-- [ ] **UX-4 — Contraste del texto de las tarjetas.**
-  Definir un color de texto explícito sobre `bg-brand-20` / `bg-brand-600` y verificar el contraste WCAG AA.
+- [x] **UX-4 — Contraste del texto de las tarjetas.** (resuelto en UX-5)
+  ✅ Las tarjetas ya no usan fondos `bg-brand-20` / `bg-brand-600`: el nombre va en `text-white/90` sobre el panel oscuro `#0C0C0F` y el rol en un `Badge`. Cumple WCAG AA.
+
+- [x] **UX-5 — Rediseño visual de `/usuarios` y `/usuarios/pin` alineado al sistema.**
+  ✅ **Hecho:** un primer intento con estética propia ("riel de comandas", con fuentes y CSS propios) se descartó porque no seguía el estilo del sistema. La versión final reutiliza el estilo del login y los componentes de TailAdmin: panel `bg-[#0C0C0F]/95`, título `text-brand-500`, tarjetas `rounded-2xl border-gray-800` (como `RecetasCard`), iniciales cuando no hay foto propia, `Badge` para el rol, `Skeleton` para la carga, `Button` para Reintentar e Ingresar. En el PIN se agregaron `aria-describedby`, `role="alert"` y un enlace para elegir otro usuario. La lógica de fetch y de login no cambió.
+  **Evidencia:** helpers `inicialesEmpleado` y `esFotoPorDefecto` (RED → GREEN, 24/24 en `empleadosKiosco.test.ts`); `tsc --noEmit` y `eslint` sin errores. **Pendiente:** smoke visual en el navegador/TPV.
 
 ## ⚪ Limpieza
 
-- [ ] **CLN-1 —** Reemplazar la metadata de la plantilla ("Next.js SignUp Page | TailAdmin") en `usuarios/page.tsx:5`.
-- [ ] **CLN-2 —** Renombrar el componente `usuarios` a PascalCase (`usuarios/page.tsx:10`).
+- [x] **CLN-1 —** Reemplazar la metadata de la plantilla ("Next.js SignUp Page | TailAdmin") en `usuarios/page.tsx:5`.
+  ✅ Título "Selección de empleado" y descripción propia. Fuera de alcance: `signup/page.tsx` y `signup/newadmin/page.tsx` tienen la misma metadata de plantilla.
+- [x] **CLN-2 —** Renombrar el componente `usuarios` a PascalCase (`usuarios/page.tsx:10`). ✅ `Usuarios`.
 - [x] **CLN-3 —** Eliminar el estado `nombre`, que no se usa (`pin/page.tsx:9`).
-- [ ] **CLN-4 —** Quitar el log de los payloads JWT completos en `middleware.ts:93-99`.
+- [x] **CLN-4 —** Quitar el log de los payloads JWT completos en `middleware.ts:93-99`.
+  ✅ Se quitaron los dos logs de payload. Además `verifyJWT` logueaba el error de jose completo, y `JWTExpired` trae el payload en `error.payload`: ahora loguea solo `error.code`.
+  **Evidencia (CLN-1/2/4):** sin lógica testeable; `tsc --noEmit` sin errores; `eslint` sin errores nuevos (los 4 `no-explicit-any` de `middleware.ts` ya estaban en HEAD). Revisión nativa (riesgo medio) aprobada y acknowledged 2026-10-25; sugerencia no bloqueante R3-code-only-error-log (un error sin `code` se loguea como "desconocido").
 
 ---
 
@@ -116,5 +129,6 @@
 ## Progreso
 
 - Prioridad sugerida: SEC-1 → SEC-2 → BUG-1/BUG-2 → SEC-3/SEC-4 → UX → limpieza.
-- Hechos: SEC-1 (+ continuación), SEC-2, SEC-3, SEC-4 (e14359e), BUG-1, BUG-2, BUG-3, BUG-4, CLN-3.
-- Siguiente paso: UX-1 (tarjetas de empleado accesibles con teclado).
+- Hechos: SEC-1 (+ continuación), SEC-2, SEC-3, SEC-4 (e14359e), BUG-1, BUG-2, BUG-3, BUG-4, UX-1, UX-2, UX-3, CLN-1, CLN-2, CLN-3, CLN-4.
+- Hechos también: UX-4, UX-5 (rediseño).
+- Siguiente paso: smoke visual de UX-5; luego NEW-1 → NEW-3.

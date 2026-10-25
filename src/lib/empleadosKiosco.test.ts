@@ -7,6 +7,10 @@ import {
   parsearEmpleadosKiosco,
   usuarioDesdeRespuestaPin,
   puedeIniciarSesionConPin,
+  rutaPinEmpleado,
+  estadoSeleccionEmpleados,
+  inicialesEmpleado,
+  esFotoPorDefecto,
 } from "./empleadosKiosco";
 
 const base = {
@@ -130,5 +134,56 @@ describe("puedeIniciarSesionConPin", () => {
       puedeIniciarSesionConPin(inactivo, "1", true),
       puedeIniciarSesionConPin(inactivo, "1", false)
     );
+  });
+});
+
+describe("rutaPinEmpleado", () => {
+  it("builds the PIN screen route for an employee id", () => {
+    assert.equal(rutaPinEmpleado("7"), "/usuarios/pin?id=7");
+  });
+
+  it("encodes the id so it cannot inject extra query parameters", () => {
+    assert.equal(rutaPinEmpleado("7&x=1"), "/usuarios/pin?id=7%26x%3D1");
+  });
+});
+
+describe("estadoSeleccionEmpleados", () => {
+  const ana = { id: "7", usuario: "ana", rol: "Cajero", fotoUrl: "/default-user.jpg" };
+
+  it("is an error when the response could not be parsed", () => {
+    assert.deepEqual(estadoSeleccionEmpleados(null), { tipo: "error" });
+  });
+
+  it("is empty when the branch has no active employees", () => {
+    assert.deepEqual(estadoSeleccionEmpleados([]), { tipo: "vacio" });
+  });
+
+  it("is a list when there are employees", () => {
+    assert.deepEqual(estadoSeleccionEmpleados([ana]), { tipo: "lista", empleados: [ana] });
+  });
+});
+
+describe("inicialesEmpleado", () => {
+  it("takes the first letter of the first two words", () => {
+    assert.equal(inicialesEmpleado("ana perez"), "AP");
+    assert.equal(inicialesEmpleado("ana.perez"), "AP");
+    assert.equal(inicialesEmpleado("juan_carlos-rojas"), "JC");
+  });
+
+  it("takes the first two letters of a single word", () => {
+    assert.equal(inicialesEmpleado("ana"), "AN");
+    assert.equal(inicialesEmpleado("x"), "X");
+  });
+
+  it("falls back to '?' for an empty name", () => {
+    assert.equal(inicialesEmpleado(""), "?");
+    assert.equal(inicialesEmpleado("  ._ "), "?");
+  });
+});
+
+describe("esFotoPorDefecto", () => {
+  it("detects the placeholder photo", () => {
+    assert.equal(esFotoPorDefecto("/default-user.jpg"), true);
+    assert.equal(esFotoPorDefecto("/uploads/ana.jpg"), false);
   });
 });

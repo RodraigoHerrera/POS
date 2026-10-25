@@ -9,7 +9,9 @@ async function verifyJWT(token: string) {
     const { payload } = await jwtVerify(token, secret);
     return payload;
   } catch (error) {
-    console.error("❌ Error al verificar JWT con jose:", error);
+    // Solo el código: los errores de jose (p. ej. JWTExpired) traen el payload completo
+    const code = (error as { code?: string })?.code ?? "desconocido";
+    console.error("❌ Error al verificar JWT con jose:", code);
     return null;
   }
 }
@@ -89,14 +91,8 @@ export async function middleware(request: NextRequest) {
         console.log(`🚫 Rol "${rol}" sin acceso a /admin`);
         return NextResponse.redirect(new URL("/cajero", request.url));
       }
-
-      console.log("✅ tokenSucursal y tokenEmpleado válidos:", {
-        sucursal: validSucursal,
-        empleado: validEmpleado,
-      });
     } else {
       // /usuarios solo necesita tokenSucursal
-      console.log("✅ tokenSucursal válido:", validSucursal);
 
       // Proactive Purge (SEC-02): Cualquier navegación a /usuarios destruye tokenEmpleado
       // incondicionalmente para evitar persistencia de sesión en terminales compartidas
