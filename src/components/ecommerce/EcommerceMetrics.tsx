@@ -3,8 +3,10 @@ import React, { useEffect, useState } from "react";
 import Badge from "../ui/badge/Badge";
 import { ArrowDownIcon, ArrowUpIcon, BoxIconLine, ListIcon } from "@/icons";
 import { Skeleton } from "../ui/skeleton/Skeleton";
+import type { Periodo } from "@/lib/periodo";
 
-export const EcommerceMetrics = () => {
+export const EcommerceMetrics = ({ periodo = "mes" }: { periodo?: Periodo }) => {
+  const etiquetaPeriodo = periodo === "semana" ? "Semana Actual" : "Mes Actual";
   // Estado para el monto de ventas
   const [ventasMes, setVentasMes] = useState<string>("");
   // Estado para el conteo de pedidos del mes
@@ -14,8 +16,9 @@ export const EcommerceMetrics = () => {
   // Efecto para obtener el total del mes actual al montar el componente
   useEffect(() => {
     const fetchMetrics = async () => {
+      setLoading(true);
       try {
-        const response = await fetch("/api/ventas/ventaMensual");
+        const response = await fetch(`/api/ventas/ventaMensual?periodo=${periodo}`);
         const data = await response.json();
 
         if (data.success) {
@@ -36,7 +39,7 @@ export const EcommerceMetrics = () => {
     };
 
     fetchMetrics();
-  }, []);
+  }, [periodo]);
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6">
@@ -48,7 +51,7 @@ export const EcommerceMetrics = () => {
         <div className="flex items-end justify-between mt-5">
           <div>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              Ventas (Mes Actual)
+              Ventas ({etiquetaPeriodo})
             </span>
             {loading ? (
               <Skeleton className="mt-2 h-7 w-24" />
@@ -71,7 +74,7 @@ export const EcommerceMetrics = () => {
         <div className="flex items-end justify-between mt-5">
           <div>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              Pedidos (Mes Actual)
+              Pedidos ({etiquetaPeriodo})
             </span>
             {loading ? (
               <Skeleton className="mt-2 h-7 w-24" />

@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import Badge from "../ui/badge/Badge";
 import { Skeleton } from "../ui/skeleton/Skeleton";
+import type { Periodo } from "@/lib/periodo";
 
 // Importación dinámica de ReactApexChart
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
@@ -26,15 +27,16 @@ interface CostoProduccion {
   costoPctMesAnterior: number;
 }
 
-export default function MonthlyTarget() {
+export default function MonthlyTarget({ periodo = "mes" }: { periodo?: Periodo }) {
   const router = useRouter();
   const [data, setData] = useState<CostoProduccion | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchCostoProduccion = async () => {
+      setLoading(true);
       try {
-        const response = await fetch("/api/ventas/costoProduccion");
+        const response = await fetch(`/api/ventas/costoProduccion?periodo=${periodo}`);
         const json = await response.json();
         if (json.success) {
           setData({
@@ -53,7 +55,7 @@ export default function MonthlyTarget() {
     };
 
     fetchCostoProduccion();
-  }, []);
+  }, [periodo]);
 
   const costoPct = data?.costoPct ?? 0;
   const dentroDeMeta = costoPct <= META_COSTO_PCT;
@@ -191,7 +193,7 @@ export default function MonthlyTarget() {
           <Skeleton className="mx-auto mt-10 h-5 w-64" />
         ) : (
           <p className="mx-auto mt-10 flex w-full max-w-[380px] items-center justify-center gap-2 text-center text-sm text-gray-500 sm:text-base">
-            El costo {mejoro ? "bajó" : "subió"} {Math.abs(diffPct).toFixed(1)} pts vs. mes anterior
+            El costo {mejoro ? "bajó" : "subió"} {Math.abs(diffPct).toFixed(1)} pts vs. {periodo === "semana" ? "semana" : "mes"} anterior
             <Badge
               color={mejoro ? "success" : "error"}
               startIcon={mejoro ? <ArrowDownIcon /> : <ArrowUpIcon />}

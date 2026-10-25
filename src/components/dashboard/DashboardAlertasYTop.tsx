@@ -4,6 +4,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import StockAlertsCard from "@/components/inventario/StockAlertsCard";
 import TopProductosCard from "@/components/ecommerce/TopProductosCard";
+import type { Periodo } from "@/lib/periodo";
 
 /**
  * Llena el hueco que quedaba debajo de las KPI cards del dashboard
@@ -12,7 +13,7 @@ import TopProductosCard from "@/components/ecommerce/TopProductosCard";
  * Componente cliente aparte porque necesita useRouter para "Reponer"/"Ver
  * todos" -> /admin/inventario.
  */
-export default function DashboardAlertasYTop() {
+export default function DashboardAlertasYTop({ periodo = "mes" }: { periodo?: Periodo }) {
   const router = useRouter();
 
   return (
@@ -21,7 +22,7 @@ export default function DashboardAlertasYTop() {
         onReponer={() => router.push("/admin/inventario")}
         onVerTodos={() => router.push("/admin/inventario")}
       />
-      <TopProductosCard />
+      <TopProductosCard periodo={periodo} />
     </div>
   );
 }
