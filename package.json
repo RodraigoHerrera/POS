@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "db:seed:demo": "tsx --env-file=.env prisma/seed-demo.ts",
+    "test:smoke": "tsx --env-file=.env tests/smoke/run.ts",
     "test:e2e": "playwright test --project=ci",
     "test:e2e:demo": "playwright test --project=demo --workers=1"
   },

@@ -60,3 +60,6 @@ scratch/
 *.xls
 
 ~/
+
+# smoke e2e
+/.next-smoke/
