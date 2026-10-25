@@ -81,3 +81,8 @@ export function puedeIniciarSesionConPin(
     pinValido
   );
 }
+
+/** Ruta de la pantalla de PIN para un empleado; el id va codificado. */
+export function rutaPinEmpleado(id: string): string {
+  return `/usuarios/pin?id=${encodeURIComponent(id)}`;
+}

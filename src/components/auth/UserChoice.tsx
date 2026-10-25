@@ -3,7 +3,11 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
-import { parsearEmpleadosKiosco, type EmpleadoKiosco } from "@/lib/empleadosKiosco";
+import {
+  parsearEmpleadosKiosco,
+  rutaPinEmpleado,
+  type EmpleadoKiosco,
+} from "@/lib/empleadosKiosco";
 
 export default function EmpleadoSelector() {
   const [empleados, setEmpleados] = useState<EmpleadoKiosco[]>([]);
@@ -40,16 +44,18 @@ export default function EmpleadoSelector() {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 max-w-6xl mx-auto">
       {empleados.map((empleado, index) => (
-        <div
+        <button
+          type="button"
           key={empleado.id}
-          className={`rounded-2xl p-3 cursor-pointer transition-transform hover:scale-105 ${
+          className={`rounded-2xl p-3 cursor-pointer transition-transform hover:scale-105 focus-visible:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500 focus-visible:ring-offset-2 ${
             colores[index % colores.length]
           }`}
-          onClick={() => router.push(`/usuarios/pin?id=${empleado.id}`)}
+          onClick={() => router.push(rutaPinEmpleado(empleado.id))}
         >
+          {/* Decorativa: el nombre visible ya da el nombre accesible del botón */}
           <Image
             src={empleado.fotoUrl}
-            alt={empleado.usuario}
+            alt=""
             width={300}
             height={300}
             className="rounded-md w-full h-auto object-cover"
@@ -57,7 +63,7 @@ export default function EmpleadoSelector() {
           <p className="text-center font-mono text-lg mt-2">
             {empleado.usuario} <br /> {empleado.rol}
           </p>
-        </div>
+        </button>
       ))}
     </div>
   );

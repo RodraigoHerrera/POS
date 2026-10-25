@@ -75,7 +75,9 @@
 
 ## 🟡 Accesibilidad y experiencia de uso
 
-- [ ] **UX-1 — Las tarjetas de empleado no se pueden usar con teclado.**
+- [x] **UX-1 — Las tarjetas de empleado no se pueden usar con teclado.**
+  ✅ **Hecho:** cada tarjeta es un `<button type="button">` con anillo `focus-visible` (`ring-brand-500` + offset); la foto pasa a `alt=""` porque el texto visible ya da el nombre accesible. La ruta sale de `rutaPinEmpleado(id)` (`empleadosKiosco.ts`), que codifica el id.
+  **Evidencia:** RED 2 fallando (`rutaPinEmpleado is not a function`) → GREEN 17/17 en `empleadosKiosco.test.ts`; `tsc --noEmit` y `eslint` sin errores. Revisión nativa (riesgo alto, 4 lentes) aprobada y acknowledged 2026-10-25. Sugerencias no bloqueantes: R3-button-p-content-model (`<p>` dentro de `<button>` no es HTML válido; cambiar a `<span className="block ...">` junto con UX-3), R3-component-wiring-untested (no hay herramientas para testear componentes). Pendiente: smoke manual con Tab/Enter en el navegador.
   `UserChoice.tsx:44` usa `<div onClick>`. **Corrección:** `<button>` con foco visible.
 
 - [ ] **UX-2 — El input de PIN no está preparado para un TPV táctil.**
@@ -116,5 +118,5 @@
 ## Progreso
 
 - Prioridad sugerida: SEC-1 → SEC-2 → BUG-1/BUG-2 → SEC-3/SEC-4 → UX → limpieza.
-- Hechos: SEC-1 (+ continuación), SEC-2, SEC-3, SEC-4 (e14359e), BUG-1, BUG-2, BUG-3, BUG-4, CLN-3.
-- Siguiente paso: UX-1 (tarjetas de empleado accesibles con teclado).
+- Hechos: SEC-1 (+ continuación), SEC-2, SEC-3, SEC-4 (e14359e), BUG-1, BUG-2, BUG-3, BUG-4, UX-1, CLN-3.
+- Siguiente paso: UX-2 (input de PIN para TPV táctil).

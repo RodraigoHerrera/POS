@@ -7,6 +7,7 @@ import {
   parsearEmpleadosKiosco,
   usuarioDesdeRespuestaPin,
   puedeIniciarSesionConPin,
+  rutaPinEmpleado,
 } from "./empleadosKiosco";
 
 const base = {
@@ -130,5 +131,15 @@ describe("puedeIniciarSesionConPin", () => {
       puedeIniciarSesionConPin(inactivo, "1", true),
       puedeIniciarSesionConPin(inactivo, "1", false)
     );
+  });
+});
+
+describe("rutaPinEmpleado", () => {
+  it("builds the PIN screen route for an employee id", () => {
+    assert.equal(rutaPinEmpleado("7"), "/usuarios/pin?id=7");
+  });
+
+  it("encodes the id so it cannot inject extra query parameters", () => {
+    assert.equal(rutaPinEmpleado("7&x=1"), "/usuarios/pin?id=7%26x%3D1");
   });
 });
