@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { requireSucursal, esRespuestaError } from "@/lib/auth";
-import { esEmpleadoActivo } from "@/lib/empleadosKiosco";
+import { puedeIniciarSesionConPin } from "@/lib/empleadosKiosco";
 import {
   checkRateLimit,
   isLocked,
@@ -89,22 +89,13 @@ export async function POST(request: Request) {
     const hashToCompare = empleado && isTargetValid ? empleado.contrasena : DUMMY_HASH;
     const isValid = await bcrypt.compare(String(pin), hashToCompare);
 
-    if (!empleado || !isTargetValid || !isValid) {
+    // Un empleado dado de baja tampoco entra aunque conserve su PIN, y recibe
+    // la misma respuesta que un PIN incorrecto para no confirmar el PIN
+    if (!empleado || !puedeIniciarSesionConPin(empleado, String(sucursalId), isValid)) {
       recordFailure(empleadoKey, 15 * 60 * 1000, 5);
       return NextResponse.json(
         { error: "PIN incorrecto", message: "PIN incorrecto" },
         { status: 401 }
-      );
-    }
-
-    // Un empleado dado de baja no puede iniciar sesión aunque conserve su PIN
-    if (!esEmpleadoActivo(empleado.estado)) {
-      return NextResponse.json(
-        {
-          error: "El empleado no está activo en esta sucursal",
-          message: "El empleado no está activo en esta sucursal",
-        },
-        { status: 403 }
       );
     }
 

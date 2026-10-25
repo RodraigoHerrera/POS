@@ -45,7 +45,9 @@
   **Corrección:** tomar la IP solo del proxy de confianza (configurable) y no del header crudo.
   **Aceptación:** cambiar `x-forwarded-for` en cada request no reinicia el contador.
 
-- [ ] **SEC-4 — Un empleado inactivo permite confirmar si un PIN es correcto.**
+- [x] **SEC-4 — Un empleado inactivo permite confirmar si un PIN es correcto.**
+  ✅ **Hecho:** `puedeIniciarSesionConPin(empleado, sucursalId, pinValido)` en `empleadosKiosco.ts` combina sucursal, estado activo y PIN; la ruta responde siempre 401 "PIN incorrecto" y registra el fallo. Se eliminó la respuesta 403 "no está activo".
+  **Evidencia:** RED 3 fallando (`puedeIniciarSesionConPin is not a function` contra el módulo de HEAD) → GREEN 15/15 en `empleadosKiosco.test.ts`; `tsc --noEmit` y `eslint` sin errores. Revisión nativa (riesgo medio, lente reliability) aprobada y acknowledged 2026-10-25. Advertencias no bloqueantes: R3-isTargetValid-dropped (verificado: el helper hace la misma comparación de sucursal), R3-route-uncovered (la ruta en sí no tiene test; solo el helper).
   `api/usuarios/id/route.ts:97`: con el PIN correcto responde 403 "no está activo"; con uno incorrecto, 401. Además, ese caso no registra fallo.
   **Corrección:** responder la misma 401 "PIN incorrecto" en ambos casos y registrar el fallo.
   **Aceptación:** el PIN correcto de un empleado inactivo devuelve la misma respuesta que un PIN incorrecto.

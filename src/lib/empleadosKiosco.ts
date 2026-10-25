@@ -64,3 +64,20 @@ export function usuarioDesdeRespuestaPin(data: unknown): string | null {
   const usuario = (data as Record<string, unknown>).usuario;
   return typeof usuario === "string" && usuario !== "" ? usuario : null;
 }
+
+/**
+ * Decide si el login por PIN procede. Un empleado inactivo se rechaza igual
+ * que un PIN incorrecto: responder distinto revelaría que el PIN era válido.
+ */
+export function puedeIniciarSesionConPin(
+  empleado: { sucursal_id: bigint; estado: string | null } | null,
+  sucursalId: string,
+  pinValido: boolean
+): boolean {
+  return (
+    !!empleado &&
+    empleado.sucursal_id.toString() === sucursalId &&
+    esEmpleadoActivo(empleado.estado) &&
+    pinValido
+  );
+}

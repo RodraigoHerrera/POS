@@ -6,6 +6,7 @@ import {
   empleadoParaPin,
   parsearEmpleadosKiosco,
   usuarioDesdeRespuestaPin,
+  puedeIniciarSesionConPin,
 } from "./empleadosKiosco";
 
 const base = {
@@ -105,5 +106,29 @@ describe("usuarioDesdeRespuestaPin", () => {
     assert.equal(usuarioDesdeRespuestaPin({ usuario: "" }), null);
     assert.equal(usuarioDesdeRespuestaPin(null), null);
     assert.equal(usuarioDesdeRespuestaPin("ana"), null);
+  });
+});
+
+describe("puedeIniciarSesionConPin", () => {
+  const activo = { sucursal_id: BigInt(1), estado: "Activo" };
+
+  it("allows an active employee of the branch with a valid PIN", () => {
+    assert.equal(puedeIniciarSesionConPin(activo, "1", true), true);
+  });
+
+  it("rejects a wrong PIN, a missing employee or another branch", () => {
+    assert.equal(puedeIniciarSesionConPin(activo, "1", false), false);
+    assert.equal(puedeIniciarSesionConPin(null, "1", true), false);
+    assert.equal(puedeIniciarSesionConPin(activo, "2", true), false);
+  });
+
+  it("rejects an inactive employee even with the correct PIN", () => {
+    // Same outcome as a wrong PIN: the response must not reveal that the PIN was right
+    const inactivo = { ...activo, estado: "inactivo" };
+    assert.equal(puedeIniciarSesionConPin(inactivo, "1", true), false);
+    assert.equal(
+      puedeIniciarSesionConPin(inactivo, "1", true),
+      puedeIniciarSesionConPin(inactivo, "1", false)
+    );
   });
 });
