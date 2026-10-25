@@ -3,6 +3,8 @@
 // endpoint orquestador, que ya tiene bastante con la orquestación.
 
 import { prisma } from "@/lib/db";
+import { agruparFilasVentas, type FilaVentaDiaria } from "./ventasDiarias";
+import { obtenerZonaMrp, offsetSegundos } from "./zonaHoraria";
 import type { MapaRecetas, TipoItemReceta } from "./explosion";
 
 /**
@@ -52,25 +54,31 @@ export async function cargarRecetasRecursivo(idsIniciales: bigint[]): Promise<Ma
   return mapa;
 }
 
-/** Ventas diarias por producto (sumadas por día) dentro de la sucursal, desde la fecha dada. */
+/**
+ * Ventas diarias por producto dentro de la sucursal, desde la fecha dada,
+ * agregadas en SQL por dia local de negocio (zona `tz`, env MRP_TZ).
+ *
+ * `fecha_venta` se guarda en UTC; se desplaza con un desfase numerico en
+ * segundos (no CONVERT_TZ, que exige las tablas de zonas horarias cargadas en
+ * MySQL). El desfase es el vigente hoy: exacto para zonas sin DST (La Paz).
+ * Todos los valores van parametrizados.
+ */
 export async function obtenerVentasDiariasPorProducto(
   sucursalId: bigint,
-  desde: Date
+  desde: Date,
+  tz: string = obtenerZonaMrp()
 ): Promise<Map<string, Map<string, number>>> {
-  const ventas = await prisma.historialVentas.findMany({
-    where: { sucursal_id: sucursalId, fecha_venta: { gte: desde } },
-    select: { producto_id: true, fecha_venta: true, cantidad: true },
-  });
-
-  const resultado = new Map<string, Map<string, number>>();
-  for (const v of ventas) {
-    const key = v.producto_id.toString();
-    const dia = v.fecha_venta.toISOString().slice(0, 10);
-    const porDia = resultado.get(key) ?? new Map<string, number>();
-    porDia.set(dia, (porDia.get(dia) ?? 0) + v.cantidad);
-    resultado.set(key, porDia);
-  }
-  return resultado;
+  const offset = offsetSegundos(new Date(), tz);
+  const filas = await prisma.$queryRaw<FilaVentaDiaria[]>`
+    SELECT producto_id,
+           DATE_FORMAT(DATE_ADD(fecha_venta, INTERVAL ${offset} SECOND), '%Y-%m-%d') AS dia,
+           SUM(cantidad) AS total
+    FROM historialVentas
+    WHERE sucursal_id = ${sucursalId}
+      AND fecha_venta >= ${desde}
+    GROUP BY producto_id, dia
+  `;
+  return agruparFilasVentas(filas);
 }
 
 /** Cantidad ya pedida pero no recibida (ordenCompra en estado "Enviada") por insumo. */
@@ -109,5 +117,17 @@ export async function obtenerStockPorItem(
     select: { item_id: true, stock: true },
   });
   for (const f of filas) resultado.set(f.item_id.toString(), Number(f.stock));
+  return resultado;
+}
+
+/** Nombres de items por id (solo para mensajes legibles). */
+export async function obtenerNombresItems(itemIds: bigint[]): Promise<Map<string, string>> {
+  const resultado = new Map<string, string>();
+  if (itemIds.length === 0) return resultado;
+  const filas = await prisma.item.findMany({
+    where: { id: { in: itemIds } },
+    select: { id: true, nombre: true },
+  });
+  for (const f of filas) resultado.set(f.id.toString(), f.nombre);
   return resultado;
 }

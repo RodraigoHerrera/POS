@@ -17,3 +17,6 @@ export function corridaReciente(
   // todas las corridas mientras dure el desfase.
   return Math.abs(ahora.getTime() - ultimaCorridaCreadaEn.getTime()) < ventanaMs;
 }
+
+/** Se lanza dentro de la transacción cuando ya hay una corrida reciente (HTTP 409). */
+export class CorridaRecienteError extends Error {}

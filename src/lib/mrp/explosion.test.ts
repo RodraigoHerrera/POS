@@ -88,3 +88,31 @@ describe("explotarMPS - neteo de stock de preps", () => {
     assert.ok(r.advertencias.some((a) => a.mensaje.includes("Ciclo")));
   });
 });
+
+describe("explotarMPS - merma >= 100%", () => {
+  it("advierte cuando la merma de receta es 100% en lugar de multiplicar x100 en silencio", () => {
+    const m: MapaRecetas = new Map([
+      ["V", { rendimiento: 1, mermaPctReceta: 100, insumos: [{ itemInsumoId: "RAW", itemInsumoTipo: "insumo", cantidad: 1, mermaPctRecetaItem: 0 }] }],
+    ]);
+    const r = explotarMPS([{ itemId: "V", tipo: "vendible", cantidad: 1 }], m);
+    assert.ok(r.advertencias.some((a) => a.itemId === "V" && /merma/i.test(a.mensaje)));
+  });
+  it("advierte cuando la merma de una linea de insumo es >= 100%", () => {
+    const m: MapaRecetas = new Map([
+      ["V", { rendimiento: 1, mermaPctReceta: 0, insumos: [{ itemInsumoId: "RAW", itemInsumoTipo: "insumo", cantidad: 1, mermaPctRecetaItem: 120 }] }],
+    ]);
+    const r = explotarMPS([{ itemId: "V", tipo: "vendible", cantidad: 1 }], m);
+    assert.ok(r.advertencias.some((a) => a.itemId === "RAW" && /merma/i.test(a.mensaje)));
+  });
+  it("sin merma excesiva no hay advertencias", () => {
+    const r = explotarMPS([{ itemId: "V2", tipo: "vendible", cantidad: 1 }], recetas);
+    assert.equal(r.advertencias.length, 0);
+  });
+});
+
+describe("explotarMPS - nombres en mensajes", () => {
+  it("usa el nombre del item cuando se provee", () => {
+    const r = explotarMPS([{ itemId: "V9", tipo: "vendible", cantidad: 1 }], new Map(), undefined, new Map([["V9", "Hamburguesa"]]));
+    assert.match(r.advertencias[0].mensaje, /Hamburguesa/);
+  });
+});

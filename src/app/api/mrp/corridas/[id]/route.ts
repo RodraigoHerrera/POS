@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { errorResponse } from "@/lib/apiError";
+import { respuestaDeError } from "@/lib/mrp/respuestaError";
+import { parseCorridaId } from "@/lib/mrp/validacion";
 import { serializeBigInt } from "@/lib/serialize";
 import { requireEmpleado, esRespuestaError } from "@/lib/auth";
 
@@ -17,7 +18,7 @@ export async function GET(
 
     const { id } = await context.params;
     const corrida = await prisma.mrpCorrida.findUnique({
-      where: { id: BigInt(id) },
+      where: { id: parseCorridaId(id) },
       include: {
         forecastDetalle: { include: { producto: { select: { nombre: true } } } },
         necesidades: { include: { item: { select: { nombre: true, unidad_code: true } } } },
@@ -35,7 +36,7 @@ export async function GET(
     }
 
     return NextResponse.json({ success: true, data: serializeBigInt(corrida) });
-  } catch (error: any) {
-    return errorResponse(error, "Error al obtener el detalle de la corrida de MRP");
+  } catch (error: unknown) {
+    return respuestaDeError(error, "Error al obtener el detalle de la corrida de MRP");
   }
 }
