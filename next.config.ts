@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Permite al servidor smoke usar su propio directorio de build y no pisar el `next dev` normal.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   images: {
     dangerouslyAllowSVG: false,
     contentDispositionType: "attachment",
