@@ -94,10 +94,13 @@
 
 ## ⚪ Limpieza
 
-- [ ] **CLN-1 —** Reemplazar la metadata de la plantilla ("Next.js SignUp Page | TailAdmin") en `usuarios/page.tsx:5`.
-- [ ] **CLN-2 —** Renombrar el componente `usuarios` a PascalCase (`usuarios/page.tsx:10`).
+- [x] **CLN-1 —** Reemplazar la metadata de la plantilla ("Next.js SignUp Page | TailAdmin") en `usuarios/page.tsx:5`.
+  ✅ Título "Selección de empleado" y descripción propia. Fuera de alcance: `signup/page.tsx` y `signup/newadmin/page.tsx` tienen la misma metadata de plantilla.
+- [x] **CLN-2 —** Renombrar el componente `usuarios` a PascalCase (`usuarios/page.tsx:10`). ✅ `Usuarios`.
 - [x] **CLN-3 —** Eliminar el estado `nombre`, que no se usa (`pin/page.tsx:9`).
-- [ ] **CLN-4 —** Quitar el log de los payloads JWT completos en `middleware.ts:93-99`.
+- [x] **CLN-4 —** Quitar el log de los payloads JWT completos en `middleware.ts:93-99`.
+  ✅ Se quitaron los dos logs de payload. Además `verifyJWT` logueaba el error de jose completo, y `JWTExpired` trae el payload en `error.payload`: ahora loguea solo `error.code`.
+  **Evidencia (CLN-1/2/4):** sin lógica testeable; `tsc --noEmit` sin errores; `eslint` sin errores nuevos (los 4 `no-explicit-any` de `middleware.ts` ya estaban en HEAD). Revisión nativa (riesgo medio) aprobada y acknowledged 2026-10-25; sugerencia no bloqueante R3-code-only-error-log (un error sin `code` se loguea como "desconocido").
 
 ---
 
@@ -122,5 +125,5 @@
 ## Progreso
 
 - Prioridad sugerida: SEC-1 → SEC-2 → BUG-1/BUG-2 → SEC-3/SEC-4 → UX → limpieza.
-- Hechos: SEC-1 (+ continuación), SEC-2, SEC-3, SEC-4 (e14359e), BUG-1, BUG-2, BUG-3, BUG-4, UX-1, UX-2, UX-3, CLN-3.
+- Hechos: SEC-1 (+ continuación), SEC-2, SEC-3, SEC-4 (e14359e), BUG-1, BUG-2, BUG-3, BUG-4, UX-1, UX-2, UX-3, CLN-1, CLN-2, CLN-3, CLN-4.
 - Siguiente paso: UX-4 (contraste del texto de las tarjetas, WCAG AA).
