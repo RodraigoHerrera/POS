@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import DenominacionesForm, { DetalleDenominacion } from "@/components/caja/DenominacionesForm";
 import TopBarCajero from "@/components/caja/TopBarCajero";
+import TicketCierreCaja from "@/components/caja/TicketCierreCaja";
+import type { CierreCajaData } from "@/lib/ticketCierre";
 import Button from "@/components/ui/button/Button";
 
 interface ResumenCaja {
@@ -23,12 +25,8 @@ interface ResumenCaja {
   efectivoEsperado: number;
 }
 
-interface ResultadoCierre {
-  totalVentas: number;
-  efectivoEsperado: number;
-  totalContado: number;
-  diferenciaEfectivo: number;
-}
+// Respuesta de POST /api/caja/cerrar (incluye lo necesario para el ticket).
+type ResultadoCierre = CierreCajaData;
 
 const LABEL_METODO: Record<string, string> = {
   ventas_efectivo: "Efectivo",
@@ -129,47 +127,7 @@ export default function CierreCajaPage() {
   }
 
   if (resultado) {
-    const diferencia = resultado.diferenciaEfectivo;
-    const esExacto = Math.abs(diferencia) < 0.01;
-    return (
-      <div className="max-w-2xl mx-auto p-6">
-        <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center dark:border-gray-800 dark:bg-gray-900">
-          <h2 className="mb-2 text-2xl font-bold text-gray-800 dark:text-white/90">Caja cerrada</h2>
-          <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
-            Total ventas del turno: Bs {resultado.totalVentas.toFixed(2)}
-          </p>
-
-          <div
-            className={`rounded-xl border p-6 ${
-              esExacto
-                ? "border-success-200 bg-success-50 dark:border-success-500/30 dark:bg-success-500/10"
-                : "border-warning-200 bg-warning-50 dark:border-warning-500/30 dark:bg-warning-500/10"
-            }`}
-          >
-            <p className="text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              {esExacto ? "Caja exacta" : diferencia > 0 ? "Sobrante" : "Faltante"}
-            </p>
-            <p
-              className={`text-3xl font-bold tabular-nums ${
-                esExacto
-                  ? "text-success-600 dark:text-success-400"
-                  : "text-warning-600 dark:text-warning-400"
-              }`}
-            >
-              Bs {Math.abs(diferencia).toFixed(2)}
-            </p>
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Esperado: Bs {resultado.efectivoEsperado.toFixed(2)} · Contado: Bs{" "}
-              {resultado.totalContado.toFixed(2)}
-            </p>
-          </div>
-
-          <Button className="mt-6 w-full" disabled={isLoggingOut} onClick={handleSalir}>
-            {isLoggingOut ? "Cerrando sesión..." : "Salir"}
-          </Button>
-        </div>
-      </div>
-    );
+    return <TicketCierreCaja cierre={resultado} onSalir={handleSalir} saliendo={isLoggingOut} />;
   }
 
   return (
