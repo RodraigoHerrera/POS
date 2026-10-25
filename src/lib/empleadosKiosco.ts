@@ -107,11 +107,6 @@ export function inicialesEmpleado(usuario: string): string {
   return iniciales.toUpperCase();
 }
 
-/** Número de comanda que se muestra en la tarjeta (posición base 1, mínimo dos dígitos). */
-export function numeroTicket(index: number): string {
-  return `#${String(index + 1).padStart(2, "0")}`;
-}
-
 export function esFotoPorDefecto(fotoUrl: string): boolean {
   return fotoUrl === FOTO_POR_DEFECTO;
 }

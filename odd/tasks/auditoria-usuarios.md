@@ -90,12 +90,11 @@
   **Evidencia:** RED 3 fallando (`estadoSeleccionEmpleados is not a function`) → GREEN 20/20 en `empleadosKiosco.test.ts`; `tsc --noEmit` y `eslint` sin errores. Revisión nativa (riesgo alto, 4 lentes) aprobada y acknowledged 2026-10-25. Sugerencias no bloqueantes: R2-null-overloaded-loading-vs-error (`null` significa "cargando" en el estado y "error" en el helper; se podría agregar `{ tipo: "cargando" }`), R3-component-render-branches-untested. Pendiente: smoke manual de los tres estados.
 
 - [x] **UX-4 — Contraste del texto de las tarjetas.** (resuelto en UX-5)
-  ✅ Las tarjetas pasan a tinta `#1A1410` sobre papel `#F3ECDF` (~15:1); texto secundario `#5B5149` (~6.6:1) y sello de rol `#B02A14` (~5.7:1). Todo cumple WCAG AA.
-  Definir un color de texto explícito sobre `bg-brand-20` / `bg-brand-600` y verificar el contraste WCAG AA.
+  ✅ Las tarjetas ya no usan fondos `bg-brand-20` / `bg-brand-600`: el nombre va en `text-white/90` sobre el panel oscuro `#0C0C0F` y el rol en un `Badge`. Cumple WCAG AA.
 
-- [x] **UX-5 — Rediseño visual de `/usuarios` y `/usuarios/pin` ("riel de comandas").**
-  ✅ **Hecho:** cada empleado es una comanda de cocina colgada de un riel (papel crema, borde perforado, número de ticket, rol como sello, monograma de iniciales si no tiene foto propia) sobre un fondo carbón con grano. Fuentes Anton + JetBrains Mono vía `usuarios/layout.tsx`; estilos en `src/components/auth/kiosco.module.css`; reloj de turno `RelojTurno.tsx`. Carga con comandas esqueleto, error "86" con botón Reintentar, vacío "Nadie en el riel". PIN: comanda única, error con `role="alert"` + `aria-describedby`, enlace "← No soy yo". `prefers-reduced-motion` respetado. Lógica de fetch/login sin cambios.
-  **Evidencia:** RED 5 fallando (`inicialesEmpleado`, `numeroTicket`, `esFotoPorDefecto`) → GREEN 25/25 en `empleadosKiosco.test.ts`; `tsc --noEmit` y `eslint` sin errores. **Pendiente:** smoke visual en el navegador/TPV (la extensión de Chrome no estaba conectada).
+- [x] **UX-5 — Rediseño visual de `/usuarios` y `/usuarios/pin` alineado al sistema.**
+  ✅ **Hecho:** un primer intento con estética propia ("riel de comandas", con fuentes y CSS propios) se descartó porque no seguía el estilo del sistema. La versión final reutiliza el estilo del login y los componentes de TailAdmin: panel `bg-[#0C0C0F]/95`, título `text-brand-500`, tarjetas `rounded-2xl border-gray-800` (como `RecetasCard`), iniciales cuando no hay foto propia, `Badge` para el rol, `Skeleton` para la carga, `Button` para Reintentar e Ingresar. En el PIN se agregaron `aria-describedby`, `role="alert"` y un enlace para elegir otro usuario. La lógica de fetch y de login no cambió.
+  **Evidencia:** helpers `inicialesEmpleado` y `esFotoPorDefecto` (RED → GREEN, 24/24 en `empleadosKiosco.test.ts`); `tsc --noEmit` y `eslint` sin errores. **Pendiente:** smoke visual en el navegador/TPV.
 
 ## ⚪ Limpieza
 

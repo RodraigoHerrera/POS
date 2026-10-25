@@ -10,7 +10,6 @@ import {
   rutaPinEmpleado,
   estadoSeleccionEmpleados,
   inicialesEmpleado,
-  numeroTicket,
   esFotoPorDefecto,
 } from "./empleadosKiosco";
 
@@ -179,14 +178,6 @@ describe("inicialesEmpleado", () => {
   it("falls back to '?' for an empty name", () => {
     assert.equal(inicialesEmpleado(""), "?");
     assert.equal(inicialesEmpleado("  ._ "), "?");
-  });
-});
-
-describe("numeroTicket", () => {
-  it("pads the 1-based position to two digits", () => {
-    assert.equal(numeroTicket(0), "#01");
-    assert.equal(numeroTicket(9), "#10");
-    assert.equal(numeroTicket(122), "#123");
   });
 });
 

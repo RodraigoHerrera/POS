@@ -3,48 +3,20 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
+import Badge from "@/components/ui/badge/Badge";
+import Button from "@/components/ui/button/Button";
+import { Skeleton } from "@/components/ui/skeleton/Skeleton";
 import {
   esFotoPorDefecto,
   estadoSeleccionEmpleados,
   inicialesEmpleado,
-  numeroTicket,
   parsearEmpleadosKiosco,
   rutaPinEmpleado,
   type EstadoSeleccion,
 } from "@/lib/empleadosKiosco";
-import styles from "./kiosco.module.css";
 
-const TICKETS_ESQUELETO = 4;
-
-function Aviso({
-  codigo,
-  titulo,
-  texto,
-  role,
-  accion,
-}: {
-  codigo: string;
-  titulo: string;
-  texto: string;
-  role: "alert" | "status";
-  accion?: React.ReactNode;
-}) {
-  return (
-    <div role={role} className={styles.aviso}>
-      <div className={styles.comanda}>
-        <span className={styles.pinza} aria-hidden="true" />
-        <div className={styles.papel}>
-          <span className={`${styles.display} ${styles.avisoCodigo}`} aria-hidden="true">
-            {codigo}
-          </span>
-          <p className={`${styles.display} ${styles.avisoTitulo}`}>{titulo}</p>
-          <p className={styles.avisoTexto}>{texto}</p>
-          {accion}
-        </div>
-      </div>
-    </div>
-  );
-}
+const TARJETAS_ESQUELETO = 4;
+const GRILLA = "grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 sm:gap-6";
 
 export default function EmpleadoSelector() {
   // null mientras carga la lista
@@ -72,96 +44,77 @@ export default function EmpleadoSelector() {
     return (
       <div role="status">
         <span className="sr-only">Cargando empleados...</span>
-        <ul className={styles.comandas} aria-hidden="true">
-          {Array.from({ length: TICKETS_ESQUELETO }, (_, i) => (
-            <li
+        <div className={GRILLA} aria-hidden="true">
+          {Array.from({ length: TARJETAS_ESQUELETO }, (_, i) => (
+            <div
               key={i}
-              className={`${styles.comandaItem} ${styles.esqueleto}`}
-              style={{ "--i": i } as React.CSSProperties}
+              className="flex flex-col items-center gap-4 rounded-2xl border border-gray-800 p-5"
             >
-              <div className={styles.comanda}>
-                <span className={styles.pinza} />
-                <div className={styles.papel}>
-                  <span className={styles.avatar} />
-                  <span className={styles.barra} />
-                  <span className={styles.barra} style={{ width: "40%" }} />
-                </div>
-              </div>
-            </li>
+              <Skeleton className="h-20 w-20 rounded-lg bg-white/10!" />
+              <Skeleton className="h-5 w-24 bg-white/10!" />
+              <Skeleton className="h-5 w-16 rounded-full bg-white/10!" />
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
     );
   }
 
   if (estado.tipo === "error") {
     return (
-      <Aviso
-        role="alert"
-        codigo="86"
-        titulo="Sin conexión con la cocina"
-        texto="No se pudo cargar la lista de empleados."
-        accion={
-          <button
-            type="button"
-            className={`${styles.mono} ${styles.botonTinta}`}
-            onClick={() => window.location.reload()}
-          >
-            Reintentar
-          </button>
-        }
-      />
+      <div role="alert" className="flex flex-col items-center gap-4 py-6 text-center">
+        <p className="text-sm text-error-500">
+          No se pudo cargar la lista de empleados.
+        </p>
+        <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
+          Reintentar
+        </Button>
+      </div>
     );
   }
 
   if (estado.tipo === "vacio") {
     return (
-      <Aviso
-        role="status"
-        codigo="0"
-        titulo="Nadie en el riel"
-        texto="No hay empleados activos en esta sucursal. Pide a un administrador que los registre."
-      />
+      <p role="status" className="py-6 text-center text-sm text-gray-400">
+        No hay empleados activos en esta sucursal. Pide a un administrador que los registre.
+      </p>
     );
   }
 
   return (
-    <ul className={styles.comandas}>
-      {estado.empleados.map((empleado, index) => (
-        <li
+    <div className={GRILLA}>
+      {estado.empleados.map((empleado) => (
+        <button
+          type="button"
           key={empleado.id}
-          className={styles.comandaItem}
-          style={{ "--i": index } as React.CSSProperties}
+          className="group flex flex-col items-center gap-4 rounded-2xl border border-gray-800 bg-white/[0.03] p-5 text-center transition hover:border-brand-500 hover:bg-white/[0.06] focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-brand-500/30"
+          onClick={() => router.push(rutaPinEmpleado(empleado.id))}
         >
-          <button
-            type="button"
-            className={styles.comanda}
-            onClick={() => router.push(rutaPinEmpleado(empleado.id))}
+          {/* Decorativa: el nombre visible ya da el nombre accesible del botón */}
+          <span
+            aria-hidden="true"
+            className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border border-gray-800 bg-brand-500/15 text-2xl font-semibold text-brand-400 transition group-hover:border-brand-500"
           >
-            <span className={styles.pinza} aria-hidden="true" />
-            <span className={styles.papel}>
-              <span className={`${styles.mono} ${styles.comandaCabecera}`} aria-hidden="true">
-                <span>{numeroTicket(index)}</span>
-                <span>En turno</span>
-              </span>
-              {/* Decorativa: el nombre visible ya da el nombre accesible del botón */}
-              <span className={`${styles.display} ${styles.avatar}`} aria-hidden="true">
-                {esFotoPorDefecto(empleado.fotoUrl) ? (
-                  inicialesEmpleado(empleado.usuario)
-                ) : (
-                  <Image src={empleado.fotoUrl} alt="" width={300} height={300} />
-                )}
-              </span>
-              <span className={`${styles.display} ${styles.nombre}`}>{empleado.usuario}</span>
-              <span className={`${styles.mono} ${styles.sello}`}>{empleado.rol}</span>
-              <span className={`${styles.mono} ${styles.comandaPie}`} aria-hidden="true">
-                <span>Ingresar</span>
-                <span className={styles.flecha}>→</span>
-              </span>
-            </span>
-          </button>
-        </li>
+            {esFotoPorDefecto(empleado.fotoUrl) ? (
+              inicialesEmpleado(empleado.usuario)
+            ) : (
+              <Image
+                src={empleado.fotoUrl}
+                alt=""
+                width={80}
+                height={80}
+                className="h-full w-full object-cover"
+              />
+            )}
+          </span>
+          <span className="block text-lg font-bold text-white/90 break-all">
+            {empleado.usuario}
+          </span>
+          <Badge size="sm" color="warning">
+            {empleado.rol}
+          </Badge>
+        </button>
       ))}
-    </ul>
+    </div>
   );
 }
