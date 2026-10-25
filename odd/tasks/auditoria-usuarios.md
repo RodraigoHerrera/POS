@@ -89,8 +89,13 @@
   ✅ **Hecho:** `estadoSeleccionEmpleados(lista)` (`empleadosKiosco.ts`) devuelve `error` / `vacio` / `lista`; `UserChoice` muestra "Cargando empleados..." (`role="status"`) mientras el estado es `null`, el error con `role="alert"` y un mensaje para la lista vacía. También se cambió el `<p>` dentro del `<button>` por `<span className="block">` (sugerencia R3-button-p-content-model de UX-1).
   **Evidencia:** RED 3 fallando (`estadoSeleccionEmpleados is not a function`) → GREEN 20/20 en `empleadosKiosco.test.ts`; `tsc --noEmit` y `eslint` sin errores. Revisión nativa (riesgo alto, 4 lentes) aprobada y acknowledged 2026-10-25. Sugerencias no bloqueantes: R2-null-overloaded-loading-vs-error (`null` significa "cargando" en el estado y "error" en el helper; se podría agregar `{ tipo: "cargando" }`), R3-component-render-branches-untested. Pendiente: smoke manual de los tres estados.
 
-- [ ] **UX-4 — Contraste del texto de las tarjetas.**
+- [x] **UX-4 — Contraste del texto de las tarjetas.** (resuelto en UX-5)
+  ✅ Las tarjetas pasan a tinta `#1A1410` sobre papel `#F3ECDF` (~15:1); texto secundario `#5B5149` (~6.6:1) y sello de rol `#B02A14` (~5.7:1). Todo cumple WCAG AA.
   Definir un color de texto explícito sobre `bg-brand-20` / `bg-brand-600` y verificar el contraste WCAG AA.
+
+- [x] **UX-5 — Rediseño visual de `/usuarios` y `/usuarios/pin` ("riel de comandas").**
+  ✅ **Hecho:** cada empleado es una comanda de cocina colgada de un riel (papel crema, borde perforado, número de ticket, rol como sello, monograma de iniciales si no tiene foto propia) sobre un fondo carbón con grano. Fuentes Anton + JetBrains Mono vía `usuarios/layout.tsx`; estilos en `src/components/auth/kiosco.module.css`; reloj de turno `RelojTurno.tsx`. Carga con comandas esqueleto, error "86" con botón Reintentar, vacío "Nadie en el riel". PIN: comanda única, error con `role="alert"` + `aria-describedby`, enlace "← No soy yo". `prefers-reduced-motion` respetado. Lógica de fetch/login sin cambios.
+  **Evidencia:** RED 5 fallando (`inicialesEmpleado`, `numeroTicket`, `esFotoPorDefecto`) → GREEN 25/25 en `empleadosKiosco.test.ts`; `tsc --noEmit` y `eslint` sin errores. **Pendiente:** smoke visual en el navegador/TPV (la extensión de Chrome no estaba conectada).
 
 ## ⚪ Limpieza
 
@@ -126,4 +131,5 @@
 
 - Prioridad sugerida: SEC-1 → SEC-2 → BUG-1/BUG-2 → SEC-3/SEC-4 → UX → limpieza.
 - Hechos: SEC-1 (+ continuación), SEC-2, SEC-3, SEC-4 (e14359e), BUG-1, BUG-2, BUG-3, BUG-4, UX-1, UX-2, UX-3, CLN-1, CLN-2, CLN-3, CLN-4.
-- Siguiente paso: UX-4 (contraste del texto de las tarjetas, WCAG AA).
+- Hechos también: UX-4, UX-5 (rediseño).
+- Siguiente paso: smoke visual de UX-5; luego NEW-1 → NEW-3.

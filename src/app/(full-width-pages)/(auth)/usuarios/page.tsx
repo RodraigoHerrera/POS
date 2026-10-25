@@ -1,4 +1,6 @@
 import UserChoice from "@/components/auth/UserChoice";
+import RelojTurno from "@/components/auth/RelojTurno";
+import styles from "@/components/auth/kiosco.module.css";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -8,11 +10,22 @@ export const metadata: Metadata = {
 
 export default function Usuarios() {
   return (
-    <div className="min-h-screen w-full bg-[#0C0C0F]/90 p-6">
-      <h1 className="text-center text-4xl font-bold text-brand-20 mb-10">
-        ¿QUIÉN ERES?
-      </h1>
+    <main className={styles.pagina}>
+      <header className={styles.cabecera}>
+        <div>
+          <p className={`${styles.mono} ${styles.eyebrow}`}>Inicio de turno</p>
+          <h1 className={`${styles.display} ${styles.titulo}`}>
+            ¿Quién está <br />
+            <em>en turno?</em>
+          </h1>
+        </div>
+        <RelojTurno />
+      </header>
+      <div className={styles.riel} aria-hidden="true" />
       <UserChoice />
-    </div>
+      <p className={`${styles.mono} ${styles.instruccion}`}>
+        Toca tu comanda para ingresar con tu PIN
+      </p>
+    </main>
   );
 }

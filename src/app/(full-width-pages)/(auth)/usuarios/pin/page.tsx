@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 import { usuarioDesdeRespuestaPin } from "@/lib/empleadosKiosco";
 import { rutaPorRol } from "@/lib/rutaPorRol";
+import Link from "next/link";
+import styles from "@/components/auth/kiosco.module.css";
 
 function EmpleadoPinContent() {
   const [pin, setPin] = useState("");
@@ -74,41 +76,67 @@ function EmpleadoPinContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0C0C0F]/98 p-6">
-      <div className="bg-white/10 p-6 rounded-lg max-w-sm w-full text-center">
-        <h2 className="text-xl font-semibold text-white mb-4">
-          Hola, {usuario}
-        </h2>
-        <p className="text-white mb-4">Ingresa tu PIN para continuar</p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Sin inputMode numérico: los PIN actuales pueden tener letras */}
-          <input
-            type="password"
-            autoComplete="off"
-            autoFocus
-            aria-label="PIN"
-            value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            className="w-full px-4 py-2 rounded-md text-gray-100"
-            placeholder="PIN"
-          />
-          {error && <p className="text-sm text-red-500">{error}</p>}
-          <button
-            type="submit"
-            disabled={isLoading || !pin}
-            className="w-full bg-brand-600 text-gray-950 font-bold py-2 rounded-md hover:bg-brand-20"
-          >
-            {isLoading ? "Verificando..." : "Ingresar"}
-          </button>
-        </form>
+    <main className={styles.pinPagina}>
+      <div className={styles.pinComanda}>
+        <div className={styles.comanda}>
+          <span className={styles.pinza} aria-hidden="true" />
+          <div className={styles.papel}>
+            <span className={`${styles.mono} ${styles.comandaCabecera}`} aria-hidden="true">
+              <span>Comanda de ingreso</span>
+              <span>PIN</span>
+            </span>
+            <div>
+              <p className={`${styles.mono} ${styles.pinSaludo}`}>Hola,</p>
+              <h1 className={`${styles.display} ${styles.pinNombre}`}>{usuario || " "}</h1>
+            </div>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              {/* Sin inputMode numérico: los PIN actuales pueden tener letras */}
+              <input
+                type="password"
+                autoComplete="off"
+                autoFocus
+                aria-label="PIN"
+                aria-invalid={!!error}
+                aria-describedby={error ? "pin-error" : undefined}
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                className={`${styles.mono} ${styles.pinInput}`}
+                placeholder="PIN"
+              />
+              {error && (
+                <p id="pin-error" role="alert" className={styles.pinError}>
+                  {error}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={isLoading || !pin}
+                className={`${styles.display} ${styles.pinBoton}`}
+              >
+                {isLoading ? "Verificando..." : "Ingresar"}
+              </button>
+            </form>
+          </div>
+        </div>
+        <div className="text-center">
+          <Link href="/usuarios" className={`${styles.mono} ${styles.volver}`}>
+            ← No soy yo
+          </Link>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
 
 export default function EmpleadoPin() {
   return (
-    <Suspense fallback={<div>Cargando...</div>}>
+    <Suspense
+      fallback={
+        <p role="status" className={`${styles.mono} ${styles.pinPagina}`}>
+          Cargando...
+        </p>
+      }
+    >
       <EmpleadoPinContent />
     </Suspense>
   );

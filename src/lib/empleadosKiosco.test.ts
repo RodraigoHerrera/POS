@@ -9,6 +9,9 @@ import {
   puedeIniciarSesionConPin,
   rutaPinEmpleado,
   estadoSeleccionEmpleados,
+  inicialesEmpleado,
+  numeroTicket,
+  esFotoPorDefecto,
 } from "./empleadosKiosco";
 
 const base = {
@@ -158,5 +161,38 @@ describe("estadoSeleccionEmpleados", () => {
 
   it("is a list when there are employees", () => {
     assert.deepEqual(estadoSeleccionEmpleados([ana]), { tipo: "lista", empleados: [ana] });
+  });
+});
+
+describe("inicialesEmpleado", () => {
+  it("takes the first letter of the first two words", () => {
+    assert.equal(inicialesEmpleado("ana perez"), "AP");
+    assert.equal(inicialesEmpleado("ana.perez"), "AP");
+    assert.equal(inicialesEmpleado("juan_carlos-rojas"), "JC");
+  });
+
+  it("takes the first two letters of a single word", () => {
+    assert.equal(inicialesEmpleado("ana"), "AN");
+    assert.equal(inicialesEmpleado("x"), "X");
+  });
+
+  it("falls back to '?' for an empty name", () => {
+    assert.equal(inicialesEmpleado(""), "?");
+    assert.equal(inicialesEmpleado("  ._ "), "?");
+  });
+});
+
+describe("numeroTicket", () => {
+  it("pads the 1-based position to two digits", () => {
+    assert.equal(numeroTicket(0), "#01");
+    assert.equal(numeroTicket(9), "#10");
+    assert.equal(numeroTicket(122), "#123");
+  });
+});
+
+describe("esFotoPorDefecto", () => {
+  it("detects the placeholder photo", () => {
+    assert.equal(esFotoPorDefecto("/default-user.jpg"), true);
+    assert.equal(esFotoPorDefecto("/uploads/ana.jpg"), false);
   });
 });

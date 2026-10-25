@@ -4,11 +4,47 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 import {
+  esFotoPorDefecto,
   estadoSeleccionEmpleados,
+  inicialesEmpleado,
+  numeroTicket,
   parsearEmpleadosKiosco,
   rutaPinEmpleado,
   type EstadoSeleccion,
 } from "@/lib/empleadosKiosco";
+import styles from "./kiosco.module.css";
+
+const TICKETS_ESQUELETO = 4;
+
+function Aviso({
+  codigo,
+  titulo,
+  texto,
+  role,
+  accion,
+}: {
+  codigo: string;
+  titulo: string;
+  texto: string;
+  role: "alert" | "status";
+  accion?: React.ReactNode;
+}) {
+  return (
+    <div role={role} className={styles.aviso}>
+      <div className={styles.comanda}>
+        <span className={styles.pinza} aria-hidden="true" />
+        <div className={styles.papel}>
+          <span className={`${styles.display} ${styles.avisoCodigo}`} aria-hidden="true">
+            {codigo}
+          </span>
+          <p className={`${styles.display} ${styles.avisoTitulo}`}>{titulo}</p>
+          <p className={styles.avisoTexto}>{texto}</p>
+          {accion}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function EmpleadoSelector() {
   // null mientras carga la lista
@@ -32,56 +68,100 @@ export default function EmpleadoSelector() {
     fetchEmpleados();
   }, []);
 
-  const colores = ["bg-brand-20", "bg-brand-600"];
-
   if (!estado) {
     return (
-      <p role="status" className="text-center text-gray-300">
-        Cargando empleados...
-      </p>
+      <div role="status">
+        <span className="sr-only">Cargando empleados...</span>
+        <ul className={styles.comandas} aria-hidden="true">
+          {Array.from({ length: TICKETS_ESQUELETO }, (_, i) => (
+            <li
+              key={i}
+              className={`${styles.comandaItem} ${styles.esqueleto}`}
+              style={{ "--i": i } as React.CSSProperties}
+            >
+              <div className={styles.comanda}>
+                <span className={styles.pinza} />
+                <div className={styles.papel}>
+                  <span className={styles.avatar} />
+                  <span className={styles.barra} />
+                  <span className={styles.barra} style={{ width: "40%" }} />
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     );
   }
 
   if (estado.tipo === "error") {
     return (
-      <p role="alert" className="text-center text-red-500">
-        No se pudo cargar la lista de empleados. Recarga la página.
-      </p>
+      <Aviso
+        role="alert"
+        codigo="86"
+        titulo="Sin conexión con la cocina"
+        texto="No se pudo cargar la lista de empleados."
+        accion={
+          <button
+            type="button"
+            className={`${styles.mono} ${styles.botonTinta}`}
+            onClick={() => window.location.reload()}
+          >
+            Reintentar
+          </button>
+        }
+      />
     );
   }
 
   if (estado.tipo === "vacio") {
     return (
-      <p role="status" className="text-center text-gray-300">
-        No hay empleados activos en esta sucursal. Pide a un administrador que los registre.
-      </p>
+      <Aviso
+        role="status"
+        codigo="0"
+        titulo="Nadie en el riel"
+        texto="No hay empleados activos en esta sucursal. Pide a un administrador que los registre."
+      />
     );
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 max-w-6xl mx-auto">
+    <ul className={styles.comandas}>
       {estado.empleados.map((empleado, index) => (
-        <button
-          type="button"
+        <li
           key={empleado.id}
-          className={`rounded-2xl p-3 cursor-pointer transition-transform hover:scale-105 focus-visible:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500 focus-visible:ring-offset-2 ${
-            colores[index % colores.length]
-          }`}
-          onClick={() => router.push(rutaPinEmpleado(empleado.id))}
+          className={styles.comandaItem}
+          style={{ "--i": index } as React.CSSProperties}
         >
-          {/* Decorativa: el nombre visible ya da el nombre accesible del botón */}
-          <Image
-            src={empleado.fotoUrl}
-            alt=""
-            width={300}
-            height={300}
-            className="rounded-md w-full h-auto object-cover"
-          />
-          <span className="block text-center font-mono text-lg mt-2">
-            {empleado.usuario} <br /> {empleado.rol}
-          </span>
-        </button>
+          <button
+            type="button"
+            className={styles.comanda}
+            onClick={() => router.push(rutaPinEmpleado(empleado.id))}
+          >
+            <span className={styles.pinza} aria-hidden="true" />
+            <span className={styles.papel}>
+              <span className={`${styles.mono} ${styles.comandaCabecera}`} aria-hidden="true">
+                <span>{numeroTicket(index)}</span>
+                <span>En turno</span>
+              </span>
+              {/* Decorativa: el nombre visible ya da el nombre accesible del botón */}
+              <span className={`${styles.display} ${styles.avatar}`} aria-hidden="true">
+                {esFotoPorDefecto(empleado.fotoUrl) ? (
+                  inicialesEmpleado(empleado.usuario)
+                ) : (
+                  <Image src={empleado.fotoUrl} alt="" width={300} height={300} />
+                )}
+              </span>
+              <span className={`${styles.display} ${styles.nombre}`}>{empleado.usuario}</span>
+              <span className={`${styles.mono} ${styles.sello}`}>{empleado.rol}</span>
+              <span className={`${styles.mono} ${styles.comandaPie}`} aria-hidden="true">
+                <span>Ingresar</span>
+                <span className={styles.flecha}>→</span>
+              </span>
+            </span>
+          </button>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
