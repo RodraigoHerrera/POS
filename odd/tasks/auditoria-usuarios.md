@@ -85,7 +85,9 @@
   **Evidencia:** cambio solo de atributos, sin lógica testeable con `node:test`; `tsc --noEmit` y `eslint` sin errores. Revisión nativa (riesgo medio) aprobada y acknowledged 2026-10-25; sugerencia no bloqueante R3-pin-input-attrs-untested. Pendiente: smoke manual en el TPV.
   Agregar `inputMode="numeric"`, `autoComplete="off"`, `autoFocus` y `aria-label`.
 
-- [ ] **UX-3 — Faltan los estados de carga, lista vacía y error en la selección de empleado.**
+- [x] **UX-3 — Faltan los estados de carga, lista vacía y error en la selección de empleado.**
+  ✅ **Hecho:** `estadoSeleccionEmpleados(lista)` (`empleadosKiosco.ts`) devuelve `error` / `vacio` / `lista`; `UserChoice` muestra "Cargando empleados..." (`role="status"`) mientras el estado es `null`, el error con `role="alert"` y un mensaje para la lista vacía. También se cambió el `<p>` dentro del `<button>` por `<span className="block">` (sugerencia R3-button-p-content-model de UX-1).
+  **Evidencia:** RED 3 fallando (`estadoSeleccionEmpleados is not a function`) → GREEN 20/20 en `empleadosKiosco.test.ts`; `tsc --noEmit` y `eslint` sin errores. Revisión nativa (riesgo alto, 4 lentes) aprobada y acknowledged 2026-10-25. Sugerencias no bloqueantes: R2-null-overloaded-loading-vs-error (`null` significa "cargando" en el estado y "error" en el helper; se podría agregar `{ tipo: "cargando" }`), R3-component-render-branches-untested. Pendiente: smoke manual de los tres estados.
 
 - [ ] **UX-4 — Contraste del texto de las tarjetas.**
   Definir un color de texto explícito sobre `bg-brand-20` / `bg-brand-600` y verificar el contraste WCAG AA.
@@ -120,5 +122,5 @@
 ## Progreso
 
 - Prioridad sugerida: SEC-1 → SEC-2 → BUG-1/BUG-2 → SEC-3/SEC-4 → UX → limpieza.
-- Hechos: SEC-1 (+ continuación), SEC-2, SEC-3, SEC-4 (e14359e), BUG-1, BUG-2, BUG-3, BUG-4, UX-1, UX-2, CLN-3.
-- Siguiente paso: UX-3 (estados de carga, vacío y error en la selección; incluye cambiar el `<p>` dentro del `<button>` por `<span className="block">`).
+- Hechos: SEC-1 (+ continuación), SEC-2, SEC-3, SEC-4 (e14359e), BUG-1, BUG-2, BUG-3, BUG-4, UX-1, UX-2, UX-3, CLN-3.
+- Siguiente paso: UX-4 (contraste del texto de las tarjetas, WCAG AA).

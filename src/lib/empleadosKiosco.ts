@@ -86,3 +86,15 @@ export function puedeIniciarSesionConPin(
 export function rutaPinEmpleado(id: string): string {
   return `/usuarios/pin?id=${encodeURIComponent(id)}`;
 }
+
+export type EstadoSeleccion =
+  | { tipo: "error" }
+  | { tipo: "vacio" }
+  | { tipo: "lista"; empleados: EmpleadoKiosco[] };
+
+/** Qué mostrar en la selección de empleado según la lista ya validada (null = error). */
+export function estadoSeleccionEmpleados(lista: EmpleadoKiosco[] | null): EstadoSeleccion {
+  if (!lista) return { tipo: "error" };
+  if (lista.length === 0) return { tipo: "vacio" };
+  return { tipo: "lista", empleados: lista };
+}

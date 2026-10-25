@@ -4,14 +4,15 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 import {
+  estadoSeleccionEmpleados,
   parsearEmpleadosKiosco,
   rutaPinEmpleado,
-  type EmpleadoKiosco,
+  type EstadoSeleccion,
 } from "@/lib/empleadosKiosco";
 
 export default function EmpleadoSelector() {
-  const [empleados, setEmpleados] = useState<EmpleadoKiosco[]>([]);
-  const [error, setError] = useState("");
+  // null mientras carga la lista
+  const [estado, setEstado] = useState<EstadoSeleccion | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -22,14 +23,10 @@ export default function EmpleadoSelector() {
           credentials: "include",
         });
         const lista = res.ok ? parsearEmpleadosKiosco(await res.json()) : null;
-        if (!lista) {
-          setError("No se pudo cargar la lista de empleados. Recarga la página.");
-          return;
-        }
-        setEmpleados(lista);
+        setEstado(estadoSeleccionEmpleados(lista));
       } catch (error) {
         console.error("Error al obtener empleados:", error);
-        setError("No se pudo cargar la lista de empleados. Recarga la página.");
+        setEstado(estadoSeleccionEmpleados(null));
       }
     };
     fetchEmpleados();
@@ -37,13 +34,33 @@ export default function EmpleadoSelector() {
 
   const colores = ["bg-brand-20", "bg-brand-600"];
 
-  if (error) {
-    return <p className="text-center text-red-500">{error}</p>;
+  if (!estado) {
+    return (
+      <p role="status" className="text-center text-gray-300">
+        Cargando empleados...
+      </p>
+    );
+  }
+
+  if (estado.tipo === "error") {
+    return (
+      <p role="alert" className="text-center text-red-500">
+        No se pudo cargar la lista de empleados. Recarga la página.
+      </p>
+    );
+  }
+
+  if (estado.tipo === "vacio") {
+    return (
+      <p role="status" className="text-center text-gray-300">
+        No hay empleados activos en esta sucursal. Pide a un administrador que los registre.
+      </p>
+    );
   }
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 max-w-6xl mx-auto">
-      {empleados.map((empleado, index) => (
+      {estado.empleados.map((empleado, index) => (
         <button
           type="button"
           key={empleado.id}
@@ -60,9 +77,9 @@ export default function EmpleadoSelector() {
             height={300}
             className="rounded-md w-full h-auto object-cover"
           />
-          <p className="text-center font-mono text-lg mt-2">
+          <span className="block text-center font-mono text-lg mt-2">
             {empleado.usuario} <br /> {empleado.rol}
-          </p>
+          </span>
         </button>
       ))}
     </div>

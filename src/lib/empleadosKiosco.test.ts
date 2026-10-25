@@ -8,6 +8,7 @@ import {
   usuarioDesdeRespuestaPin,
   puedeIniciarSesionConPin,
   rutaPinEmpleado,
+  estadoSeleccionEmpleados,
 } from "./empleadosKiosco";
 
 const base = {
@@ -141,5 +142,21 @@ describe("rutaPinEmpleado", () => {
 
   it("encodes the id so it cannot inject extra query parameters", () => {
     assert.equal(rutaPinEmpleado("7&x=1"), "/usuarios/pin?id=7%26x%3D1");
+  });
+});
+
+describe("estadoSeleccionEmpleados", () => {
+  const ana = { id: "7", usuario: "ana", rol: "Cajero", fotoUrl: "/default-user.jpg" };
+
+  it("is an error when the response could not be parsed", () => {
+    assert.deepEqual(estadoSeleccionEmpleados(null), { tipo: "error" });
+  });
+
+  it("is empty when the branch has no active employees", () => {
+    assert.deepEqual(estadoSeleccionEmpleados([]), { tipo: "vacio" });
+  });
+
+  it("is a list when there are employees", () => {
+    assert.deepEqual(estadoSeleccionEmpleados([ana]), { tipo: "lista", empleados: [ana] });
   });
 });
