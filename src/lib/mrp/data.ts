@@ -95,3 +95,19 @@ export async function obtenerEntradasProgramadas(
   }
   return resultado;
 }
+
+/** Stock actual en la sucursal de los items dados (usado para netear preps). */
+export async function obtenerStockPorItem(
+  sucursalId: bigint,
+  itemIds: bigint[]
+): Promise<Map<string, number>> {
+  const resultado = new Map<string, number>();
+  if (itemIds.length === 0) return resultado;
+
+  const filas = await prisma.inventarioSucursal.findMany({
+    where: { sucursal_id: sucursalId, item_id: { in: itemIds } },
+    select: { item_id: true, stock: true },
+  });
+  for (const f of filas) resultado.set(f.item_id.toString(), Number(f.stock));
+  return resultado;
+}
