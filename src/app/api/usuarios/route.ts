@@ -1,40 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { requireEmpleado, esRespuestaError } from "@/lib/auth";
 
-
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-
-async function getSucursalIdFromToken(token: string) {
-  try {
-    const { payload } = await jwtVerify(token, secret);
-    // En tu login firmamos sucursalId como string, no number
-    return (payload as any)?.sucursalId as string | undefined;
-  } catch (error) {
-    return null;
-  }
-}
-
+// Listado completo (con datos de contacto) para la administración de usuarios.
+// La pantalla de selección pre-PIN usa /api/usuarios/kiosco.
 export async function GET() {
-  // ✅ Usa cookies() (async) y lee la cookie correcta: tokenSucursal
-  const cookieStore = await cookies();
-  const tokenSucursal = cookieStore.get("tokenSucursal")?.value;
-
-  if (!tokenSucursal) {
-    return NextResponse.json({ message: "No autorizado" }, { status: 401 });
-  }
-
-  const sucursalIdStr = await getSucursalIdFromToken(tokenSucursal);
-
-  if (!sucursalIdStr) {
-    return NextResponse.json({ message: "Token inválido" }, { status: 403 });
-  }
+  const sesion = await requireEmpleado(["Administrador"]);
+  if (esRespuestaError(sesion)) return sesion;
 
   try {
     // Prisma espera BigInt en sucursal_id
     const empleados = await prisma.empleados.findMany({
-      where: { sucursal_id: BigInt(sucursalIdStr) },
+      where: { sucursal_id: BigInt(sesion.sucursalId) },
       select: {
         id: true,
         nombre: true,

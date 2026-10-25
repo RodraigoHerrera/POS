@@ -197,11 +197,32 @@ export class MemoryRateLimiter {
 export const rateLimiter = new MemoryRateLimiter();
 
 // Exported Helper Functions
-export function getClientIp(req: Request): string {
+/**
+ * Clave del bloqueo por PIN fallido. Va acotada por sucursal: sin eso, una
+ * terminal de otra sucursal podía bloquear a cualquier empleado por su id.
+ */
+export function clavePinEmpleado(sucursalId: string, empleadoId: string): string {
+  return `emp:pin:${sucursalId}:${empleadoId}`;
+}
+
+/**
+ * IP del cliente para los límites por IP. Los headers x-forwarded-for y
+ * x-real-ip los puede escribir cualquiera, así que solo se leen con
+ * TRUST_PROXY=true (app detrás de Nginx/Caddy). En ese caso se toma la última
+ * entrada de x-forwarded-for, que es la que agrega el proxy; las anteriores
+ * vienen del cliente. Sin proxy confiable todas las peticiones caen en la
+ * misma clave: el límite pasa a ser global en lugar de evadible.
+ */
+export function getClientIp(
+  req: Request,
+  confiarEnProxy: boolean = process.env.TRUST_PROXY === "true"
+): string {
+  if (!confiarEnProxy) return "127.0.0.1";
+
   const xForwardedFor = req.headers.get("x-forwarded-for");
   if (xForwardedFor) {
-    const firstIp = xForwardedFor.split(",")[0].trim();
-    if (firstIp) return firstIp;
+    const lastIp = xForwardedFor.split(",").at(-1)?.trim();
+    if (lastIp) return lastIp;
   }
   const xRealIp = req.headers.get("x-real-ip");
   if (xRealIp) {

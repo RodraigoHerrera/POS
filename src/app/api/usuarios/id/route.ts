@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { requireSucursal, esRespuestaError } from "@/lib/auth";
+import { puedeIniciarSesionConPin } from "@/lib/empleadosKiosco";
 import {
   checkRateLimit,
   isLocked,
@@ -11,6 +12,7 @@ import {
   rateLimitResponse,
   getClientIp,
   DUMMY_HASH,
+  clavePinEmpleado,
 } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
@@ -25,16 +27,6 @@ export async function POST(request: Request) {
           message: "Faltan id o pin en el cuerpo de la petición",
         },
         { status: 400 }
-      );
-    }
-
-    // IP PIN Spray defense (máximo 30 peticiones por cada 5 minutos)
-    const clientIp = getClientIp(request);
-    const sprayCheck = checkRateLimit("pin:ip:" + clientIp, 30, 5 * 60 * 1000);
-    if (!sprayCheck.allowed) {
-      return rateLimitResponse(
-        sprayCheck.retryAfterSeconds,
-        "Demasiadas peticiones desde esta IP. Intenta de nuevo más tarde."
       );
     }
 
@@ -61,8 +53,20 @@ export async function POST(request: Request) {
       );
     }
 
+    // PIN Spray defense (máximo 30 peticiones por cada 5 minutos). Va por
+    // sucursal + IP: sin proxy confiable la IP es la misma para todos, y así
+    // una sucursal no puede agotar el límite de otra.
+    const clientIp = getClientIp(request);
+    const sprayCheck = checkRateLimit(`pin:suc:${sucursalId}:ip:${clientIp}`, 30, 5 * 60 * 1000);
+    if (!sprayCheck.allowed) {
+      return rateLimitResponse(
+        sprayCheck.retryAfterSeconds,
+        "Demasiados intentos de PIN desde esta terminal. Intenta de nuevo más tarde."
+      );
+    }
+
     // Pre-DB Employee Lockout Check (5 fallos en 15 minutos)
-    const empleadoKey = "emp:pin:" + String(id);
+    const empleadoKey = clavePinEmpleado(String(sucursalId), String(id));
     const lockoutCheck = isLocked(empleadoKey, 5, 15 * 60 * 1000);
     if (lockoutCheck.locked) {
       return rateLimitResponse(
@@ -85,22 +89,13 @@ export async function POST(request: Request) {
     const hashToCompare = empleado && isTargetValid ? empleado.contrasena : DUMMY_HASH;
     const isValid = await bcrypt.compare(String(pin), hashToCompare);
 
-    if (!empleado || !isTargetValid || !isValid) {
+    // Un empleado dado de baja tampoco entra aunque conserve su PIN, y recibe
+    // la misma respuesta que un PIN incorrecto para no confirmar el PIN
+    if (!empleado || !puedeIniciarSesionConPin(empleado, String(sucursalId), isValid)) {
       recordFailure(empleadoKey, 15 * 60 * 1000, 5);
       return NextResponse.json(
         { error: "PIN incorrecto", message: "PIN incorrecto" },
         { status: 401 }
-      );
-    }
-
-    // Un empleado dado de baja no puede iniciar sesión aunque conserve su PIN
-    if ((empleado.estado ?? "").toLowerCase() !== "activo") {
-      return NextResponse.json(
-        {
-          error: "El empleado no está activo en esta sucursal",
-          message: "El empleado no está activo en esta sucursal",
-        },
-        { status: 403 }
       );
     }
 

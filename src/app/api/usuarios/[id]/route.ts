@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/db";
 import { NextResponse } from 'next/server';
 import { requireSucursal, esRespuestaError } from "@/lib/auth";
+import { empleadoParaPin } from "@/lib/empleadosKiosco";
 
 export async function GET(
   request: Request,
@@ -20,14 +21,16 @@ export async function GET(
     const empleadoId = BigInt(id);
     const empleado = await prisma.empleados.findFirst({
       where: { id: empleadoId, sucursal_id: BigInt(sesion.sucursalId) },
-      select: { nombre: true, usuario: true },
+      select: { usuario: true, estado: true },
     });
 
-    if (!empleado) {
+    // Igual que el kiosco: sin nombre completo y sin empleados dados de baja
+    const vista = empleadoParaPin(empleado);
+    if (!vista) {
       return NextResponse.json({ error: 'Empleado no encontrado' }, { status: 404 });
     }
 
-    return NextResponse.json({ nombre: empleado.nombre, usuario: empleado.usuario });
+    return NextResponse.json(vista);
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Error al obtener el empleado' }, { status: 500 });
