@@ -54,11 +54,14 @@
   `UserChoice.tsx:25-26`: sin el chequeo de `res.ok`, `data` es `{message}` y `.filter` (línea 38) lanza `TypeError`.
   **Aceptación:** una respuesta 4xx/5xx muestra un mensaje de error y no rompe la pantalla.
 
-- [ ] **BUG-2 — "Hola, undefined" en la pantalla de PIN.**
+- [x] **BUG-2 — "Hola, undefined" en la pantalla de PIN.**
+  ✅ Sin `id`, con una respuesta no OK, mal formada (validada con `usuarioDesdeRespuestaPin()`) o con un error de red → `router.replace("/usuarios")`. El id va con `encodeURIComponent`.
   `pin/page.tsx:21-24` no chequea `res.ok`, y sin `id` no redirige.
   **Aceptación:** sin `id`, o con un id inexistente, se redirige a `/usuarios`.
 
-- [ ] **BUG-3 — Un rol desconocido deja al usuario trabado tras un login exitoso.**
+- [x] **BUG-3 — Un rol desconocido deja al usuario trabado tras un login exitoso.**
+  ✅ Nueva `rutaPorRol()` (`src/lib/rutaPorRol.ts`); con un rol sin pantalla muestra un error en lugar de quedarse quieta.
+  **Evidencia (BUG-2 y BUG-3):** RED 3 fallando → GREEN 14/14 (`rutaPorRol.test.ts` + `empleadosKiosco.test.ts`); `tsc --noEmit` y `eslint` sin errores. Pendiente: smoke manual en el navegador.
   `pin/page.tsx:50-51` solo contempla `Administrador` y `Cajero`.
   **Aceptación:** un rol no contemplado muestra un error claro.
 
@@ -108,5 +111,5 @@
 ## Progreso
 
 - Prioridad sugerida: SEC-1 → SEC-2 → BUG-1/BUG-2 → SEC-3/SEC-4 → UX → limpieza.
-- Hechos: SEC-1 (+ continuación), SEC-2, BUG-1, BUG-4, CLN-3.
-- Siguiente paso: BUG-2 / BUG-3 (pantalla de PIN), luego SEC-3 y SEC-4.
+- Hechos: SEC-1 (+ continuación), SEC-2, BUG-1, BUG-2, BUG-3, BUG-4, CLN-3.
+- Siguiente paso: SEC-3 y SEC-4.

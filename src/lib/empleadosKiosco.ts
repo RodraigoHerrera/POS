@@ -57,3 +57,10 @@ export function parsearEmpleadosKiosco(data: unknown): EmpleadoKiosco[] | null {
   if (!Array.isArray(data) || !data.every(esEmpleadoKiosco)) return null;
   return data;
 }
+
+/** Valida la respuesta de /api/usuarios/[id]; null si es un error o viene mal formada. */
+export function usuarioDesdeRespuestaPin(data: unknown): string | null {
+  if (typeof data !== "object" || data === null) return null;
+  const usuario = (data as Record<string, unknown>).usuario;
+  return typeof usuario === "string" && usuario !== "" ? usuario : null;
+}

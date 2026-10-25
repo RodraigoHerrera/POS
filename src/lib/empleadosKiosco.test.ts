@@ -5,6 +5,7 @@ import {
   empleadosParaKiosco,
   empleadoParaPin,
   parsearEmpleadosKiosco,
+  usuarioDesdeRespuestaPin,
 } from "./empleadosKiosco";
 
 const base = {
@@ -91,5 +92,18 @@ describe("parsearEmpleadosKiosco", () => {
 
   it("returns null when an item is malformed", () => {
     assert.equal(parsearEmpleadosKiosco([valido, { id: 1 }]), null);
+  });
+});
+
+describe("usuarioDesdeRespuestaPin", () => {
+  it("returns the username from a valid response", () => {
+    assert.equal(usuarioDesdeRespuestaPin({ usuario: "ana" }), "ana");
+  });
+
+  it("returns null for an error body, empty username or non-object", () => {
+    assert.equal(usuarioDesdeRespuestaPin({ error: "Empleado no encontrado" }), null);
+    assert.equal(usuarioDesdeRespuestaPin({ usuario: "" }), null);
+    assert.equal(usuarioDesdeRespuestaPin(null), null);
+    assert.equal(usuarioDesdeRespuestaPin("ana"), null);
   });
 });

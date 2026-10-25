@@ -3,6 +3,8 @@ import React, { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
 import { Suspense } from "react";
+import { usuarioDesdeRespuestaPin } from "@/lib/empleadosKiosco";
+import { rutaPorRol } from "@/lib/rutaPorRol";
 
 function EmpleadoPinContent() {
   const [pin, setPin] = useState("");
@@ -15,18 +17,30 @@ function EmpleadoPinContent() {
   const id = searchParams.get("id");
 
   useEffect(() => {
-    const fetchNombre = async () => {
+    // Sin id válido o con un empleado inexistente/inactivo no hay a quién
+    // pedirle el PIN: se vuelve a la selección de empleado
+    if (!id) {
+      router.replace("/usuarios");
+      return;
+    }
+
+    const fetchUsuario = async () => {
       try {
-        const res = await fetch(`/api/usuarios/${id}`);
-        const data = await res.json();
-        setUsuario(data.usuario);
+        const res = await fetch(`/api/usuarios/${encodeURIComponent(id)}`);
+        const nombreUsuario = res.ok ? usuarioDesdeRespuestaPin(await res.json()) : null;
+        if (!nombreUsuario) {
+          router.replace("/usuarios");
+          return;
+        }
+        setUsuario(nombreUsuario);
       } catch (err) {
-        console.error("Error al obtener nombre del empleado:", err);
+        console.error("Error al obtener el empleado:", err);
+        router.replace("/usuarios");
       }
     };
 
-    if (id) fetchNombre();
-  }, [id]);
+    fetchUsuario();
+  }, [id, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,8 +59,9 @@ function EmpleadoPinContent() {
       const data = await res.json();
 
       if (res.ok) {
-        if (data.rol === "Administrador") router.push("/admin");
-        else if (data.rol === "Cajero") router.push("/cajero");
+        const ruta = rutaPorRol(data.rol);
+        if (ruta) router.push(ruta);
+        else setError("Tu rol no tiene acceso a ninguna pantalla. Consulta con un administrador.");
       } else {
         setError(data.error || data.message || "PIN incorrecto");
       }
