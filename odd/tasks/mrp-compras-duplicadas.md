@@ -49,7 +49,7 @@ Stop the MRP from over-buying: fix the three HIGH findings of the 2026-10-25 MRP
 
 ## Review
 - Native review (medium, reliability lens) approved and acknowledged 2026-10-25. Non-blocking follow-ups:
-  - R3-recent-run-future-timestamp (WARNING): `corridaReciente` treats a run timestamp ahead of the app clock as recent; DB/app clock or timezone skew would 409 every run. Clamp negative differences / test future and boundary timestamps.
+  - R3-recent-run-future-timestamp (WARNING, FIXED 2026-10-25: absolute difference; tests for boundary, small and large future skew; RED 5/1 then 15/15 mrp tests; tsc/eslint clean; not reviewed): `corridaReciente` treats a run timestamp ahead of the app clock as recent; DB/app clock or timezone skew would 409 every run. Clamp negative differences / test future and boundary timestamps.
   - R3-route-tx-untested (WARNING): lock, recent-run check and anulación filter not tested against a DB (candidate for the smoke suite).
   - R3-409-mapping-via-retry (SUGGESTION): no test that the route maps `CorridaRecienteError` to 409 (verified manually: `runWithRetry` rethrows non-deadlock errors unchanged).
   - R3-prep-stock-unit (SUGGESTION): prep stock assumed in recipe unit; no check.

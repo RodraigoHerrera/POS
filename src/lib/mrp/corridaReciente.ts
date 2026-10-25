@@ -12,5 +12,8 @@ export function corridaReciente(
   ventanaMs: number = VENTANA_CORRIDA_MS
 ): boolean {
   if (!ultimaCorridaCreadaEn) return false;
-  return ahora.getTime() - ultimaCorridaCreadaEn.getTime() < ventanaMs;
+  // Diferencia absoluta: si el reloj de la BD va adelantado respecto al de la
+  // app (desfase o zona horaria), una diferencia negativa no debe bloquear
+  // todas las corridas mientras dure el desfase.
+  return Math.abs(ahora.getTime() - ultimaCorridaCreadaEn.getTime()) < ventanaMs;
 }
