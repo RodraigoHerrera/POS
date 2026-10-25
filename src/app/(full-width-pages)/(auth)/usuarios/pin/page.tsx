@@ -6,7 +6,6 @@ import { Suspense } from "react";
 
 function EmpleadoPinContent() {
   const [pin, setPin] = useState("");
-  const [nombre, setNombre] = useState("");
   const [usuario, setUsuario] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -20,7 +19,6 @@ function EmpleadoPinContent() {
       try {
         const res = await fetch(`/api/usuarios/${id}`);
         const data = await res.json();
-        setNombre(data.nombre);
         setUsuario(data.usuario);
       } catch (err) {
         console.error("Error al obtener nombre del empleado:", err);

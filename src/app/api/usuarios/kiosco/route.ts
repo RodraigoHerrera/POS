@@ -11,7 +11,8 @@ export async function GET() {
 
   try {
     const empleados = await prisma.empleados.findMany({
-      where: { sucursal_id: BigInt(sesion.sucursalId) },
+      // La columna usa collation *_ci: "activo" también matchea "Activo"
+      where: { sucursal_id: BigInt(sesion.sucursalId), estado: "activo" },
       select: { id: true, usuario: true, rol: true, estado: true },
       orderBy: { nombre: "asc" },
     });

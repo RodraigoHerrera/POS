@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { requireSucursal, esRespuestaError } from "@/lib/auth";
+import { esEmpleadoActivo } from "@/lib/empleadosKiosco";
 import {
   checkRateLimit,
   isLocked,
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
     }
 
     // Un empleado dado de baja no puede iniciar sesión aunque conserve su PIN
-    if ((empleado.estado ?? "").toLowerCase() !== "activo") {
+    if (!esEmpleadoActivo(empleado.estado)) {
       return NextResponse.json(
         {
           error: "El empleado no está activo en esta sucursal",

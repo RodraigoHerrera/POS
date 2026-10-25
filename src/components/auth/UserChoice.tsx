@@ -3,10 +3,11 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
-import type { EmpleadoKiosco } from "@/lib/empleadosKiosco";
+import { parsearEmpleadosKiosco, type EmpleadoKiosco } from "@/lib/empleadosKiosco";
 
 export default function EmpleadoSelector() {
   const [empleados, setEmpleados] = useState<EmpleadoKiosco[]>([]);
+  const [error, setError] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -16,10 +17,15 @@ export default function EmpleadoSelector() {
         const res = await fetch("/api/usuarios/kiosco", {
           credentials: "include",
         });
-        const data = await res.json();
-        setEmpleados(data);
+        const lista = res.ok ? parsearEmpleadosKiosco(await res.json()) : null;
+        if (!lista) {
+          setError("No se pudo cargar la lista de empleados. Recarga la página.");
+          return;
+        }
+        setEmpleados(lista);
       } catch (error) {
         console.error("Error al obtener empleados:", error);
+        setError("No se pudo cargar la lista de empleados. Recarga la página.");
       }
     };
     fetchEmpleados();
@@ -27,8 +33,11 @@ export default function EmpleadoSelector() {
 
   const colores = ["bg-brand-20", "bg-brand-600"];
 
-  return (
+  if (error) {
+    return <p className="text-center text-red-500">{error}</p>;
+  }
 
+  return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 max-w-6xl mx-auto">
       {empleados.map((empleado, index) => (
         <div
@@ -51,6 +60,5 @@ export default function EmpleadoSelector() {
         </div>
       ))}
     </div>
-    
   );
 }

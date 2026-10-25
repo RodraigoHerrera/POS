@@ -24,6 +24,8 @@
 - [x] **SEC-1 — El listado de empleados expone datos personales con solo la sesión de sucursal.**
   ✅ **Hecho:** `GET /api/usuarios` ahora exige `requireEmpleado(["Administrador"])` y toma la sucursal de esa sesión. Nuevo `GET /api/usuarios/kiosco` (`requireSucursal`) que devuelve `empleadosParaKiosco()` (`src/lib/empleadosKiosco.ts`): solo activos, con `id`, `usuario`, `rol` y `fotoUrl`. `UserChoice` usa el endpoint nuevo, ya no filtra en el cliente y se quitó el `console.log(data)` (BUG-4 queda resuelto con esto).
   **Evidencia:** `npx tsx --test src/lib/empleadosKiosco.test.ts` → RED (módulo inexistente) → GREEN 5/5; `tsc --noEmit` y `eslint` sin errores. Pendiente: smoke manual en el navegador.
+  ✅ **Continuación (tras `/code-review` de 3a78f86):** `/api/usuarios/[id]` (pantalla de PIN) ahora devuelve solo `{ usuario }` vía `empleadoParaPin()`, y 404 para inactivos (antes exponía el nombre completo, también de empleados dados de baja). El kiosco filtra `estado: "activo"` en la consulta (collation verificada: `utf8mb4_unicode_ci`). `api/usuarios/id` usa `esEmpleadoActivo` en lugar de la comparación a mano.
+  **Evidencia:** RED 5 tests nuevos fallando → GREEN 10/10; `tsc --noEmit` sin errores; `eslint` sin errores en los archivos tocados.
   `api/usuarios/route.ts:36-62` devuelve `correo`, `celular` y `creado` de todos los empleados (incluidos los inactivos) con solo `tokenSucursal`. `UserChoice.tsx:27` además hace `console.log(data)`. `admin/usuarios/page.tsx:44` consume el mismo endpoint, así que el listado de administración no exige rol de Administrador.
   **Corrección:** separar en un endpoint de kiosco (solo `id`, `usuario`, `rol`; solo los activos, filtrados en el servidor) y uno de administración protegido con `tokenEmpleado` + rol `Administrador`.
   **Aceptación:** el kiosco no recibe datos de contacto ni empleados inactivos; el endpoint de administración devuelve 401/403 sin un `tokenEmpleado` de Administrador.
@@ -45,7 +47,8 @@
 
 ## 🟠 Bugs
 
-- [ ] **BUG-1 — La pantalla de selección se rompe si la API responde con error.**
+- [x] **BUG-1 — La pantalla de selección se rompe si la API responde con error.**
+  ✅ Chequea `res.ok` y valida la respuesta con `parsearEmpleadosKiosco()`; ante un error muestra un mensaje.
   `UserChoice.tsx:25-26`: sin el chequeo de `res.ok`, `data` es `{message}` y `.filter` (línea 38) lanza `TypeError`.
   **Aceptación:** una respuesta 4xx/5xx muestra un mensaje de error y no rompe la pantalla.
 
@@ -77,10 +80,21 @@
 
 - [ ] **CLN-1 —** Reemplazar la metadata de la plantilla ("Next.js SignUp Page | TailAdmin") en `usuarios/page.tsx:5`.
 - [ ] **CLN-2 —** Renombrar el componente `usuarios` a PascalCase (`usuarios/page.tsx:10`).
-- [ ] **CLN-3 —** Eliminar el estado `nombre`, que no se usa (`pin/page.tsx:9`).
+- [x] **CLN-3 —** Eliminar el estado `nombre`, que no se usa (`pin/page.tsx:9`).
 - [ ] **CLN-4 —** Quitar el log de los payloads JWT completos en `middleware.ts:93-99`.
 
 ---
+
+## Nuevas (del `/code-review` de 3a78f86)
+
+- [ ] **NEW-1 — El listado de administración no muestra errores de autorización.**
+  `admin/usuarios/page.tsx:44` ignora el `error` de `useFetchData`: un 401/403 de `/api/usuarios` se ve como una lista vacía.
+  **Aceptación:** un 401/403 muestra un mensaje de error en lugar de "sin empleados".
+- [ ] **NEW-2 — Los tests unitarios no corren en CI.**
+  `package.json` no tiene un script para los tests `node:test`; solo corren con `npx tsx --test` a mano. Pasa en todo el proyecto.
+  **Aceptación:** existe un script `test` que corre todos los `src/**/*.test.ts` sin depender de la base de datos (o separados en unitarios e integración).
+- [ ] **NEW-3 — La foto por defecto está duplicada.**
+  `/default-user.jpg` está escrita en `api/usuarios/route.ts` y en `FOTO_POR_DEFECTO` (`empleadosKiosco.ts`). Unificar.
 
 ## Lo que ya está bien (no tocar)
 
@@ -92,5 +106,5 @@
 ## Progreso
 
 - Prioridad sugerida: SEC-1 → SEC-2 → BUG-1/BUG-2 → SEC-3/SEC-4 → UX → limpieza.
-- SEC-1 y BUG-4 hechos.
+- Hechos: SEC-1 (+ continuación), BUG-1, BUG-4, CLN-3.
 - Siguiente paso: SEC-2.

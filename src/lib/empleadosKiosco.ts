@@ -32,3 +32,28 @@ export function empleadosParaKiosco(empleados: EmpleadoFuente[]): EmpleadoKiosco
       fotoUrl: FOTO_POR_DEFECTO,
     }));
 }
+
+/** Vista para la pantalla de PIN: solo el usuario, y solo si el empleado está activo. */
+export function empleadoParaPin(
+  empleado: { usuario: string; estado: string | null } | null
+): { usuario: string } | null {
+  if (!empleado || !esEmpleadoActivo(empleado.estado)) return null;
+  return { usuario: empleado.usuario };
+}
+
+function esEmpleadoKiosco(x: unknown): x is EmpleadoKiosco {
+  if (typeof x !== "object" || x === null) return false;
+  const e = x as Record<string, unknown>;
+  return (
+    typeof e.id === "string" &&
+    typeof e.usuario === "string" &&
+    typeof e.rol === "string" &&
+    typeof e.fotoUrl === "string"
+  );
+}
+
+/** Valida la respuesta de /api/usuarios/kiosco; null si es un error o viene mal formada. */
+export function parsearEmpleadosKiosco(data: unknown): EmpleadoKiosco[] | null {
+  if (!Array.isArray(data) || !data.every(esEmpleadoKiosco)) return null;
+  return data;
+}

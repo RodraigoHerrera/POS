@@ -1,6 +1,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { esEmpleadoActivo, empleadosParaKiosco } from "./empleadosKiosco";
+import {
+  esEmpleadoActivo,
+  empleadosParaKiosco,
+  empleadoParaPin,
+  parsearEmpleadosKiosco,
+} from "./empleadosKiosco";
 
 const base = {
   id: BigInt(7),
@@ -56,5 +61,35 @@ describe("empleadosParaKiosco", () => {
       resultado.map((e) => e.usuario),
       ["ana"]
     );
+  });
+});
+
+describe("empleadoParaPin", () => {
+  it("exposes only the username of an active employee", () => {
+    assert.deepEqual(empleadoParaPin(base), { usuario: "ana" });
+  });
+
+  it("returns null for an inactive or missing employee", () => {
+    assert.equal(empleadoParaPin({ ...base, estado: "inactivo" }), null);
+    assert.equal(empleadoParaPin(null), null);
+  });
+});
+
+describe("parsearEmpleadosKiosco", () => {
+  const valido = { id: "7", usuario: "ana", rol: "Cajero", fotoUrl: "/default-user.jpg" };
+
+  it("returns the list when the response is a valid array", () => {
+    assert.deepEqual(parsearEmpleadosKiosco([valido]), [valido]);
+    assert.deepEqual(parsearEmpleadosKiosco([]), []);
+  });
+
+  it("returns null for an error body or a non-array payload", () => {
+    assert.equal(parsearEmpleadosKiosco({ message: "No autorizado" }), null);
+    assert.equal(parsearEmpleadosKiosco(null), null);
+    assert.equal(parsearEmpleadosKiosco("texto"), null);
+  });
+
+  it("returns null when an item is malformed", () => {
+    assert.equal(parsearEmpleadosKiosco([valido, { id: 1 }]), null);
   });
 });
