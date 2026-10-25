@@ -4,6 +4,13 @@
 // el prep se trata como si fuera comprable directamente, para no perder la
 // necesidad.
 //
+// Invariante de unidades: las cantidades de receta (recetaItem.cantidad), el
+// stock (inventarioSucursal.stock) y las necesidades resultantes están todos
+// expresados en item.unidad_code del insumo/prep; recetaItem no tiene unidad
+// propia, por lo que no hay forma de detectar un desajuste en los datos. Si
+// una receta se carga en otra unidad que la del inventario, el neteo de stock
+// de preps y las cantidades a comprar serán incorrectos sin aviso.
+//
 // Función pura: recibe el MPS y un mapa de recetas ya cargado desde la DB
 // (una sola consulta en el endpoint), no toca Prisma.
 
@@ -54,12 +61,34 @@ const MAX_NIVELES = 10; // guard contra ciclos / profundidad excesiva (prep A ->
 export function explotarMPS(
   mps: { itemId: string; tipo: TipoItemReceta; cantidad: number }[],
   recetas: MapaRecetas,
-  stockPreps?: Map<string, number>
+  stockPreps?: Map<string, number>,
+  /** Nombres por itemId, solo para mensajes legibles (opcional). */
+  nombres?: Map<string, string>
 ): ExplosionResultado {
+  const etiqueta = (itemId: string) => nombres?.get(itemId) ?? itemId;
+  const mermasAvisadas = new Set<string>();
   const acumulado = new Map<string, number>();
   const nivelMinimoPorItem = new Map<string, number>();
   const advertencias: AdvertenciaExplosion[] = [];
   const prepsDeStock = new Map<string, number>();
+
+  // Una merma >= 100% hace inviable el factor (1 - merma); se limita a 0.01 para
+  // no dividir por cero, pero se avisa en vez de inflar x100 en silencio.
+  function factorMerma(pct: number, itemId: string, donde: string): number {
+    const factor = 1 - (pct || 0) / 100;
+    if (factor <= 0) {
+      const clave = `${donde}:${itemId}`;
+      if (!mermasAvisadas.has(clave)) {
+        mermasAvisadas.add(clave);
+        advertencias.push({
+          itemId,
+          mensaje: `La merma ${donde} de "${etiqueta(itemId)}" es ${pct}% (>= 100%); se limitó a 99% para calcular, revise la receta`,
+        });
+      }
+      return 0.01;
+    }
+    return factor;
+  }
 
   function acumular(itemId: string, cantidad: number, nivel: number) {
     acumulado.set(itemId, (acumulado.get(itemId) ?? 0) + cantidad);
@@ -77,7 +106,7 @@ export function explotarMPS(
     if (nivel > MAX_NIVELES) {
       advertencias.push({
         itemId,
-        mensaje: `Profundidad de explosión excedida en "${itemId}" (posible ciclo de receta), se detiene esa rama`,
+        mensaje: `Profundidad de explosión excedida en "${etiqueta(itemId)}" (posible ciclo de receta), se detiene esa rama`,
       });
       acumular(itemId, cantidadRequerida, nivel);
       return;
@@ -86,7 +115,7 @@ export function explotarMPS(
     if (pila.has(itemId)) {
       advertencias.push({
         itemId,
-        mensaje: `Ciclo de receta detectado en "${itemId}", se detiene la explosión de esa rama`,
+        mensaje: `Ciclo de receta detectado en "${etiqueta(itemId)}", se detiene la explosión de esa rama`,
       });
       acumular(itemId, cantidadRequerida, nivel);
       return;
@@ -108,12 +137,12 @@ export function explotarMPS(
       if (tipo === "prep") {
         advertencias.push({
           itemId,
-          mensaje: `El prep "${itemId}" no tiene receta estándar definida; se incluye como necesidad directa sin explotar sus insumos`,
+          mensaje: `El prep "${etiqueta(itemId)}" no tiene receta estándar definida; se incluye como necesidad directa sin explotar sus insumos`,
         });
       } else if (tipo === "vendible") {
         advertencias.push({
           itemId,
-          mensaje: `El vendible "${itemId}" no tiene receta definida; no genera necesidad de insumos`,
+          mensaje: `El vendible "${etiqueta(itemId)}" no tiene receta definida; no genera necesidad de insumos`,
         });
         return;
       }
@@ -122,15 +151,15 @@ export function explotarMPS(
     }
 
     const rendimiento = receta.rendimiento > 0 ? receta.rendimiento : 1;
-    const factorMermaReceta = 1 - (receta.mermaPctReceta || 0) / 100;
-    const lotesNecesarios = cantidadRequerida / rendimiento / Math.max(factorMermaReceta, 0.01);
+    const factorMermaReceta = factorMerma(receta.mermaPctReceta, itemId, "de la receta");
+    const lotesNecesarios = cantidadRequerida / rendimiento / factorMermaReceta;
 
     const siguientePila = new Set(pila);
     siguientePila.add(itemId);
 
     for (const insumo of receta.insumos) {
-      const factorMermaItem = 1 - (insumo.mermaPctRecetaItem || 0) / 100;
-      const bruta = (lotesNecesarios * insumo.cantidad) / Math.max(factorMermaItem, 0.01);
+      const factorMermaItem = factorMerma(insumo.mermaPctRecetaItem, insumo.itemInsumoId, "del insumo");
+      const bruta = (lotesNecesarios * insumo.cantidad) / factorMermaItem;
 
       if (insumo.itemInsumoTipo === "prep") {
         explotar(insumo.itemInsumoId, "prep", bruta, nivel + 1, siguientePila);

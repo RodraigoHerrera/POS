@@ -25,7 +25,7 @@ export async function GET() {
     });
 
     return NextResponse.json({ success: true, data: serializeBigInt(corridas) });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return errorResponse(error, "Error al obtener el historial de corridas de MRP");
   }
 }

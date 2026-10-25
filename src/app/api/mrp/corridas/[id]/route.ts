@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { errorResponse } from "@/lib/apiError";
+import { respuestaDeError } from "@/lib/mrp/respuestaError";
+import { parseCorridaId } from "@/lib/mrp/validacion";
 import { serializeBigInt } from "@/lib/serialize";
 import { requireEmpleado, esRespuestaError } from "@/lib/auth";
 
@@ -16,8 +17,9 @@ export async function GET(
     const sucursalId = sesion.sucursalId;
 
     const { id } = await context.params;
-    const corrida = await prisma.mrpCorrida.findUnique({
-      where: { id: BigInt(id) },
+    // La sucursal va en el where: una corrida de otra sucursal ni se carga.
+    const corrida = await prisma.mrpCorrida.findFirst({
+      where: { id: parseCorridaId(id), sucursal_id: BigInt(sucursalId) },
       include: {
         forecastDetalle: { include: { producto: { select: { nombre: true } } } },
         necesidades: { include: { item: { select: { nombre: true, unidad_code: true } } } },
@@ -30,12 +32,12 @@ export async function GET(
       },
     });
 
-    if (!corrida || corrida.sucursal_id.toString() !== sucursalId) {
+    if (!corrida) {
       return NextResponse.json({ error: "Corrida no encontrada" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, data: serializeBigInt(corrida) });
-  } catch (error: any) {
-    return errorResponse(error, "Error al obtener el detalle de la corrida de MRP");
+  } catch (error: unknown) {
+    return respuestaDeError(error, "Error al obtener el detalle de la corrida de MRP");
   }
 }

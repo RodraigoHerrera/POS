@@ -1,22 +1,28 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { errorResponse } from "@/lib/apiError";
 import { serializeBigInt } from "@/lib/serialize";
 import { requireEmpleado, esRespuestaError } from "@/lib/auth";
-import { construirSerieDiaria, pronosticarDemandaDiaria } from "@/lib/mrp/forecast";
+import { cantidadMps, construirSerieDiaria, pronosticarDemandaDiaria } from "@/lib/mrp/forecast";
 import { explotarMPS, type TipoItemReceta } from "@/lib/mrp/explosion";
 import { calcularNecesidadNeta } from "@/lib/mrp/necesidad";
 import { agruparPorProveedor } from "@/lib/mrp/ordenes";
-import { corridaReciente, MENSAJE_CORRIDA_RECIENTE } from "@/lib/mrp/corridaReciente";
+import {
+  corridaReciente,
+  CorridaRecienteError,
+  MENSAJE_CORRIDA_RECIENTE,
+} from "@/lib/mrp/corridaReciente";
+import { respuestaDeError } from "@/lib/mrp/respuestaError";
+import { verificarLimiteMrp } from "@/lib/mrp/limiteEjecucion";
+import { parseHorizonteDias } from "@/lib/mrp/validacion";
+import { claveDia, inicioDiaLocal, obtenerZonaMrp, sumarDias } from "@/lib/mrp/zonaHoraria";
 import { runWithRetry } from "@/lib/transactionRetry";
 import {
   cargarRecetasRecursivo,
   obtenerVentasDiariasPorProducto,
   obtenerEntradasProgramadas,
   obtenerStockPorItem,
+  obtenerNombresItems,
 } from "@/lib/mrp/data";
-
-class CorridaRecienteError extends Error {}
 
 // Días de historia de historialVentas usados para pronosticar.
 const LOOKBACK_DIAS = 60;
@@ -30,24 +36,39 @@ export async function POST(req: Request) {
     const empleadoId: string | null = sesion.empleadoId;
 
     const body = await req.json().catch(() => ({}));
-    const horizonteDiasInput = Number(body?.horizonteDias);
-    const horizonteDias =
-      horizonteDiasInput > 0 ? Math.min(horizonteDiasInput, 60) : 7;
+    // Entero 1..60 (ValidationError -> 400 vía respuestaDeError); ausente = 7.
+    const horizonteDias = parseHorizonteDias(body?.horizonteDias);
     const alpha = Number(body?.alpha) > 0 && Number(body.alpha) <= 1 ? Number(body.alpha) : 0.3;
+
+    const limite = verificarLimiteMrp(sucursalId);
+    if (limite) return limite;
 
     const sucursalBigInt = BigInt(sucursalId);
     const hoy = new Date();
-    const desde = new Date(hoy);
-    desde.setDate(desde.getDate() - LOOKBACK_DIAS);
+
+    // Chequeo barato ANTES del cálculo pesado: una corrida reciente se rechaza
+    // sin leer historia ni explotar recetas. El chequeo dentro de la
+    // transacción (con lock) sigue siendo la garantía frente a carreras.
+    const ultimaCorrida = await prisma.mrpCorrida.findFirst({
+      where: { sucursal_id: sucursalBigInt },
+      orderBy: { creado_en: "desc" },
+      select: { creado_en: true },
+    });
+    if (corridaReciente(ultimaCorrida?.creado_en, hoy)) {
+      throw new CorridaRecienteError(MENSAJE_CORRIDA_RECIENTE);
+    }
+    // Días de negocio en la zona MRP_TZ (misma definición para agrupar ventas
+    // y recorrer la serie). `desde` = inicio del día local hace LOOKBACK_DIAS.
+    const tz = obtenerZonaMrp();
+    const desde = inicioDiaLocal(sumarDias(claveDia(hoy, tz), -LOOKBACK_DIAS), tz);
     // El día de "hoy" está incompleto (sigue acumulando ventas): entrenar el
     // pronóstico con ese punto parcial sesga el nivel hacia abajo justo antes
     // de proyectar hacia adelante. La serie de historia solo debe llegar
     // hasta el último día ya cerrado.
-    const finHistoria = new Date(hoy);
-    finHistoria.setDate(finHistoria.getDate() - 1);
+    const finHistoria = new Date(hoy.getTime() - 24 * 60 * 60 * 1000);
 
     // 2. PRONÓSTICO: serie diaria por producto a partir de historialVentas
-    const ventasPorProducto = await obtenerVentasDiariasPorProducto(sucursalBigInt, desde);
+    const ventasPorProducto = await obtenerVentasDiariasPorProducto(sucursalBigInt, desde, tz);
     const productoIds = [...ventasPorProducto.keys()].map((id) => BigInt(id));
 
     if (productoIds.length === 0) {
@@ -79,14 +100,14 @@ export async function POST(req: Request) {
 
     const forecastLineas: LineaForecast[] = productos.map((p) => {
       const serieMap = ventasPorProducto.get(p.id.toString()) ?? new Map();
-      const serieDiaria = construirSerieDiaria(serieMap, desde, finHistoria);
+      const serieDiaria = construirSerieDiaria(serieMap, desde, finHistoria, tz);
       const resultado = pronosticarDemandaDiaria(serieDiaria, horizonteDias, { alpha });
       return {
         productoId: p.id,
         nombre: p.nombre,
         itemVendibleId: p.item_inventario_id,
         cantidadHorizonte: resultado.cantidadHorizonte,
-        mpsQty: Math.round(resultado.cantidadHorizonte),
+        mpsQty: cantidadMps(resultado.cantidadHorizonte),
         mapePct: resultado.mapePct,
         metodo: resultado.metodo,
       };
@@ -145,6 +166,7 @@ export async function POST(req: Request) {
       if (tipo === "prep") prepIds.add(BigInt(id));
     }
     const stockPreps = await obtenerStockPorItem(sucursalBigInt, [...prepIds]);
+    const nombresItems = await obtenerNombresItems([...new Set([...prepIds, ...itemVendibleIds])]);
 
     const brutaTotalPorItem = new Map<string, number>();
     const nivelPorItem = new Map<string, number>();
@@ -156,13 +178,14 @@ export async function POST(req: Request) {
       const { requerimientos, advertencias, prepsDeStock } = explotarMPS(
         [{ itemId: l.itemVendibleId.toString(), tipo, cantidad: l.mpsQty }],
         recetaMap,
-        stockPreps
+        stockPreps,
+        nombresItems
       );
       advertenciasGlobales.push(...advertencias);
       for (const p of prepsDeStock) {
         advertenciasGlobales.push({
           itemId: p.itemId,
-          mensaje: `Se cubrieron ${Number(p.cantidad.toFixed(3))} unidades del prep "${p.itemId}" con stock existente (para "${l.nombre}"); solo se explotó el resto a insumos`,
+          mensaje: `Se cubrieron ${Number(p.cantidad.toFixed(3))} unidades del prep "${nombresItems.get(p.itemId) ?? p.itemId}" con stock existente (para "${l.nombre}"); solo se explotó el resto a insumos`,
         });
       }
 
@@ -195,6 +218,7 @@ export async function POST(req: Request) {
             select: {
               id: true,
               nombre: true,
+              unidad_code: true,
               lead_time_dias: true,
               vida_util_dias: true,
               proveedor_id: true,
@@ -222,6 +246,7 @@ export async function POST(req: Request) {
       proveedorId: string | null;
       proveedorNombre: string | null;
       costoUnitEstimado: number;
+      unidadCode: string | null;
       observaciones: string | null;
       mapeBlendPct: number | null;
     }
@@ -271,6 +296,7 @@ export async function POST(req: Request) {
         proveedorId: meta?.proveedor_id ? meta.proveedor_id.toString() : null,
         proveedorNombre: meta?.proveedor?.nombre ?? null,
         costoUnitEstimado: inv ? Number(inv.costo_promedio) : 0,
+        unidadCode: meta?.unidad_code ?? null,
         observaciones: observacionesPartes.length ? observacionesPartes.join("; ") : null,
         mapeBlendPct: mapeBlend,
       };
@@ -284,6 +310,7 @@ export async function POST(req: Request) {
         proveedorId: n.proveedorId,
         costoUnitEstimado: n.costoUnitEstimado,
         fechaSugeridaEmision: n.fechaSugeridaEmision,
+        unidadCode: n.unidadCode,
       }))
     );
 
@@ -395,10 +422,7 @@ export async function POST(req: Request) {
         advertencias: advertenciasGlobales,
       })
     );
-  } catch (error: any) {
-    if (error instanceof CorridaRecienteError) {
-      return NextResponse.json({ error: error.message }, { status: 409 });
-    }
-    return errorResponse(error, "Error al ejecutar el MRP");
+  } catch (error: unknown) {
+    return respuestaDeError(error, "Error al ejecutar el MRP");
   }
 }

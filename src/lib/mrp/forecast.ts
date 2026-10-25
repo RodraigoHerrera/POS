@@ -14,6 +14,8 @@ export interface ResultadoPronosticoSerie {
   metodo: MetodoPronostico;
 }
 
+import { claveDia, obtenerZonaMrp, rangoDias } from "./zonaHoraria";
+
 const MIN_DIAS_PARA_SUAVIZACION = 14;
 
 /** Promedio móvil ponderado: más peso a los días recientes de la ventana. */
@@ -94,27 +96,16 @@ export function backtestMAPE(
 export function construirSerieDiaria(
   ventasPorDia: Map<string, number>,
   fechaInicio: Date,
-  fechaFin: Date
+  fechaFin: Date,
+  tz: string = obtenerZonaMrp()
 ): number[] {
-  const fin = new Date(fechaFin);
-  fin.setHours(0, 0, 0, 0);
-
-  const cursor = new Date(fechaInicio);
-  cursor.setHours(0, 0, 0, 0);
+  const fin = claveDia(fechaFin, tz);
+  let inicio = claveDia(fechaInicio, tz);
 
   const primeraVentaKey = [...ventasPorDia.keys()].sort()[0];
-  if (primeraVentaKey) {
-    const primeraVenta = new Date(`${primeraVentaKey}T00:00:00`);
-    if (primeraVenta > cursor) cursor.setTime(primeraVenta.getTime());
-  }
+  if (primeraVentaKey && primeraVentaKey > inicio) inicio = primeraVentaKey;
 
-  const serie: number[] = [];
-  while (cursor <= fin) {
-    const key = cursor.toISOString().slice(0, 10);
-    serie.push(ventasPorDia.get(key) ?? 0);
-    cursor.setDate(cursor.getDate() + 1);
-  }
-  return serie;
+  return rangoDias(inicio, fin).map((key) => ventasPorDia.get(key) ?? 0);
 }
 
 /**
@@ -156,4 +147,14 @@ export function pronosticarDemandaDiaria(
     mapePct,
     metodo: "suavizacion_exponencial",
   };
+}
+
+/**
+ * Cantidad del MPS a partir del pronóstico del horizonte. No se redondea a
+ * entero (eso descartaba pronósticos < 0.5): la columna mps_qty es
+ * Decimal(18,3), así que se conserva la fracción con esa precisión.
+ */
+export function cantidadMps(cantidadHorizonte: number): number {
+  if (!Number.isFinite(cantidadHorizonte) || cantidadHorizonte <= 0) return 0;
+  return Math.round(cantidadHorizonte * 1000) / 1000;
 }
