@@ -30,16 +30,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // IP PIN Spray defense (máximo 30 peticiones por cada 5 minutos)
-    const clientIp = getClientIp(request);
-    const sprayCheck = checkRateLimit("pin:ip:" + clientIp, 30, 5 * 60 * 1000);
-    if (!sprayCheck.allowed) {
-      return rateLimitResponse(
-        sprayCheck.retryAfterSeconds,
-        "Demasiadas peticiones desde esta IP. Intenta de nuevo más tarde."
-      );
-    }
-
     // Verificación de sesión de sucursal
     const sucursalSesion = await requireSucursal();
     if (esRespuestaError(sucursalSesion)) {
@@ -60,6 +50,18 @@ export async function POST(request: Request) {
           message: "tokenSucursal no contiene sucursalId",
         },
         { status: 400 }
+      );
+    }
+
+    // PIN Spray defense (máximo 30 peticiones por cada 5 minutos). Va por
+    // sucursal + IP: sin proxy confiable la IP es la misma para todos, y así
+    // una sucursal no puede agotar el límite de otra.
+    const clientIp = getClientIp(request);
+    const sprayCheck = checkRateLimit(`pin:suc:${sucursalId}:ip:${clientIp}`, 30, 5 * 60 * 1000);
+    if (!sprayCheck.allowed) {
+      return rateLimitResponse(
+        sprayCheck.retryAfterSeconds,
+        "Demasiados intentos de PIN desde esta terminal. Intenta de nuevo más tarde."
       );
     }
 

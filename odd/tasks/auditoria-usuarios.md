@@ -37,7 +37,10 @@
   **Corrección:** usar la clave `emp:pin:<sucursalId>:<id>`, o registrar fallos solo cuando `isTargetValid` es verdadero.
   **Aceptación:** 5 intentos fallidos desde la sucursal A contra un empleado de la sucursal B no bloquean su ingreso desde B.
 
-- [ ] **SEC-3 — El límite de intentos por IP se evade falseando `x-forwarded-for`.**
+- [x] **SEC-3 — El límite de intentos por IP se evade falseando `x-forwarded-for`.**
+  ✅ **Hecho:** `getClientIp(req, confiarEnProxy = TRUST_PROXY === "true")`. Sin proxy confiable ignora `x-forwarded-for`/`x-real-ip` y devuelve `127.0.0.1`; con proxy toma la **última** entrada (la que agrega el proxy). En el login por PIN el límite se cuenta por `pin:suc:<sucursalId>:ip:<ip>` y se aplica después de verificar la sesión. Documentado en el README (Build y despliegue, punto 5). `.env.example` no se tocó (sin permiso de escritura).
+  **Contrapartida conocida:** sin `TRUST_PROXY`, el límite del login de sucursal (`/api/auth/login`, 15/min) queda compartido por todos los clientes. Localmente no cambia nada (ya era así); en producción hay que publicar detrás del proxy con `TRUST_PROXY=true`.
+  **Evidencia:** RED 3 fallando → GREEN 12/12 en `rate-limit.test.ts` (26/26 junto a `empleadosKiosco` y `rutaPorRol`); `tsc --noEmit` y `eslint` sin errores; ningún e2e manda headers de IP.
   `getClientIp` (`rate-limit.ts:200`) confía en el header que envía el cliente.
   **Corrección:** tomar la IP solo del proxy de confianza (configurable) y no del header crudo.
   **Aceptación:** cambiar `x-forwarded-for` en cada request no reinicia el contador.
@@ -111,5 +114,5 @@
 ## Progreso
 
 - Prioridad sugerida: SEC-1 → SEC-2 → BUG-1/BUG-2 → SEC-3/SEC-4 → UX → limpieza.
-- Hechos: SEC-1 (+ continuación), SEC-2, BUG-1, BUG-2, BUG-3, BUG-4, CLN-3.
-- Siguiente paso: SEC-3 y SEC-4.
+- Hechos: SEC-1 (+ continuación), SEC-2, SEC-3, BUG-1, BUG-2, BUG-3, BUG-4, CLN-3.
+- Siguiente paso: SEC-4.

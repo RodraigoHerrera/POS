@@ -155,6 +155,7 @@ npm start
 2. **Entorno:** define `.env` seguro en el servidor.
 3. **Migraciones:** `npx prisma migrate deploy` antes de levantar.
 4. **Ejecución:** `npm start` detrás de un reverse proxy (Nginx/Caddy) con HTTPS.
+5. **IP real del cliente:** con el proxy delante, define `TRUST_PROXY=true` para que los límites de intentos usen la IP que agrega el proxy en `X-Forwarded-For`. Sin proxy déjalo sin definir: esos headers los puede falsificar el propio cliente.
 
 ---
 

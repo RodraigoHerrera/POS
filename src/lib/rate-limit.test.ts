@@ -119,22 +119,53 @@ test("MemoryRateLimiter - sweep purges expired timestamps", () => {
   limiter.stopSweep();
 });
 
-test("getClientIp - extracts client IP accurately", () => {
-  // Test x-forwarded-for with multiple IPs
-  const req1 = new Request("http://localhost/api/test", {
-    headers: { "x-forwarded-for": "203.0.113.195, 70.41.3.18, 150.172.238.178" },
+test("getClientIp - without a trusted proxy ignores client-supplied IP headers", () => {
+  const spoofed = new Request("http://localhost/api/test", {
+    headers: { "x-forwarded-for": "203.0.113.195", "x-real-ip": "198.51.100.42" },
   });
-  assert.equal(getClientIp(req1), "203.0.113.195");
+  assert.equal(getClientIp(spoofed, false), "127.0.0.1");
 
-  // Test x-real-ip
-  const req2 = new Request("http://localhost/api/test", {
+  const plain = new Request("http://localhost/api/test");
+  assert.equal(getClientIp(plain, false), "127.0.0.1");
+});
+
+test("getClientIp - behind a trusted proxy uses the last x-forwarded-for entry", () => {
+  // The proxy appends the address it saw; earlier entries come from the client
+  const req = new Request("http://localhost/api/test", {
+    headers: { "x-forwarded-for": "1.1.1.1, 203.0.113.195" },
+  });
+  assert.equal(getClientIp(req, true), "203.0.113.195");
+
+  const single = new Request("http://localhost/api/test", {
+    headers: { "x-forwarded-for": " 150.172.238.178 " },
+  });
+  assert.equal(getClientIp(single, true), "150.172.238.178");
+});
+
+test("getClientIp - behind a trusted proxy falls back to x-real-ip, then 127.0.0.1", () => {
+  const realIp = new Request("http://localhost/api/test", {
     headers: { "x-real-ip": " 198.51.100.42 " },
   });
-  assert.equal(getClientIp(req2), "198.51.100.42");
+  assert.equal(getClientIp(realIp, true), "198.51.100.42");
 
-  // Fallback to 127.0.0.1
-  const req3 = new Request("http://localhost/api/test");
-  assert.equal(getClientIp(req3), "127.0.0.1");
+  const plain = new Request("http://localhost/api/test");
+  assert.equal(getClientIp(plain, true), "127.0.0.1");
+});
+
+test("getClientIp - trust defaults to the TRUST_PROXY env var", () => {
+  const req = new Request("http://localhost/api/test", {
+    headers: { "x-forwarded-for": "203.0.113.195" },
+  });
+  const previo = process.env.TRUST_PROXY;
+  try {
+    delete process.env.TRUST_PROXY;
+    assert.equal(getClientIp(req), "127.0.0.1");
+    process.env.TRUST_PROXY = "true";
+    assert.equal(getClientIp(req), "203.0.113.195");
+  } finally {
+    if (previo === undefined) delete process.env.TRUST_PROXY;
+    else process.env.TRUST_PROXY = previo;
+  }
 });
 
 test("rateLimitResponse - formats 429 response correctly", async () => {
