@@ -197,6 +197,14 @@ export class MemoryRateLimiter {
 export const rateLimiter = new MemoryRateLimiter();
 
 // Exported Helper Functions
+/**
+ * Clave del bloqueo por PIN fallido. Va acotada por sucursal: sin eso, una
+ * terminal de otra sucursal podía bloquear a cualquier empleado por su id.
+ */
+export function clavePinEmpleado(sucursalId: string, empleadoId: string): string {
+  return `emp:pin:${sucursalId}:${empleadoId}`;
+}
+
 export function getClientIp(req: Request): string {
   const xForwardedFor = req.headers.get("x-forwarded-for");
   if (xForwardedFor) {

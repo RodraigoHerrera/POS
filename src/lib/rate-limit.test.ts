@@ -5,6 +5,7 @@ import {
   getClientIp,
   rateLimitResponse,
   DUMMY_HASH,
+  clavePinEmpleado,
 } from "./rate-limit";
 
 test("MemoryRateLimiter - sliding window checkRateLimit", () => {
@@ -151,4 +152,20 @@ test("DUMMY_HASH - valid bcrypt cost 10 hash", async () => {
   assert.ok(DUMMY_HASH.startsWith("$2b$10$"));
   const match = await bcrypt.compare("random_password_attempt", DUMMY_HASH);
   assert.equal(match, false);
+});
+
+test("clavePinEmpleado - scopes the PIN lockout key by branch", () => {
+  assert.notEqual(clavePinEmpleado("1", "42"), clavePinEmpleado("2", "42"));
+  assert.equal(clavePinEmpleado("1", "42"), clavePinEmpleado("1", "42"));
+  // Ambiguous concatenations must not collide ("1"+"12" vs "11"+"2")
+  assert.notEqual(clavePinEmpleado("1", "12"), clavePinEmpleado("11", "2"));
+});
+
+test("clavePinEmpleado - failures from another branch do not lock the employee out", () => {
+  const limiter = new MemoryRateLimiter({ maxKeys: 100, sweepIntervalMs: 60_000 });
+  const desdeOtraSucursal = clavePinEmpleado("1", "42");
+  for (let i = 0; i < 5; i++) limiter.recordFailure(desdeOtraSucursal, 15 * 60 * 1000, 5);
+
+  assert.equal(limiter.isLocked(desdeOtraSucursal, 5, 15 * 60 * 1000).locked, true);
+  assert.equal(limiter.isLocked(clavePinEmpleado("2", "42"), 5, 15 * 60 * 1000).locked, false);
 });

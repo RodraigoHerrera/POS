@@ -30,7 +30,9 @@
   **Corrección:** separar en un endpoint de kiosco (solo `id`, `usuario`, `rol`; solo los activos, filtrados en el servidor) y uno de administración protegido con `tokenEmpleado` + rol `Administrador`.
   **Aceptación:** el kiosco no recibe datos de contacto ni empleados inactivos; el endpoint de administración devuelve 401/403 sin un `tokenEmpleado` de Administrador.
 
-- [ ] **SEC-2 — Desde una sucursal se puede bloquear a empleados de otra.**
+- [x] **SEC-2 — Desde una sucursal se puede bloquear a empleados de otra.**
+  ✅ **Hecho:** nueva `clavePinEmpleado(sucursalId, empleadoId)` en `src/lib/rate-limit.ts` → `emp:pin:<sucursalId>:<id>`; `api/usuarios/id` la usa. Los fallos desde otra sucursal quedan en su propia clave y no bloquean al empleado en la suya.
+  **Evidencia:** `npx tsx --test src/lib/rate-limit.test.ts` → RED 2 fallando → GREEN 9/9; `tsc --noEmit` y `eslint` sin errores.
   En `api/usuarios/id/route.ts:65-89` la clave de bloqueo es `emp:pin:<id>`, se chequea antes de validar la sucursal y registra fallos aunque el empleado sea de otra sucursal.
   **Corrección:** usar la clave `emp:pin:<sucursalId>:<id>`, o registrar fallos solo cuando `isTargetValid` es verdadero.
   **Aceptación:** 5 intentos fallidos desde la sucursal A contra un empleado de la sucursal B no bloquean su ingreso desde B.
@@ -106,5 +108,5 @@
 ## Progreso
 
 - Prioridad sugerida: SEC-1 → SEC-2 → BUG-1/BUG-2 → SEC-3/SEC-4 → UX → limpieza.
-- Hechos: SEC-1 (+ continuación), BUG-1, BUG-4, CLN-3.
-- Siguiente paso: SEC-2.
+- Hechos: SEC-1 (+ continuación), SEC-2, BUG-1, BUG-4, CLN-3.
+- Siguiente paso: BUG-2 / BUG-3 (pantalla de PIN), luego SEC-3 y SEC-4.

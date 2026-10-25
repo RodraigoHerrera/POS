@@ -12,6 +12,7 @@ import {
   rateLimitResponse,
   getClientIp,
   DUMMY_HASH,
+  clavePinEmpleado,
 } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
     }
 
     // Pre-DB Employee Lockout Check (5 fallos en 15 minutos)
-    const empleadoKey = "emp:pin:" + String(id);
+    const empleadoKey = clavePinEmpleado(String(sucursalId), String(id));
     const lockoutCheck = isLocked(empleadoKey, 5, 15 * 60 * 1000);
     if (lockoutCheck.locked) {
       return rateLimitResponse(
