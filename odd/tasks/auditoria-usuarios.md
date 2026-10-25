@@ -116,5 +116,5 @@
 ## Progreso
 
 - Prioridad sugerida: SEC-1 → SEC-2 → BUG-1/BUG-2 → SEC-3/SEC-4 → UX → limpieza.
-- Hechos: SEC-1 (+ continuación), SEC-2, SEC-3, BUG-1, BUG-2, BUG-3, BUG-4, CLN-3.
-- Siguiente paso: SEC-4.
+- Hechos: SEC-1 (+ continuación), SEC-2, SEC-3, SEC-4 (e14359e), BUG-1, BUG-2, BUG-3, BUG-4, CLN-3.
+- Siguiente paso: UX-1 (tarjetas de empleado accesibles con teclado).
