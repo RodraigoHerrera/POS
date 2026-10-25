@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Skeleton } from "../ui/skeleton/Skeleton";
+import type { Periodo } from "@/lib/periodo";
 
 interface ProductoVendido {
   productoId: string;
@@ -10,15 +11,17 @@ interface ProductoVendido {
   ventaTotal: number;
 }
 
-export default function TopProductosCard() {
+export default function TopProductosCard({ periodo = "mes" }: { periodo?: Periodo }) {
   const [productos, setProductos] = useState<ProductoVendido[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     const cargar = async () => {
+      setLoading(true);
+      setError("");
       try {
-        const res = await fetch("/api/ventas/topProductos");
+        const res = await fetch(`/api/ventas/topProductos?periodo=${periodo}`);
         const data = await res.json();
         if (data.success) {
           setProductos(data.data);
@@ -32,14 +35,14 @@ export default function TopProductosCard() {
       }
     };
     cargar();
-  }, []);
+  }, [periodo]);
 
   const maxCantidad = Math.max(1, ...productos.map((p) => p.cantidad));
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-white/3">
       <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-        Top productos (mes actual)
+        Top productos ({periodo === "semana" ? "semana actual" : "mes actual"})
       </h3>
 
       {loading && (
@@ -53,7 +56,7 @@ export default function TopProductosCard() {
       {!loading && error && <p className="mt-4 text-sm text-error-500">{error}</p>}
 
       {!loading && !error && productos.length === 0 && (
-        <p className="mt-4 text-sm text-gray-400">Todavía no hay ventas este mes.</p>
+        <p className="mt-4 text-sm text-gray-400">Todavía no hay ventas {periodo === "semana" ? "esta semana" : "este mes"}.</p>
       )}
 
       {!loading && !error && productos.length > 0 && (

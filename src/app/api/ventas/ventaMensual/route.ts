@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { errorResponse } from '@/lib/apiError';
 import { requireEmpleado, esRespuestaError } from '@/lib/auth';
+import { parsePeriodo, rangoPeriodo } from '@/lib/periodo';
 
 export async function GET(req: Request) {
   try {
@@ -10,17 +11,12 @@ export async function GET(req: Request) {
     if (esRespuestaError(sesion)) return sesion;
     const sucursalId = sesion.sucursalId;
 
-    // 2. Calcular Rango de Fechas (Mes Actual)
+    // 2. Calcular Rango de Fechas (mes actual o semana actual)
+    const periodo = parsePeriodo(new URL(req.url).searchParams.get('periodo'));
     const now = new Date();
+    const { inicio: startOfMonth, fin: endOfMonth } = rangoPeriodo(periodo, now);
     const year = now.getFullYear();
     const month = now.getMonth(); // 0 = Enero, 11 = Diciembre
-
-    // Primer día del mes actual a las 00:00:00
-    const startOfMonth = new Date(year, month, 1);
-    
-    // Último día del mes actual a las 23:59:59
-    // (El día 0 del siguiente mes es el último día del mes actual)
-    const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
     // 3. Consulta Agregada (SUM)
     const resultado = await prisma.historialVentas.aggregate({
@@ -55,6 +51,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       success: true,
+      periodo,
       mes: month + 1, // Retornamos el número de mes para referencia (1-12)
       anio: year,
       total: totalMesActual, // El monto total en Bolivianos

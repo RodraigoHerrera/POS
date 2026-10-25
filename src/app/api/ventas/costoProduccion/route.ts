@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { errorResponse } from '@/lib/apiError';
 import { requireEmpleado, esRespuestaError } from '@/lib/auth';
+import { parsePeriodo, rangoPeriodo } from '@/lib/periodo';
 
 export async function GET(req: Request) {
   try {
@@ -10,16 +11,17 @@ export async function GET(req: Request) {
     if (esRespuestaError(sesion)) return sesion;
     const sucursalId = sesion.sucursalId;
 
-    // 2. Calcular Rangos de Fechas (Mes Actual y Mes Anterior)
+    // 2. Calcular Rangos de Fechas (periodo actual y anterior: mes o semana)
+    const periodo = parsePeriodo(new URL(req.url).searchParams.get('periodo'));
     const now = new Date();
+    const {
+      inicio: startOfMonth,
+      fin: endOfMonth,
+      inicioAnterior: startOfPrevMonth,
+      finAnterior: endOfPrevMonth,
+    } = rangoPeriodo(periodo, now);
     const year = now.getFullYear();
     const month = now.getMonth(); // 0 = Enero, 11 = Diciembre
-
-    const startOfMonth = new Date(year, month, 1);
-    const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
-
-    const startOfPrevMonth = new Date(year, month - 1, 1);
-    const endOfPrevMonth = new Date(year, month, 0, 23, 59, 59, 999);
 
     // 3. Consultas Agregadas (SUM) — mes actual y mes anterior
     const [actual, anterior] = await Promise.all([
@@ -51,13 +53,15 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       success: true,
+      periodo,
       mes: month + 1,
       anio: year,
       ventaTotal,
       costoTotal,
       margen,
       costoPct,
-      costoPctMesAnterior,
+      costoPctMesAnterior, // nombre histórico: compara contra el periodo anterior (mes o semana)
+      costoPctAnterior: costoPctMesAnterior,
     });
 
   } catch (error: any) {
