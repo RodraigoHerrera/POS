@@ -81,8 +81,12 @@ function EmpleadoPinContent() {
         </h2>
         <p className="text-white mb-4">Ingresa tu PIN para continuar</p>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Sin inputMode numérico: los PIN actuales pueden tener letras */}
           <input
             type="password"
+            autoComplete="off"
+            autoFocus
+            aria-label="PIN"
             value={pin}
             onChange={(e) => setPin(e.target.value)}
             className="w-full px-4 py-2 rounded-md text-gray-100"

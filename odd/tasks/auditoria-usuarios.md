@@ -80,7 +80,9 @@
   **Evidencia:** RED 2 fallando (`rutaPinEmpleado is not a function`) → GREEN 17/17 en `empleadosKiosco.test.ts`; `tsc --noEmit` y `eslint` sin errores. Revisión nativa (riesgo alto, 4 lentes) aprobada y acknowledged 2026-10-25. Sugerencias no bloqueantes: R3-button-p-content-model (`<p>` dentro de `<button>` no es HTML válido; cambiar a `<span className="block ...">` junto con UX-3), R3-component-wiring-untested (no hay herramientas para testear componentes). Pendiente: smoke manual con Tab/Enter en el navegador.
   `UserChoice.tsx:44` usa `<div onClick>`. **Corrección:** `<button>` con foco visible.
 
-- [ ] **UX-2 — El input de PIN no está preparado para un TPV táctil.**
+- [x] **UX-2 — El input de PIN no está preparado para un TPV táctil.**
+  ✅ **Hecho (opción B, decidida por el usuario):** `autoComplete="off"`, `autoFocus` y `aria-label="PIN"`. **Sin `inputMode="numeric"`:** los empleados se crean desde `AdminForm.tsx` con una contraseña libre de ≥ 8 caracteres (`registerAdmin` la hashea tal cual), así que un teclado solo numérico dejaría afuera a quien tenga letras. Pasar a PIN numérico (validar dígitos al crear + reset de los existentes) queda como decisión de producto aparte.
+  **Evidencia:** cambio solo de atributos, sin lógica testeable con `node:test`; `tsc --noEmit` y `eslint` sin errores. Revisión nativa (riesgo medio) aprobada y acknowledged 2026-10-25; sugerencia no bloqueante R3-pin-input-attrs-untested. Pendiente: smoke manual en el TPV.
   Agregar `inputMode="numeric"`, `autoComplete="off"`, `autoFocus` y `aria-label`.
 
 - [ ] **UX-3 — Faltan los estados de carga, lista vacía y error en la selección de empleado.**
@@ -118,5 +120,5 @@
 ## Progreso
 
 - Prioridad sugerida: SEC-1 → SEC-2 → BUG-1/BUG-2 → SEC-3/SEC-4 → UX → limpieza.
-- Hechos: SEC-1 (+ continuación), SEC-2, SEC-3, SEC-4 (e14359e), BUG-1, BUG-2, BUG-3, BUG-4, UX-1, CLN-3.
-- Siguiente paso: UX-2 (input de PIN para TPV táctil).
+- Hechos: SEC-1 (+ continuación), SEC-2, SEC-3, SEC-4 (e14359e), BUG-1, BUG-2, BUG-3, BUG-4, UX-1, UX-2, CLN-3.
+- Siguiente paso: UX-3 (estados de carga, vacío y error en la selección; incluye cambiar el `<p>` dentro del `<button>` por `<span className="block">`).
