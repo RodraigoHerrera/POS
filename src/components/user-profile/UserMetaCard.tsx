@@ -7,6 +7,7 @@ import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
 import Image from "next/image";
+import { validarNuevaContrasena } from "@/lib/contrasenaEmpleado";
 
 interface User {
   id: number;
@@ -19,7 +20,7 @@ interface User {
   creado: string;
 }
 
-type UpdatePayload = Partial<User> & { id: number };
+type UpdatePayload = Partial<User> & { id: number; contrasena?: string };
 
 export default function UserMetaCard({ userData, onSaved }: { userData: User; onSaved?: () => void }) {
   const { isOpen, openModal, closeModal } = useModal();
@@ -59,12 +60,26 @@ export default function UserMetaCard({ userData, onSaved }: { userData: User; on
 
     try {
       const payload = getFormValues(e.currentTarget);
+
+      // La contraseña solo se cambia si el administrador escribió una nueva
+      const fd = new FormData(e.currentTarget);
+      const nuevaContrasena = (fd.get("nuevaContrasena") as string) ?? "";
+      const confirmarContrasena = (fd.get("confirmarContrasena") as string) ?? "";
+      if (nuevaContrasena !== "" || confirmarContrasena !== "") {
+        const errorContrasena = validarNuevaContrasena(nuevaContrasena, confirmarContrasena);
+        if (errorContrasena) {
+          setErrorMsg(errorContrasena);
+          return;
+        }
+        payload.contrasena = nuevaContrasena;
+      }
+
       const res = await updateUser(payload);
 
       if (!res.ok) {
-        const text = await res.text();
-        console.error("Error al guardar:", text);
-        setErrorMsg("No se pudo guardar los cambios.");
+        const data = await res.json().catch(() => null);
+        console.error("Error al guardar:", data);
+        setErrorMsg(data?.message || "No se pudo guardar los cambios.");
         return;
       }
 
@@ -210,6 +225,41 @@ export default function UserMetaCard({ userData, onSaved }: { userData: User; on
                       type="text"
                       className="text-gray-dark"
                       defaultValue={userData.rol}
+                    />
+                  </div>
+                </div>
+
+                <h5 className="mb-2 mt-7 text-lg font-medium text-gray-800 dark:text-white/90">
+                  Cambiar Contraseña
+                </h5>
+                <p className="mb-5 text-sm text-gray-500 dark:text-gray-400">
+                  Déjelo en blanco para mantener la contraseña actual.
+                </p>
+
+                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label className="text-black" htmlFor="nuevaContrasena">
+                      Nueva Contraseña
+                    </Label>
+                    <Input
+                      id="nuevaContrasena"
+                      name="nuevaContrasena"
+                      type="password"
+                      className="text-gray-dark"
+                      placeholder="********"
+                    />
+                  </div>
+
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label className="text-black" htmlFor="confirmarContrasena">
+                      Confirmar Contraseña
+                    </Label>
+                    <Input
+                      id="confirmarContrasena"
+                      name="confirmarContrasena"
+                      type="password"
+                      className="text-gray-dark"
+                      placeholder="********"
                     />
                   </div>
                 </div>
