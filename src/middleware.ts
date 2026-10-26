@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import { debePurgarEmpleado } from "@/lib/purgaSesion";
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -94,10 +95,10 @@ export async function middleware(request: NextRequest) {
     } else {
       // /usuarios solo necesita tokenSucursal
 
-      // Proactive Purge (SEC-02): Cualquier navegación a /usuarios destruye tokenEmpleado
-      // incondicionalmente para evitar persistencia de sesión en terminales compartidas
-      if (tokenEmpleado) {
-        console.log("🧹 Purgando tokenEmpleado incondicionalmente en /usuarios");
+      // Proactive Purge (SEC-02): navegar a la selección de empleado destruye tokenEmpleado
+      // para evitar persistencia de sesión en terminales compartidas
+      if (tokenEmpleado && debePurgarEmpleado(pathname, request.headers)) {
+        console.log("🧹 Purgando tokenEmpleado en /usuarios");
         const res = NextResponse.next();
         res.cookies.set("tokenEmpleado", "", {
           path: "/",
