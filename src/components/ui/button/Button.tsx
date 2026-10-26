@@ -7,6 +7,7 @@ interface ButtonProps {
   startIcon?: ReactNode; // Icon before the text
   endIcon?: ReactNode; // Icon after the text
   onClick?: () => void; // Click handler
+  type?: "button" | "submit" | "reset"; // Native button type (defaults to the browser's "submit" inside forms)
   disabled?: boolean; // Disabled state
   className?: string; // Disabled state
   "aria-label"?: string; // Accesibilidad: texto alternativo cuando children no es suficientemente descriptivo
@@ -19,6 +20,7 @@ const Button: React.FC<ButtonProps> = ({
   startIcon,
   endIcon,
   onClick,
+  type,
   className = "",
   disabled = false,
   "aria-label": ariaLabel,
@@ -44,6 +46,7 @@ const Button: React.FC<ButtonProps> = ({
       } ${variantClasses[variant]} ${
         disabled ? "cursor-not-allowed opacity-50" : ""
       }`}
+      type={type}
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}

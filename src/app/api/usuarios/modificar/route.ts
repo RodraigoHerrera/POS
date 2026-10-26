@@ -3,10 +3,12 @@ import { prisma } from "@/lib/db";
 import { serializeBigInt } from "@/lib/serialize";
 import { errorResponse } from "@/lib/apiError";
 import { requireEmpleado, esRespuestaError } from "@/lib/auth";
+import { validarNuevaContrasena } from "@/lib/contrasenaEmpleado";
+import bcrypt from "bcrypt";
 
 // PUT /api/usuarios  (id viene en el body)
-// Permite cambiar el rol de un empleado (Cajero <-> Administrador) — solo un
-// Administrador de la MISMA sucursal puede hacerlo.
+// Permite cambiar datos, rol (Cajero <-> Administrador) o contraseña de un
+// empleado — solo un Administrador de la MISMA sucursal puede hacerlo.
 export async function PUT(req: Request) {
   try {
     const sesion = await requireEmpleado(["Administrador"]);
@@ -36,6 +38,15 @@ export async function PUT(req: Request) {
     if (typeof body.celular === "string" || body.celular === null) dataToUpdate.celular = body.celular;
     if (typeof body.estado === "string") dataToUpdate.estado = body.estado;
     if (typeof body.rol === "string") dataToUpdate.rol = body.rol;
+
+    // Cambio de contraseña (PIN): opcional; si viene, se valida y se hashea
+    if (body.contrasena !== undefined) {
+      const errorContrasena = validarNuevaContrasena(body.contrasena);
+      if (errorContrasena) {
+        return NextResponse.json({ message: errorContrasena }, { status: 400 });
+      }
+      dataToUpdate.contrasena = await bcrypt.hash(body.contrasena, 10);
+    }
 
     if (Object.keys(dataToUpdate).length === 0) {
       return NextResponse.json({ message: "No hay campos para actualizar" }, { status: 400 });
