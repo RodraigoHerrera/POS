@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { cookies } from "next/headers";
-import { jwtVerify } from "jose";
 import { calcularResumenCaja } from "@/lib/caja";
 import { errorResponse } from "@/lib/apiError";
-
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+import { requireEmpleado, esRespuestaError } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -15,24 +12,9 @@ export const dynamic = "force-dynamic";
 // contar el efectivo físico en /cajero/cierre.
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const tokenSucursal = cookieStore.get("tokenSucursal")?.value;
-    const tokenEmpleado = cookieStore.get("tokenEmpleado")?.value;
-    if (!tokenSucursal || !tokenEmpleado) {
-      return NextResponse.json({ message: "Sesión no válida o expirada" }, { status: 401 });
-    }
-
-    let sucursalId: string;
-    let empleadoId: string;
-    try {
-      const payloadSucursal = await jwtVerify(tokenSucursal, secret);
-      sucursalId = (payloadSucursal.payload as any)?.sucursalId || (payloadSucursal.payload as any)?.id;
-
-      const payloadEmpleado = await jwtVerify(tokenEmpleado, secret);
-      empleadoId = (payloadEmpleado.payload as any)?.empleadoId || (payloadEmpleado.payload as any)?.id;
-    } catch {
-      return NextResponse.json({ message: "Error verificando tokens" }, { status: 403 });
-    }
+    const sesion = await requireEmpleado(["Cajero", "Administrador"]);
+    if (esRespuestaError(sesion)) return sesion;
+    const { sucursalId, empleadoId } = sesion;
 
     const cajaAbierta = await prisma.caja.findFirst({
       where: {

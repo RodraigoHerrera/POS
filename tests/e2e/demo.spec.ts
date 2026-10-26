@@ -113,33 +113,100 @@ test("Smash POS — recorrido completo de demo para la defensa", async ({ page }
     expect((await guardarResp).status()).toBe(200);
   });
 
-  await test.step("Recetas: redefinir el BOM en vivo (Carne Demo + Pan Demo)", async () => {
+  await test.step("Recetas: el modal precarga el BOM existente y permite editarlo sin perder filas", async () => {
     await page.goto("/admin/recetas");
     const card = page
       .locator("h4", { hasText: PRODUCTO })
       .locator("xpath=ancestor::div[contains(@class,'rounded-2xl')][1]");
+    const modal = page.locator("div.rounded-3xl", { hasText: `Receta de: ${PRODUCTO}` });
+    const cantidades = modal.locator('input[type="number"][placeholder="0.00"]');
+    const insumosEsperados = ["Carne Demo (kg)", "Pan Demo (u)"];
+
+    // Se arma la espera antes del click: la primera visita compila la ruta en frío.
+    const recetaCargada = page.waitForResponse(
+      (r) => r.url().includes("/api/inventarios/recetas") && r.request().method() === "GET",
+      { timeout: 30_000 }
+    );
     await card.getByRole("button", { name: "Editar Receta" }).click();
-
     await expect(page.getByText(`Receta de: ${PRODUCTO}`)).toBeVisible();
-    // El modal de edición no precarga los insumos existentes (siempre arranca
-    // en "No hay insumos agregados aún") y la API reemplaza el BOM completo
-    // con lo que se envíe -> hay que reconstruir las 2 filas (Carne + Pan),
-    // no solo añadir una, o se perdería el insumo no tocado.
-    const numeroInputs = page.locator('input[type="number"][placeholder="0.00"]');
+    expect((await recetaCargada).status()).toBe(200);
 
-    await page.getByRole("button", { name: "+ Añadir Insumo" }).click();
-    await page.locator("select").nth(0).selectOption({ label: "Carne Demo (kg)" });
-    await numeroInputs.nth(0).fill("0.18"); // se sube de 0.15 a 0.18 kg/unidad, en vivo
+    // El modal debe mostrar las 2 filas existentes sin añadir nada a mano.
+    await expect(modal.locator("select")).toHaveCount(2);
+    await expect(modal.locator("select option:checked")).toHaveText(insumosEsperados);
+    for (let i = 0; i < 2; i++) {
+      expect(Number(await cantidades.nth(i).inputValue())).toBeGreaterThan(0);
+    }
 
-    await page.getByRole("button", { name: "+ Añadir Insumo" }).click();
-    await page.locator("select").nth(1).selectOption({ label: "Pan Demo (u)" });
-    await numeroInputs.nth(1).fill("1");
+    await cantidades.nth(0).fill("0.18"); // se sube de 0.15 a 0.18 kg/unidad, en vivo
 
     const guardarResp = page.waitForResponse(
       (r) => r.url().includes("/api/inventarios/modificarReceta") && r.request().method() === "PUT"
     );
     await page.getByRole("button", { name: "Guardar Cambios" }).click();
     expect((await guardarResp).status()).toBe(200);
+
+    // Reabrir: el guardado no perdió filas y conserva el cambio.
+    const recetaRecargada = page.waitForResponse(
+      (r) => r.url().includes("/api/inventarios/recetas") && r.request().method() === "GET"
+    );
+    await card.getByRole("button", { name: "Editar Receta" }).click();
+    await expect(page.getByText(`Receta de: ${PRODUCTO}`)).toBeVisible();
+    await recetaRecargada;
+    await expect(modal.locator("select")).toHaveCount(2);
+    await expect(modal.locator("select option:checked")).toHaveText(insumosEsperados);
+    await expect(cantidades.nth(0)).toHaveValue("0.18");
+    await modal.getByRole("button", { name: "Cancelar" }).click();
+    await expect(page.getByText(`Receta de: ${PRODUCTO}`)).toBeHidden();
+  });
+
+  await test.step("Extras: el modal precarga los extras guardados con su insumo, cantidad y precio", async () => {
+    const card = page
+      .locator("h4", { hasText: PRODUCTO })
+      .locator("xpath=ancestor::div[contains(@class,'rounded-2xl')][1]");
+    const modal = page.locator("div.rounded-3xl", { hasText: `Extras de: ${PRODUCTO}` });
+
+    const abrirExtras = async () => {
+      const cargados = page.waitForResponse(
+        (r) => r.url().includes("/api/inventarios/modificadores") && r.request().method() === "GET",
+        { timeout: 30_000 }
+      );
+      await card.getByRole("button", { name: "Editar Extras" }).click();
+      await expect(page.getByText(`Extras de: ${PRODUCTO}`)).toBeVisible();
+      await cargados;
+      await expect(modal.getByText("Cargando extras...")).toBeHidden();
+    };
+    const guardarExtras = async () => {
+      const resp = page.waitForResponse(
+        (r) => r.url().includes("/api/inventarios/modificarModificadores") && r.request().method() === "PUT"
+      );
+      await modal.getByRole("button", { name: "Guardar Cambios" }).click();
+      expect((await resp).status()).toBe(200);
+    };
+
+    await abrirExtras();
+    // Limpia extras previos para partir de un estado conocido.
+    while ((await modal.getByTitle("Eliminar extra").count()) > 0) {
+      await modal.getByTitle("Eliminar extra").first().click();
+    }
+
+    await modal.getByRole("button", { name: "+ Añadir Extra" }).click();
+    await modal.locator("select").nth(0).selectOption({ label: "Carne Demo (kg)" });
+    const numeros = modal.locator('input[type="number"][placeholder="0.00"]');
+    await numeros.nth(0).fill("0.05");
+    await numeros.nth(1).fill("5");
+    await guardarExtras();
+
+    // Reabrir: la fila guardada aparece con el insumo seleccionado, no en blanco.
+    await abrirExtras();
+    await expect(modal.locator("select")).toHaveCount(1);
+    await expect(modal.locator("select option:checked")).toHaveText(["Carne Demo (kg)"]);
+    await expect(numeros.nth(0)).toHaveValue("0.05");
+    await expect(numeros.nth(1)).toHaveValue("5");
+
+    // Limpieza: deja el producto sin extras para no afectar corridas posteriores.
+    await modal.getByTitle("Eliminar extra").first().click();
+    await guardarExtras();
   });
 
   await test.step("Inventario: registrar una entrada de stock en vivo (repone Pan Demo)", async () => {

@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { cookies } from 'next/headers';
-import { jwtVerify } from 'jose';
 import { errorResponse } from '@/lib/apiError';
 import { costoTeoricoDesdeRequerimientos, obtenerCostoReferenciaPorInsumo } from '@/lib/costeo';
 import { simularConsumoFEFO, applySortedStockDecrements } from '@/lib/fefo';
 import { runWithRetry } from '@/lib/transactionRetry';
-
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+import { requireEmpleado, esRespuestaError } from '@/lib/auth';
 
 export async function POST(req: Request) {
   try {
@@ -32,26 +29,10 @@ export async function POST(req: Request) {
       }
     }
 
-    // 2. Validar Sesión
-    const cookieStore = await cookies();
-    const tokenSucursal = cookieStore.get("tokenSucursal")?.value;
-    const tokenEmpleado = cookieStore.get("tokenEmpleado")?.value;
-
-    if (!tokenSucursal || !tokenEmpleado) {
-      return NextResponse.json({ error: 'Sesión no válida o expirada' }, { status: 401 });
-    }
-
-    // Decodificar Tokens
-    let sucursalId, empleadoId;
-    try {
-      const payloadSucursal = await jwtVerify(tokenSucursal, secret);
-      sucursalId = (payloadSucursal.payload as any)?.sucursalId || (payloadSucursal.payload as any)?.id;
-
-      const payloadEmpleado = await jwtVerify(tokenEmpleado, secret);
-      empleadoId = (payloadEmpleado.payload as any)?.empleadoId || (payloadEmpleado.payload as any)?.id;
-    } catch (e) {
-      return NextResponse.json({ error: 'Error verificando tokens' }, { status: 403 });
-    }
+    // 2. Validar Sesión y Rol (Cajero o Administrador)
+    const sesion = await requireEmpleado(["Cajero", "Administrador"]);
+    if (esRespuestaError(sesion)) return sesion;
+    const { sucursalId, empleadoId } = sesion;
 
     const sucursalBigInt = BigInt(sucursalId);
 

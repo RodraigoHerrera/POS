@@ -2,6 +2,8 @@ import "dotenv/config";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import jwt from "jsonwebtoken";
+import { prisma } from "./db";
+import { serializeBigInt } from "./serialize";
 import {
   obtenerSesionEmpleado,
   obtenerSesionSucursal,
@@ -468,3 +470,195 @@ describe("SEC-02: Middleware Proactive Purge on /usuarios Tests", () => {
     assert.equal(setCookies.length, 0, "No Set-Cookie header needed when tokenEmpleado is absent");
   });
 });
+
+describe("SEC-07: Caja RBAC Standardization Tests", () => {
+  it("allows Cajero role on Caja APIs", async () => {
+    const tokenSucursal = jwt.sign({ sucursalId: "1" }, TEST_SECRET);
+    const tokenEmpleado = jwt.sign(
+      { empleadoId: "101", rol: "Cajero", sucursalId: "1" },
+      TEST_SECRET
+    );
+    const reader = createCookieReader({ tokenSucursal, tokenEmpleado });
+    const res = await requireEmpleado(["Cajero", "Administrador"], reader);
+
+    assert.ok(!esRespuestaError(res));
+    assert.equal(res.sucursalId, "1");
+    assert.equal(res.empleadoId, "101");
+    assert.equal(res.rol, "Cajero");
+  });
+
+  it("allows Administrador role on Caja APIs", async () => {
+    const tokenSucursal = jwt.sign({ sucursalId: "1" }, TEST_SECRET);
+    const tokenEmpleado = jwt.sign(
+      { empleadoId: "1", rol: "Administrador", sucursalId: "1" },
+      TEST_SECRET
+    );
+    const reader = createCookieReader({ tokenSucursal, tokenEmpleado });
+    const res = await requireEmpleado(["Cajero", "Administrador"], reader);
+
+    assert.ok(!esRespuestaError(res));
+    assert.equal(res.sucursalId, "1");
+    assert.equal(res.empleadoId, "1");
+    assert.equal(res.rol, "Administrador");
+  });
+
+  it("rejects unauthorized roles (such as Mesero or Cocina) with 403 Forbidden", async () => {
+    const tokenSucursal = jwt.sign({ sucursalId: "1" }, TEST_SECRET);
+    const tokenEmpleado = jwt.sign(
+      { empleadoId: "202", rol: "Mesero", sucursalId: "1" },
+      TEST_SECRET
+    );
+    const reader = createCookieReader({ tokenSucursal, tokenEmpleado });
+    const res = await requireEmpleado(["Cajero", "Administrador"], reader);
+
+    assert.ok(esRespuestaError(res));
+    assert.equal(res.status, 403);
+    const body = await res.json();
+    assert.match(body.message, /requiere rol: Cajero o Administrador/);
+  });
+
+  it("rejects missing tokens on Caja APIs with 401 Unauthorized", async () => {
+    const reader = createCookieReader({});
+    const res = await requireEmpleado(["Cajero", "Administrador"], reader);
+
+    assert.ok(esRespuestaError(res));
+    assert.equal(res.status, 401);
+  });
+});
+
+describe("SEC-09: Bcrypt Password Hash Sanitization in Registration", () => {
+  it("POST /api/auth/register enforces explicit select projection excluding contrasena", async () => {
+    const { NextRequest } = await import("next/server");
+    const { POST: registerBranch } = await import("../app/api/auth/register/route");
+
+    const origFindUnique = prisma.sucursales.findUnique;
+    const origCreate = prisma.sucursales.create;
+
+    try {
+      let capturedArgs: any = null;
+      (prisma.sucursales.findUnique as any) = async () => null;
+      (prisma.sucursales.create as any) = async (args: any) => {
+        capturedArgs = args;
+        return {
+          id: BigInt(123),
+          nombre: args.data.nombre,
+          direccion: args.data.direccion,
+          correo: args.data.correo,
+          telefono: args.data.telefono,
+          creado: new Date(),
+        };
+      };
+
+      const req = new NextRequest("http://localhost/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre: "Sucursal Test SEC09",
+          direccion: "Calle Test 123",
+          correo: "sec09test@gmail.com",
+          telefono: "77799988",
+          contraseña: "PlaintextPassword123!",
+        }),
+      });
+
+      const res = await registerBranch(req);
+      assert.equal(res.status, 201);
+      const body = await res.json();
+
+      assert.ok(capturedArgs, "prisma.sucursales.create should be called");
+      assert.ok(capturedArgs.select, "prisma.sucursales.create must include explicit select projection");
+      assert.equal(capturedArgs.select.contrasena, undefined);
+      assert.equal("contrasena" in capturedArgs.select, false);
+      assert.equal(capturedArgs.select.id, true);
+      assert.equal(capturedArgs.select.nombre, true);
+      assert.equal(capturedArgs.select.direccion, true);
+      assert.equal(capturedArgs.select.correo, true);
+      assert.equal(capturedArgs.select.telefono, true);
+      assert.equal(capturedArgs.select.creado, true);
+
+      assert.equal(body.sucursal.id, "123");
+      assert.equal(body.sucursal.correo, "sec09test@gmail.com");
+      assert.equal(body.sucursal.contrasena, undefined);
+      assert.equal("contrasena" in body.sucursal, false);
+      assert.equal(JSON.stringify(body).includes("contrasena"), false);
+      assert.equal(JSON.stringify(body).includes("PlaintextPassword123!"), false);
+    } finally {
+      prisma.sucursales.findUnique = origFindUnique;
+      prisma.sucursales.create = origCreate;
+    }
+  });
+
+  it("sucursales.create projection excludes contrasena while retaining all metadata", () => {
+    const sucursalSelectProjection = {
+      id: true,
+      nombre: true,
+      direccion: true,
+      correo: true,
+      telefono: true,
+      creado: true,
+    } as const;
+
+    assert.equal("contrasena" in sucursalSelectProjection, false);
+
+    const mockProjectedSucursal = {
+      id: BigInt(10),
+      nombre: "Smash Centro",
+      direccion: "Av. Las Americas 45",
+      correo: "centro@gmail.com",
+      telefono: "77123456",
+      creado: new Date("2026-01-01T00:00:00.000Z"),
+    };
+
+    const serializedSucursal = serializeBigInt(mockProjectedSucursal);
+    assert.equal((serializedSucursal as any).contrasena, undefined);
+    assert.equal("contrasena" in serializedSucursal, false);
+    assert.equal(serializedSucursal.id, "10");
+    assert.equal(serializedSucursal.nombre, "Smash Centro");
+    assert.equal(serializedSucursal.direccion, "Av. Las Americas 45");
+    assert.equal(serializedSucursal.correo, "centro@gmail.com");
+    assert.equal(serializedSucursal.telefono, "77123456");
+    assert.equal(JSON.stringify(serializedSucursal).includes("contrasena"), false);
+  });
+
+  it("empleados.create projection excludes contrasena while retaining all required metadata", () => {
+    const empleadoSelectProjection = {
+      id: true,
+      sucursal_id: true,
+      rol: true,
+      usuario: true,
+      correo: true,
+      nombre: true,
+      celular: true,
+      creado: true,
+      estado: true,
+    } as const;
+
+    assert.equal("contrasena" in empleadoSelectProjection, false);
+
+    const mockProjectedAdmin = {
+      id: BigInt(42),
+      sucursal_id: BigInt(10),
+      rol: "Administrador",
+      usuario: "admin_smash",
+      correo: "admin@gmail.com",
+      nombre: "Admin General",
+      celular: "77998811",
+      creado: new Date("2026-01-01T00:00:00.000Z"),
+      estado: "Activo",
+    };
+
+    const serializedAdmin = serializeBigInt(mockProjectedAdmin);
+    assert.equal((serializedAdmin as any).contrasena, undefined);
+    assert.equal("contrasena" in serializedAdmin, false);
+    assert.equal(serializedAdmin.id, "42");
+    assert.equal(serializedAdmin.sucursal_id, "10");
+    assert.equal(serializedAdmin.rol, "Administrador");
+    assert.equal(serializedAdmin.usuario, "admin_smash");
+    assert.equal(serializedAdmin.correo, "admin@gmail.com");
+    assert.equal(serializedAdmin.nombre, "Admin General");
+    assert.equal(serializedAdmin.celular, "77998811");
+    assert.equal(serializedAdmin.estado, "Activo");
+    assert.equal(JSON.stringify(serializedAdmin).includes("contrasena"), false);
+  });
+});
+

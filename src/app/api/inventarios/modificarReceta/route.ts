@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireEmpleado, esRespuestaError } from "@/lib/auth";
+import { errorResponse } from "@/lib/apiError";
+import {
+  parsePositiveBigInt,
+  validateReceta,
+  ValidationError,
+  validationErrorResponse,
+} from "@/lib/validation";
 
 export async function PUT(request: Request) {
   try {
@@ -13,30 +20,26 @@ export async function PUT(request: Request) {
     // Desestructuramos: "id" es el ID del producto vendible (ej: "7")
     const { id: idProductoVendible, receta } = body;
 
-    // Validación básica
-    if (!idProductoVendible) {
-      return NextResponse.json({ error: "Falta ID del producto" }, { status: 400 });
-    }
-
-    // Convertimos el ID que viene como string ("7") a número (7)
-    const itemVendibleIdInt = parseInt(idProductoVendible, 10);
+    // Validación estricta antes de la transacción
+    const itemVendibleId = parsePositiveBigInt(idProductoVendible, "ID del producto");
+    const validReceta = validateReceta(receta);
 
     // 2. Iniciamos la transacción de base de datos
     // Esto hace: Buscar/Crear Cabecera -> Borrar Items Viejos -> Crear Items Nuevos
-    const resultado = await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       
       // --- PASO A: Gestionar la tabla 'receta' (Cabecera) ---
       
-      // Buscamos si ya existe una receta para el "Vaso de coca cola"
+      // Buscamos si ya existe una receta para el producto
       let recetaHeader = await tx.receta.findFirst({
-        where: { item_vendible_id: itemVendibleIdInt },
+        where: { item_vendible_id: itemVendibleId },
       });
 
       // Si no existe, la creamos
       if (!recetaHeader) {
         recetaHeader = await tx.receta.create({
           data: {
-            item_vendible_id: itemVendibleIdInt,
+            item_vendible_id: itemVendibleId,
             rendimiento: 1, // Default: Rinde 1 unidad
             merma_pct: 0,   // Default: 0% merma
           },
@@ -46,19 +49,17 @@ export async function PUT(request: Request) {
       // --- PASO B: Gestionar la tabla 'recetaitem' (Detalles) ---
 
       // Primero: LIMPIEZA. Borramos los ingredientes viejos de esta receta.
-      // Esto es más seguro que intentar actualizar uno por uno.
       await tx.recetaItem.deleteMany({
         where: { receta_id: recetaHeader.id },
       });
 
-      // Segundo: INSERCIÓN. Si vienen items en el JSON, los creamos.
-      if (receta && receta.length > 0) {
-        // Preparamos los datos convirtiendo strings a números
-        const itemsParaGuardar = receta.map((insumo: any) => ({
-          receta_id: recetaHeader!.id,           // ID de la cabecera (int)
-          item_insumo_id: parseInt(insumo.itemId, 10), // "5" -> 5
-          cantidad: Number(insumo.cantidad),     // 0.5 -> 0.5 (Decimal/Float)
-          merma_pct: 0,                          // Default
+      // Segundo: INSERCIÓN. Si vienen items validados, los creamos.
+      if (validReceta.length > 0) {
+        const itemsParaGuardar = validReceta.map((insumo) => ({
+          receta_id: recetaHeader.id,
+          item_insumo_id: Number(insumo.itemId),
+          cantidad: insumo.cantidad,
+          merma_pct: insumo.merma_pct,
         }));
 
         await tx.recetaItem.createMany({
@@ -75,10 +76,9 @@ export async function PUT(request: Request) {
     });
 
   } catch (error) {
-    console.error("Error en modificarReceta:", error);
-    return NextResponse.json(
-      { error: "Error interno al procesar la receta" },
-      { status: 500 }
-    );
+    if (error instanceof ValidationError) {
+      return validationErrorResponse(error);
+    }
+    return errorResponse(error, "Error interno al procesar la receta");
   }
 }

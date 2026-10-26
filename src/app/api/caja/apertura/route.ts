@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { cookies } from 'next/headers';
-import { jwtVerify } from 'jose';
 import jwt from "jsonwebtoken";
-
-// Clave secreta para verificar los tokens
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+import { requireEmpleado, esRespuestaError } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
@@ -20,54 +16,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Obtener las cookies
-    const cookieStore = await cookies();
-    const tokenSucursal = cookieStore.get("tokenSucursal")?.value;
-    const tokenEmpleado = cookieStore.get("tokenEmpleado")?.value;
-
-    // Validar existencia de tokens
-    if (!tokenSucursal) {
-      return NextResponse.json(
-        { error: 'No se identificó la sucursal (Token faltante).' },
-        { status: 401 }
-      );
-    }
-
-    if (!tokenEmpleado) {
-      return NextResponse.json(
-        { error: 'No se identificó al empleado (Token faltante).' },
-        { status: 401 }
-      );
-    }
-
-    let sucursalId: string | undefined;
-    let empleadoId: string | undefined;
-
-    // 2. Verificar Token de SUCURSAL
-    try {
-      const { payload } = await jwtVerify(tokenSucursal, secret);
-      sucursalId = (payload?.sucursalId || payload?.id) as string; 
-    } catch (error) {
-      console.error("Error verificando token sucursal:", error);
-      return NextResponse.json({ error: 'Sesión de sucursal inválida.' }, { status: 403 });
-    }
-
-    // 3. Verificar Token de EMPLEADO
-    try {
-      const { payload } = await jwtVerify(tokenEmpleado, secret);
-      empleadoId = (payload?.empleadoId || payload?.id || payload?.sub || payload?.userId) as string;
-    } catch (error) {
-      console.error("Error verificando token empleado:", error);
-      return NextResponse.json({ error: 'Sesión de empleado inválida.' }, { status: 403 });
-    }
-
-    // 4. Validar IDs
-    if (!sucursalId || !empleadoId) {
-      return NextResponse.json(
-        { error: 'Error al leer identificadores de sesión (IDs nulos).' },
-        { status: 400 }
-      );
-    }
+    // 1. Validar Sesión y Rol (Cajero o Administrador)
+    const sesion = await requireEmpleado(["Cajero", "Administrador"]);
+    if (esRespuestaError(sesion)) return sesion;
+    const { sucursalId, empleadoId } = sesion;
 
     // 5. Verificar si YA existe caja abierta
     const cajaAbierta = await prisma.caja.findFirst({

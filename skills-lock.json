@@ -13,6 +13,12 @@
       "skillPath": ".agents/skills/archify-review/SKILL.md",
       "computedHash": "ea17fd7a735f2e787defcc35d67f97908ddb7c5817220d6163a32998b4573f8f"
     },
+    "frontend-desing": {
+      "source": "kintsukuro1/aplicacion_colegio",
+      "sourceType": "github",
+      "skillPath": "Aplicacion_Colegio/.github/skills/frontend-desing/SKILL.md",
+      "computedHash": "0fd4f6eff04267deb80daac3261ea6437feb44c5e88ce7887be31824cb603cb8"
+    },
     "mysql": {
       "source": "planetscale/database-skills",
       "sourceType": "github",

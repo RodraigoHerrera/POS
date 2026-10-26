@@ -52,11 +52,12 @@
 
 ## 🟠 Fase 2: Vulnerabilidades de Severidad Alta (Control de Acceso, Validación y Datos)
 
-- [ ] **SEC-07: Estandarización de RBAC en APIs de Caja (Bypass de `requireEmpleado`)**
-  - **Archivos:** [`caja/apertura`](file:///D:/cod/smashPOS/POS/src/app/api/caja/apertura/route.ts), [`caja/cerrar`](file:///D:/cod/smashPOS/POS/src/app/api/caja/cerrar/route.ts), [`caja/editarPedido`](file:///D:/cod/smashPOS/POS/src/app/api/caja/editarPedido/route.ts), [`caja/facturacion`](file:///D:/cod/smashPOS/POS/src/app/api/caja/facturacion/route.ts), [`caja/registrarPedido`](file:///D:/cod/smashPOS/POS/src/app/api/caja/registrarPedido/route.ts), [`caja/resumen`](file:///D:/cod/smashPOS/POS/src/app/api/caja/resumen/route.ts)
+- [x] **SEC-07: Estandarización de RBAC en APIs de Caja (Bypass de `requireEmpleado`)**
+  - **Archivos:** [`caja/apertura`](file:///D:/cod/smashPOS/POS/src/app/api/caja/apertura/route.ts), [`caja/cerrar`](file:///D:/cod/smashPOS/POS/src/app/api/caja/cerrar/route.ts), [`caja/editarPedido`](file:///D:/cod/smashPOS/POS/src/app/api/caja/editarPedido/route.ts), [`caja/facturacion`](file:///D:/cod/smashPOS/POS/src/app/api/caja/facturacion/route.ts), [`caja/registrarPedido`](file:///D:/cod/smashPOS/POS/src/app/api/caja/registrarPedido/route.ts), [`caja/resumen`](file:///D:/cod/smashPOS/POS/src/app/api/caja/resumen/route.ts) y [`src/lib/auth.test.ts`](file:///D:/cod/smashPOS/POS/src/lib/auth.test.ts)
   - **Problema:** 6 rutas transaccionales decodifican JWT manualmente sin verificar si el rol es Cajero o Administrador.
   - **Acción:** Refactorizar los 6 endpoints para utilizar centralizadamente `requireEmpleado(["Cajero", "Administrador"])`.
-  - **Commit:** *Pendiente*
+  - **Solución implementada:** Se refactorizaron los 6 endpoints transaccionales de caja (`apertura`, `cerrar`, `editarPedido`, `facturacion`, `registrarPedido` y `resumen`) reemplazando la decodificación manual de cookies/JWTs por la guarda centralizada `requireEmpleado(["Cajero", "Administrador"])`. Esto garantiza validación de roles en capa API (HTTP 403 ante roles no autorizados como Mesero o Cocina), aislamiento cross-tenant estricto y eliminación de código duplicado. Suite de 4 pruebas unitarias agregada a `src/lib/auth.test.ts` (75 pruebas totales del sistema pasando).
+  - **Commit:** Resuelto
 
 - [ ] **SEC-08: Eliminación de Código Muerto: Cookie `tokenCaja`**
   - **Archivos:** [`src/app/api/caja/apertura/route.ts`](file:///D:/cod/smashPOS/POS/src/app/api/caja/apertura/route.ts) y [`src/app/api/caja/cerrar/route.ts`](file:///D:/cod/smashPOS/POS/src/app/api/caja/cerrar/route.ts)
@@ -64,11 +65,12 @@
   - **Acción:** Eliminar la emisión y borrado de `tokenCaja`, eliminando también el `console.log("Token generado:", cajaToken)` que filtra JWTs a logs.
   - **Commit:** *Pendiente*
 
-- [ ] **SEC-09: Filtración de Hashes Bcrypt en Respuestas JSON**
-  - **Archivos:** [`src/app/api/auth/register/route.ts`](file:///D:/cod/smashPOS/POS/src/app/api/auth/register/route.ts) y [`src/app/api/auth/registerAdmin/route.ts`](file:///D:/cod/smashPOS/POS/src/app/api/auth/registerAdmin/route.ts)
+- [x] **SEC-09: Filtración de Hashes Bcrypt en Respuestas JSON**
+  - **Archivos:** [`src/app/api/auth/register/route.ts`](file:///D:/cod/smashPOS/POS/src/app/api/auth/register/route.ts), [`src/app/api/auth/registerAdmin/route.ts`](file:///D:/cod/smashPOS/POS/src/app/api/auth/registerAdmin/route.ts) y [`src/lib/auth.test.ts`](file:///D:/cod/smashPOS/POS/src/lib/auth.test.ts)
   - **Problema:** Ambas rutas retornan el registro completo de Prisma al crear sucursales o administradores, exponiendo `contrasena: hashedPassword`.
   - **Acción:** Utilizar `select` explícito en Prisma excluyendo el campo `contrasena` de las respuestas.
-  - **Commit:** *Pendiente*
+  - **Solución implementada:** Se agregaron proyecciones explícitas `select` a `prisma.sucursales.create` en `/api/auth/register` (incluyendo `id`, `nombre`, `direccion`, `correo`, `telefono`, `creado`) y a `prisma.empleados.create` en `/api/auth/registerAdmin` (incluyendo `id`, `sucursal_id`, `rol`, `usuario`, `correo`, `nombre`, `celular`, `creado`, `estado`), excluyendo a nivel de consulta SQL el campo `contrasena`. Se añadieron pruebas unitarias en `src/lib/auth.test.ts` que verifican que los objetos devueltos y serializados no contienen hashes ni la propiedad `contrasena`.
+  - **Commit:** Resuelto
 
 - [ ] **SEC-10: Evasión de Rate Limiting por Spoofing de `X-Forwarded-For`**
   - **Archivos:** [`src/lib/rate-limit.ts`](file:///D:/cod/smashPOS/POS/src/lib/rate-limit.ts)
@@ -76,11 +78,12 @@
   - **Acción:** Validar encabezados de proxy solo si provienen de proxies configurados o usar la IP directa provista por el runtime.
   - **Commit:** *Pendiente*
 
-- [ ] **SEC-11: Cotas No Negativas en Precios, Cantidades y Arqueos**
-  - **Archivos:** [`modificarModificadores`](file:///D:/cod/smashPOS/POS/src/app/api/inventarios/modificarModificadores/route.ts), [`modificarReceta`](file:///D:/cod/smashPOS/POS/src/app/api/inventarios/modificarReceta/route.ts), [`productos/editar`](file:///D:/cod/smashPOS/POS/src/app/api/inventarios/productos/editar/route.ts), [`caja/cerrar`](file:///D:/cod/smashPOS/POS/src/app/api/caja/cerrar/route.ts)
+- [x] **SEC-11: Cotas No Negativas en Precios, Cantidades y Arqueos**
+  - **Archivos:** [`src/lib/validation.ts`](file:///D:/cod/smashPOS/POS/src/lib/validation.ts), [`src/lib/validation.test.ts`](file:///D:/cod/smashPOS/POS/src/lib/validation.test.ts), [`modificarModificadores`](file:///D:/cod/smashPOS/POS/src/app/api/inventarios/modificarModificadores/route.ts), [`modificarReceta`](file:///D:/cod/smashPOS/POS/src/app/api/inventarios/modificarReceta/route.ts), [`productos/editar`](file:///D:/cod/smashPOS/POS/src/app/api/inventarios/productos/editar/route.ts) y [`caja/cerrar`](file:///D:/cod/smashPOS/POS/src/app/api/caja/cerrar/route.ts)
   - **Problema:** `Number(-50) || 0` permite modificadores con precios negativos o recetas con cantidades negativas.
   - **Acción:** Forzar validación estricta: `precio >= 0`, `cantidad > 0`, `totalContado >= 0`.
-  - **Commit:** *Pendiente*
+  - **Solución implementada:** Se creó el módulo de validación de dominio `src/lib/validation.ts` con parsers estrictos (`parseNonNegativeNumber`, `parsePositiveNumber`, `parsePositiveInt`, `parsePositiveBigInt`, `validateModificadores`, `validateReceta`), `ValidationError` y `validationErrorResponse` (HTTP 400). Se refactorizaron las cuatro rutas transaccionales (`modificarModificadores`, `modificarReceta`, `productos/editar`, `caja/cerrar`) aplicando validación fail-fast previa a cualquier mutación o transacción de base de datos. Se implementó una suite completa de pruebas unitarias en `src/lib/validation.test.ts` verificando cotas numéricas, rechazo de tipos no válidos y validación fail-fast en endpoints (31 pruebas pasando, 93 pruebas totales del sistema pasando).
+  - **Commit:** Resuelto
 
 - [ ] **SEC-12: Inconsistencia Fiscal en Anulación de Ventas**
   - **Archivos:** [`src/app/api/admin/ventas/[id]/anular/route.ts`](file:///D:/cod/smashPOS/POS/src/app/api/admin/ventas/%5Bid%5D/anular/route.ts) y [`prisma/schema.prisma`](file:///D:/cod/smashPOS/POS/prisma/schema.prisma)
@@ -88,11 +91,12 @@
   - **Acción:** Agregar campo `estado` (`EMITIDA` / `ANULADA`) y `fecha_anulacion` en el modelo `factura`.
   - **Commit:** *Pendiente*
 
-- [ ] **SEC-13: Falta de Bloqueo Atómico en Mermas**
-  - **Archivos:** [`src/app/api/inventarios/mermas/route.ts`](file:///D:/cod/smashPOS/POS/src/app/api/inventarios/mermas/route.ts)
+- [x] **SEC-13: Falta de Bloqueo Atómico en Mermas**
+  - **Archivos:** [`src/app/api/inventarios/mermas/route.ts`](file:///D:/cod/smashPOS/POS/src/app/api/inventarios/mermas/route.ts), [`src/lib/mermas.ts`](file:///D:/cod/smashPOS/POS/src/lib/mermas.ts) y [`src/lib/mermas.test.ts`](file:///D:/cod/smashPOS/POS/src/lib/mermas.test.ts)
   - **Problema:** Se descuenta stock de lote con `update` directo sin verificar `where: { cantidad: { gte: aDescontar } }`, pudiendo provocar stock negativo.
   - **Acción:** Usar `updateMany` atómico con guarda `gte` y revertir si `count === 0`.
-  - **Commit:** *Pendiente*
+  - **Solución implementada:** Se creó el módulo de dominio `src/lib/mermas.ts` y se refactorizó `src/app/api/inventarios/mermas/route.ts`. Se implementó validación fail-fast previa a la transacción con `parsePositiveBigInt`, `parsePositiveNumber` y validación de `tipoMerma` (`ValidationError` -> HTTP 400). Dentro de la transacción, envuelta en `runWithRetry` (timeout de 15s, 3 reintentos), se ejecuta la asignación FEFO en memoria y se ordenan deterministamente las deducciones por `id ASC` (`compareBigIntAsc` para cumplir `INV-1`). Se implementó la guarda atómica en lotes (`INV-4`) mediante `stockLoteSucursal.updateMany({ where: { id: alloc.id, cantidad: { gte: alloc.aDescontar } }, data: { cantidad: { decrement: alloc.aDescontar } } })` abortando y revirtiendo si `count === 0`. Se añadió la guarda atómica en el inventario global de la sucursal (`INV-5`) mediante `inventarioSucursal.updateMany({ where: { sucursal_id, item_id, stock: { gte: cantidadMerma } }, data: { stock: { decrement: cantidadMerma } } })` abortando si `count === 0`. Los errores de stock insuficiente fallan rápido (excluidos de `isDeadlockError`) y son mapeados a HTTP 409 Conflict. Suite completa de 26 pruebas unitarias implementada en `src/lib/mermas.test.ts` (119 pruebas totales del sistema pasando).
+  - **Commit:** Resuelto
 
 - [ ] **SEC-14: Limpieza de Secretos y Volcados en Workspace y Git**
   - **Archivos:** [`backup_smash_20261019_174512.sql`](file:///D:/cod/smashPOS/POS/backup_smash_20261019_174512.sql) e historial Git (`.env`)

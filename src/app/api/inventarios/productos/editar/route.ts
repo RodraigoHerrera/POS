@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import { prisma } from "@/lib/db";
 import { errorResponse } from "@/lib/apiError";
 import { requireEmpleado, esRespuestaError } from "@/lib/auth";
+import {
+  parsePositiveBigInt,
+  parseNonNegativeNumber,
+  ValidationError,
+  validationErrorResponse,
+} from "@/lib/validation";
 
 // --- SOLUCIÓN BIGINT ---
 // Esto define cómo se debe comportar BigInt al convertirse a JSON.
@@ -14,7 +20,7 @@ BigInt.prototype.toJSON = function () {
 
 // Definimos la interfaz para tipar los datos entrantes
 interface ProductUpdateData {
-  id: number | string; // Aceptamos string o number por si acaso
+  id: number | string;
   nombre: string;
   precio: string | number;
   estado: string;
@@ -34,25 +40,18 @@ export async function PUT(request: Request) {
     // Desestructuramos los datos
     const { id, nombre, precio, estado, categoria, descripcion, fotoUrl } = body;
 
-    // 2. Validación básica
-    if (!id) {
-      return NextResponse.json(
-        { message: 'El ID del producto es obligatorio para la edición.' },
-        { status: 400 }
-      );
-    }
+    // 2. Validación de cotas no negativas y tipos seguros
+    const validId = parsePositiveBigInt(id, "ID del producto");
+    const validPrecio = parseNonNegativeNumber(precio, "Precio del producto");
 
     // 3. ACTUALIZACIÓN CON PRISMA
     const updatedProduct = await prisma.producto.update({
       where: { 
-        id: Number(id) // Aseguramos que para la query sea un número (si tu DB espera BigInt, Prisma lo convierte solo)
+        id: Number(validId)
       },
       data: {
         nombre,
-        // Conversión segura de precio:
-        // Si tu base de datos usa DECIMAL/FLOAT, pásalo como Number o String (Prisma Decimal prefiere String para precisión)
-        // Si tienes problemas con el precio también, usa String(precio)
-        precio: typeof precio === 'string' ? parseFloat(precio) : precio, 
+        precio: validPrecio,
         estado,
         categoria,
         descripcion,
@@ -60,17 +59,20 @@ export async function PUT(request: Request) {
       }
     });
     
-    console.log(`[API] Producto ID ${id} actualizado.`);
+    console.log(`[API] Producto ID ${validId.toString()} actualizado.`);
 
     // 4. Retornar el producto actualizado
-    // Ahora esto funcionará porque el BigInt se convertirá a String automáticamente
     return NextResponse.json(updatedProduct);
 
   } catch (error: any) {
+    if (error instanceof ValidationError) {
+      return validationErrorResponse(error);
+    }
+
     console.error('[API Error] Fallo al actualizar producto:', error);
     
     // Manejo de errores específicos de Prisma
-    if (error.code === 'P2025') {
+    if (error?.code === 'P2025') {
       return NextResponse.json(
         { message: 'El producto a editar no existe.' },
         { status: 404 }

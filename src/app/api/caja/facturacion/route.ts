@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { cookies } from 'next/headers';
-import { jwtVerify } from 'jose';
 import { errorResponse } from '@/lib/apiError';
 import { runWithRetry } from '@/lib/transactionRetry';
 import { validateOrderForBilling } from '@/lib/caja';
-
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+import { requireEmpleado, esRespuestaError } from '@/lib/auth';
 
 export async function POST(req: Request) {
   try {
@@ -23,25 +20,9 @@ export async function POST(req: Request) {
     // /api/caja/cerrar (derivada de sucursal+empleado), en vez de depender
     // de la cookie tokenCaja — esa solo se setea al momento de abrir la caja
     // y no sobrevive a un re-login con la caja ya abierta.
-    const cookieStore = await cookies();
-    const tokenSucursal = cookieStore.get("tokenSucursal")?.value;
-    const tokenEmpleado = cookieStore.get("tokenEmpleado")?.value;
-
-    if (!tokenSucursal || !tokenEmpleado) {
-      return NextResponse.json({ error: 'Sesión no válida o expirada' }, { status: 401 });
-    }
-
-    let sucursalId: string;
-    let empleadoId: string;
-    try {
-      const payloadSucursal = await jwtVerify(tokenSucursal, secret);
-      sucursalId = (payloadSucursal.payload as any)?.sucursalId || (payloadSucursal.payload as any)?.id;
-
-      const payloadEmpleado = await jwtVerify(tokenEmpleado, secret);
-      empleadoId = (payloadEmpleado.payload as any)?.empleadoId || (payloadEmpleado.payload as any)?.id;
-    } catch (e) {
-      return NextResponse.json({ error: 'Error verificando tokens' }, { status: 403 });
-    }
+    const sesion = await requireEmpleado(["Cajero", "Administrador"]);
+    if (esRespuestaError(sesion)) return sesion;
+    const { sucursalId, empleadoId } = sesion;
 
     const cajaAbierta = await prisma.caja.findFirst({
       where: {

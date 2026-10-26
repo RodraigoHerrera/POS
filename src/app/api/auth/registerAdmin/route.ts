@@ -74,6 +74,17 @@ export async function POST(req: Request) {
         estado: "Activo", // Ajusta el valor según tu lógica de negocio
         usuario,
       },
+      select: {
+        id: true,
+        sucursal_id: true,
+        rol: true,
+        usuario: true,
+        correo: true,
+        nombre: true,
+        celular: true,
+        creado: true,
+        estado: true,
+      },
     });
 
     return NextResponse.json(

@@ -9,6 +9,7 @@ import Button from "../button/Button";
 import Image from "next/image";
 import Select from "@/components/form/Select";
 import Label from "@/components/form/Label";
+import { toInsumoOptions, withMissingOptions, type Option } from "@/lib/recetaEditor";
 
 // --- Interfaces ---
 
@@ -17,6 +18,7 @@ interface Insumo {
   id: string;      // ID único temporal para el frontend (key de React)
   itemId: string;  // El ID del producto del inventario que se usa como insumo
   nombre?: string; // Nombre para mostrar en UI (opcional)
+  unidad_code?: string; // Solo para etiquetar insumos que ya no son seleccionables
   cantidad: number;
 }
 
@@ -34,7 +36,6 @@ interface InventoryItem {
   sku: string;
   unidad_code: string;
   fotoUrl?: string;
-  receta?: Insumo[];
 }
 
 interface InventoryItemCardProps {
@@ -42,7 +43,28 @@ interface InventoryItemCardProps {
   onSaved?: () => void;
 }
 
-type Option = { value: string; label: string };
+// Formas de las respuestas JSON consumidas por los modales
+type ItemApi = { id: string | number; nombre: string; tipo: string; unidad_code?: string | null };
+type RecetaRowApi = {
+  itemInsumoId: string | number;
+  nombre: string;
+  unidad_code: string;
+  cantidad: string | number;
+};
+type ExtraRowApi = {
+  itemInsumoId: string | number;
+  nombre: string;
+  unidad_code: string;
+  delta_cantidad: string | number;
+  precio: string | number;
+};
+
+// GET JSON helper que lanza si la respuesta no es 2xx (para no tratar un error como lista vacía)
+async function fetchJson<T>(url: string): Promise<T> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`GET ${url} -> ${res.status}`);
+  return res.json();
+}
 
 // --- Utility: Generador de IDs seguro ---
 // Esto reemplaza a crypto.randomUUID() para evitar errores en navegadores antiguos o sin HTTPS
@@ -66,6 +88,8 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
 
   // Estado para manejar la lista dinámica de la receta
   const [recetaActual, setRecetaActual] = useState<Insumo[]>([]);
+  const [loadingReceta, setLoadingReceta] = useState(false);
+  const [recetaLoadError, setRecetaLoadError] = useState<string | null>(null);
 
   // --- Extras (modificadorProducto): mismo patrón que la receta, pero
   // representan insumos opcionales que el cajero puede agregar al pedido
@@ -75,6 +99,7 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
   const [extrasOptions, setExtrasOptions] = useState<Option[]>([]);
   const [extrasActual, setExtrasActual] = useState<ExtraRow[]>([]);
   const [loadingExtras, setLoadingExtras] = useState(false);
+  const [extrasLoadError, setExtrasLoadError] = useState<string | null>(null);
 
   // Costo teórico (BOM x costo_promedio actual) de este producto, visible en la tarjeta
   const [costoTeorico, setCostoTeorico] = useState<number | null>(null);
@@ -92,98 +117,85 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
       }
     };
     fetchCostoTeorico();
-  }, [itemData.id, itemData.receta]);
+  }, [itemData.id]);
 
-  // Sincronizar el estado de la receta cuando se abre el modal
+  // Cargar la receta existente al abrir el modal. Las opciones de insumos y las
+  // filas guardadas se piden juntas y se confirman en el mismo tick, de modo que
+  // un Select controlado nunca recibe un valor sin su opción correspondiente.
   useEffect(() => {
-    if (isOpen) {
-      // 1. Cargar Items disponibles para el Select
-      const fetchItems = async () => {
-  try {
-    const res = await fetch('/api/inventarios/items');
-    if (res.ok) {
-      const data = await res.json();
-      
-      // MODIFICACIÓN AQUÍ:
-      // Primero filtramos, luego mapeamos
-      const options = data
-        .filter((i: any) => i.tipo !== "vendible") // <--- Filtro agregado
-        .map((i: any) => ({
-          value: String(i.id),
-          label: `${i.nombre} (${i.unidad_code || 'u'})`
-        }));
-        
-      setItemsOptions(options);
-    }
-  } catch (error) {
-    console.error("Error cargando lista de items:", error);
-  }
-};
-      fetchItems();
+    if (!isOpen) return;
 
-      // 2. Cargar receta existente del item
-      if (itemData.receta && itemData.receta.length > 0) {
-        const recetaConIds = itemData.receta.map(insumo => ({
-          ...insumo,
-          // Usamos generateId si no viene ID, asegurando string para keys de React
-          id: insumo.id ? String(insumo.id) : generateId(),
-          itemId: String(insumo.itemId || insumo.id), // Aseguramos que itemId sea string
-          cantidad: Number(insumo.cantidad)
-        }));
-        setRecetaActual(recetaConIds);
-      } else {
-        setRecetaActual([]);
-      }
-    }
-  }, [isOpen, itemData.receta]);
+    let cancelled = false;
+    setLoadingReceta(true);
+    setRecetaLoadError(null);
 
-  // Sincronizar el estado de extras cuando se abre su modal
+    Promise.all([
+      fetchJson<ItemApi[]>("/api/inventarios/items"),
+      fetchJson<RecetaRowApi[]>(`/api/inventarios/recetas?itemVendibleId=${itemData.id}`),
+    ])
+      .then(([items, rows]) => {
+        if (cancelled) return;
+        const mapped: Insumo[] = rows.map((r) => ({
+          id: generateId(),
+          itemId: String(r.itemInsumoId),
+          nombre: r.nombre,
+          unidad_code: r.unidad_code,
+          cantidad: Number(r.cantidad),
+        }));
+        setItemsOptions(withMissingOptions(toInsumoOptions(items), mapped));
+        setRecetaActual(mapped);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("Error cargando la receta del producto:", error);
+        setRecetaLoadError("No se pudo cargar la receta actual");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingReceta(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, itemData.id]);
+
+  // Cargar los extras existentes al abrir su modal (mismo patrón que la receta)
   useEffect(() => {
     if (!isExtrasOpen) return;
 
-    const fetchItems = async () => {
-      try {
-        const res = await fetch('/api/inventarios/items');
-        if (res.ok) {
-          const data = await res.json();
-          const options = data
-            .filter((i: any) => i.tipo !== "vendible")
-            .map((i: any) => ({
-              value: String(i.id),
-              label: `${i.nombre} (${i.unidad_code || 'u'})`
-            }));
-          setExtrasOptions(options);
-        }
-      } catch (error) {
-        console.error("Error cargando lista de items:", error);
-      }
-    };
+    let cancelled = false;
+    setLoadingExtras(true);
+    setExtrasLoadError(null);
 
-    const fetchExtrasActuales = async () => {
-      setLoadingExtras(true);
-      try {
-        const res = await fetch(`/api/inventarios/modificadores?itemVendibleId=${itemData.id}`);
-        if (res.ok) {
-          const data = await res.json();
-          setExtrasActual(
-            data.map((m: any) => ({
-              id: generateId(),
-              itemId: String(m.itemInsumoId),
-              nombre: m.nombre,
-              cantidad: Number(m.delta_cantidad),
-              precio: Number(m.precio),
-            }))
-          );
-        }
-      } catch (error) {
+    Promise.all([
+      fetchJson<ItemApi[]>("/api/inventarios/items"),
+      fetchJson<ExtraRowApi[]>(`/api/inventarios/modificadores?itemVendibleId=${itemData.id}`),
+    ])
+      .then(([items, rows]) => {
+        if (cancelled) return;
+        const mapped: ExtraRow[] = rows.map((m) => ({
+          id: generateId(),
+          itemId: String(m.itemInsumoId),
+          nombre: m.nombre,
+          unidad_code: m.unidad_code,
+          cantidad: Number(m.delta_cantidad),
+          precio: Number(m.precio),
+        }));
+        setExtrasOptions(withMissingOptions(toInsumoOptions(items), mapped));
+        setExtrasActual(mapped);
+      })
+      .catch((error) => {
+        if (cancelled) return;
         console.error("Error cargando extras del producto:", error);
-      } finally {
-        setLoadingExtras(false);
-      }
-    };
+        setExtrasLoadError("No se pudieron cargar los extras actuales");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingExtras(false);
+      });
 
-    fetchItems();
-    fetchExtrasActuales();
+    return () => {
+      cancelled = true;
+    };
   }, [isExtrasOpen, itemData.id]);
 
   // ---- Handlers de la Receta Dinámica ----
@@ -409,7 +421,12 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
                 <h5 className="text-lg font-medium text-gray-800 dark:text-white/90">
                   Lista de Insumos
                 </h5>
-                <Button size="sm" variant="primary" onClick={handleAddInsumo}>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={handleAddInsumo}
+                  disabled={loadingReceta || !!recetaLoadError}
+                >
                   + Añadir Insumo
                 </Button>
               </div>
@@ -420,7 +437,11 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
 
               {/* --- LISTA DINÁMICA DE INSUMOS --- */}
               <div className="custom-scrollbar flex-1 overflow-y-auto px-2 pb-3 space-y-3">
-                {recetaActual.length === 0 ? (
+                {loadingReceta ? (
+                    <div className="py-10 text-center text-gray-400">Cargando receta...</div>
+                ) : recetaLoadError ? (
+                    <div className="py-10 text-center text-red-500">{recetaLoadError}</div>
+                ) : recetaActual.length === 0 ? (
                     <div className="py-10 text-center border-2 border-dashed border-gray-200 rounded-lg dark:border-gray-800">
                         <p className="text-gray-400">No hay insumos agregados aún.</p>
                     </div>
@@ -434,6 +455,7 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
                                 <Select
                                     options={itemsOptions}
                                     placeholder={"Seleccionar Item"}
+                                    value={insumo.itemId}
                                     onChange={(val) => handleUpdateInsumo(insumo.id, "itemId", val)}
                                     className="dark:bg-gray-900"
                                 />
@@ -477,7 +499,7 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
               >
                 Cancelar
               </Button>
-              <Button size="sm"  disabled={isSaving} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button size="sm"  disabled={isSaving || loadingReceta || !!recetaLoadError} className="bg-blue-600 hover:bg-blue-700 text-white">
                 {isSaving ? "Guardando..." : "Guardar Cambios"}
               </Button>
             </div>
@@ -502,7 +524,7 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
             <h5 className="text-lg font-medium text-gray-800 dark:text-white/90">
               Lista de Extras
             </h5>
-            <Button size="sm" variant="primary" onClick={handleAddExtra} disabled={loadingExtras}>
+            <Button size="sm" variant="primary" onClick={handleAddExtra} disabled={loadingExtras || !!extrasLoadError}>
               + Añadir Extra
             </Button>
           </div>
@@ -513,6 +535,8 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
             <div className="custom-scrollbar flex-1 overflow-y-auto px-2 pb-3 space-y-3">
               {loadingExtras ? (
                 <div className="py-10 text-center text-gray-400">Cargando extras...</div>
+              ) : extrasLoadError ? (
+                <div className="py-10 text-center text-red-500">{extrasLoadError}</div>
               ) : extrasActual.length === 0 ? (
                 <div className="py-10 text-center border-2 border-dashed border-gray-200 rounded-lg dark:border-gray-800">
                   <p className="text-gray-400">No hay extras configurados aún.</p>
@@ -527,7 +551,7 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
                       <Select
                         options={extrasOptions}
                         placeholder={"Seleccionar Item"}
-                        defaultValue={extra.itemId}
+                        value={extra.itemId}
                         onChange={(val) => handleUpdateExtra(extra.id, "itemId", val)}
                         className="dark:bg-gray-900"
                       />
@@ -539,7 +563,7 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
                       <input
                         type="number"
                         min="0"
-                        step="0.01"
+                        step="any"
                         className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                         placeholder="0.00"
                         value={extra.cantidad}
@@ -553,7 +577,7 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
                       <input
                         type="number"
                         min="0"
-                        step="any"
+                        step="0.01"
                         className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                         placeholder="0.00"
                         value={extra.precio}
@@ -585,7 +609,10 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
               >
                 Cancelar
               </Button>
-              <Button size="sm" disabled={isSavingExtras} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button
+                size="sm"
+                disabled={isSavingExtras || loadingExtras || !!extrasLoadError}
+                className="bg-blue-600 hover:bg-blue-700 text-white">
                 {isSavingExtras ? "Guardando..." : "Guardar Cambios"}
               </Button>
             </div>

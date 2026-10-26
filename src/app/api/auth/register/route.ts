@@ -37,6 +37,14 @@ export async function POST(req: Request) {
         telefono,
         contrasena: hashedPassword,
       },
+      select: {
+        id: true,
+        nombre: true,
+        direccion: true,
+        correo: true,
+        telefono: true,
+        creado: true,
+      },
     });
 
     const secret = process.env.JWT_SECRET;
