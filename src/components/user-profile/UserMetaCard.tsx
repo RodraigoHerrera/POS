@@ -4,14 +4,18 @@ import React, { useState, useCallback } from "react";
 import { useModal } from "../../hooks/useModal";
 import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
+import Badge from "../ui/badge/Badge";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
 import Image from "next/image";
 import { validarNuevaContrasena } from "@/lib/contrasenaEmpleado";
+import { esEmpleadoActivo, esFotoPorDefecto, inicialesEmpleado } from "@/lib/empleadosKiosco";
+import { ROLES_EMPLEADO, estadoNormalizado } from "@/lib/usuariosAdmin";
 
 interface User {
   id: number;
   nombre: string;
+  usuario?: string;
   fotoUrl: string;
   rol: string;
   estado: string;
@@ -22,10 +26,59 @@ interface User {
 
 type UpdatePayload = Partial<User> & { id: number; contrasena?: string };
 
+// Mismo aspecto que el componente Select del sistema, pero nativo para que
+// el valor viaje en el FormData del formulario
+const SELECT_CLASSES =
+  "h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800";
+
+const ChevronIcon = () => (
+  <svg
+    className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 stroke-current text-gray-500 dark:text-gray-400"
+    width="20"
+    height="20"
+    viewBox="0 0 20 20"
+    fill="none"
+    aria-hidden="true"
+  >
+    <path d="M4.79175 7.396L10.0001 12.6043L15.2084 7.396" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const MailIcon = () => (
+  <svg className="shrink-0 stroke-current" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M4 6h16v12H4z" strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="m4 7 8 6 8-6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const PhoneIcon = () => (
+  <svg className="shrink-0 stroke-current" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <rect x="7" y="3" width="10" height="18" rx="2" strokeWidth="1.5" />
+    <path d="M11 17.5h2" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
+const EditIcon = () => (
+  <svg className="fill-current" width="16" height="16" viewBox="0 0 18 18" aria-hidden="true">
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M15.0911 2.78206C14.2125 1.90338 12.7878 1.90338 11.9092 2.78206L4.57524 10.116C4.26682 10.4244 4.0547 10.8158 3.96468 11.2426L3.31231 14.3352C3.25997 14.5833 3.33653 14.841 3.51583 15.0203C3.69512 15.1996 3.95286 15.2761 4.20096 15.2238L7.29355 14.5714C7.72031 14.4814 8.11172 14.2693 8.42013 13.9609L15.7541 6.62695C16.6327 5.74827 16.6327 4.32365 15.7541 3.44497L15.0911 2.78206ZM12.9698 3.84272C13.2627 3.54982 13.7376 3.54982 14.0305 3.84272L14.6934 4.50563C14.9863 4.79852 14.9863 5.2734 14.6934 5.56629L14.044 6.21573L12.3204 4.49215L12.9698 3.84272ZM11.2597 5.55281L5.6359 11.1766C5.53309 11.2794 5.46238 11.4099 5.43238 11.5522L5.01758 13.5185L6.98394 13.1037C7.1262 13.0737 7.25666 13.003 7.35947 12.9002L12.9833 7.27639L11.2597 5.55281Z"
+    />
+  </svg>
+);
+
 export default function UserMetaCard({ userData, onSaved }: { userData: User; onSaved?: () => void }) {
   const { isOpen, openModal, closeModal } = useModal();
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
+
+  const activo = esEmpleadoActivo(userData.estado);
+  const esAdmin = userData.rol === "Administrador";
+  // Si el rol guardado no está en la lista, se conserva como opción para no perderlo
+  const roles: string[] = ROLES_EMPLEADO.includes(userData.rol as (typeof ROLES_EMPLEADO)[number])
+    ? [...ROLES_EMPLEADO]
+    : [...ROLES_EMPLEADO, userData.rol];
 
   // ---- API helpers ----
   const updateUser = useCallback(async (payload: UpdatePayload) => {
@@ -48,6 +101,11 @@ export default function UserMetaCard({ userData, onSaved }: { userData: User; on
       estado: (fd.get("estado") as string) ?? "",
       rol: (fd.get("rol") as string) ?? "",
     };
+  };
+
+  const handleClose = () => {
+    setErrorMsg("");
+    closeModal();
   };
 
   // ---- Handlers ----
@@ -85,7 +143,6 @@ export default function UserMetaCard({ userData, onSaved }: { userData: User; on
 
       closeModal();
       onSaved?.();
-      // Aquí podrías revalidar datos (SWR/React Query) si lo usas.
     } catch (err) {
       console.error("Fallo de red o servidor:", err);
       setErrorMsg("Ocurrió un problema de red o servidor.");
@@ -97,185 +154,162 @@ export default function UserMetaCard({ userData, onSaved }: { userData: User; on
   // ---- UI ----
   return (
     <>
-      <div className="rounded-2xl border border-gray-200 p-5 dark:border-gray-800 lg:p-6">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex w-full flex-col items-center gap-6 xl:flex-row">
-            <div className="h-20 w-20 overflow-hidden rounded-full border border-gray-200 dark:border-gray-800">
-              <Image width={80} height={80} src={userData.fotoUrl} alt="user" />
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 transition hover:border-brand-300 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-brand-800 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-4">
+            <div
+              className={`flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-brand-50 text-lg font-semibold text-brand-500 dark:border-gray-800 dark:bg-brand-500/15 dark:text-brand-400 ${
+                activo ? "" : "opacity-50 grayscale"
+              }`}
+            >
+              {esFotoPorDefecto(userData.fotoUrl) ? (
+                inicialesEmpleado(userData.usuario || userData.nombre)
+              ) : (
+                <Image width={56} height={56} src={userData.fotoUrl} alt={userData.nombre} />
+              )}
             </div>
 
-            <div className="order-3 xl:order-2">
-              <h4 className="mb-2 text-center text-lg font-semibold text-gray-800 dark:text-white/90 xl:text-left">
-                {userData.nombre} - {userData.estado}
+            <div className="min-w-0">
+              <h4 className="truncate text-base font-semibold text-gray-800 dark:text-white/90">
+                {userData.nombre}
               </h4>
-              <div className="flex flex-col items-center gap-1 text-center xl:flex-row xl:gap-3 xl:text-left">
-                <p className="text-sm text-gray-500 dark:text-gray-400">{userData.celular}</p>
-                <div className="hidden h-3.5 w-px bg-gray-300 dark:bg-gray-700 xl:block" />
-                <p className="text-sm text-gray-500 dark:text-gray-400">{userData.rol}</p>
+              {userData.usuario && (
+                <p className="truncate text-sm text-gray-500 dark:text-gray-400">@{userData.usuario}</p>
+              )}
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Badge size="sm" color={esAdmin ? "primary" : "light"}>
+                  {userData.rol}
+                </Badge>
+                <Badge size="sm" color={activo ? "success" : "error"}>
+                  {activo ? "Activo" : "Inactivo"}
+                </Badge>
               </div>
             </div>
           </div>
 
-          <button
+          <div className="flex flex-col gap-1.5 border-t border-gray-100 pt-3 text-sm text-gray-500 dark:border-gray-800 dark:text-gray-400 sm:w-64 sm:border-t-0 sm:pt-0 lg:w-72">
+            <span className="flex min-w-0 items-center gap-2">
+              <MailIcon />
+              <span className="truncate">{userData.correo || "Sin correo"}</span>
+            </span>
+            <span className="flex items-center gap-2">
+              <PhoneIcon />
+              <span>{userData.celular || "Sin celular"}</span>
+            </span>
+          </div>
+
+          <Button
+            size="sm"
+            variant="outline"
             onClick={openModal}
-            className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/3 dark:hover:text-gray-200 lg:inline-flex lg:w-auto"
+            startIcon={<EditIcon />}
+            className="w-full sm:w-auto"
+            aria-label={`Editar a ${userData.nombre}`}
           >
-            <svg
-              className="fill-current"
-              width="18"
-              height="18"
-              viewBox="0 0 18 18"
-              aria-hidden="true"
-            >
-              <path
-                fillRule="evenodd"
-                clipRule="evenodd"
-                d="M15.0911 2.78206C14.2125 1.90338 12.7878 1.90338 11.9092 2.78206L4.57524 10.116C4.26682 10.4244 4.0547 10.8158 3.96468 11.2426L3.31231 14.3352C3.25997 14.5833 3.33653 14.841 3.51583 15.0203C3.69512 15.1996 3.95286 15.2761 4.20096 15.2238L7.29355 14.5714C7.72031 14.4814 8.11172 14.2693 8.42013 13.9609L15.7541 6.62695C16.6327 5.74827 16.6327 4.32365 15.7541 3.44497L15.0911 2.78206ZM12.9698 3.84272C13.2627 3.54982 13.7376 3.54982 14.0305 3.84272L14.6934 4.50563C14.9863 4.79852 14.9863 5.2734 14.6934 5.56629L14.044 6.21573L12.3204 4.49215L12.9698 3.84272ZM11.2597 5.55281L5.6359 11.1766C5.53309 11.2794 5.46238 11.4099 5.43238 11.5522L5.01758 13.5185L6.98394 13.1037C7.1262 13.0737 7.25666 13.003 7.35947 12.9002L12.9833 7.27639L11.2597 5.55281Z"
-              />
-            </svg>
             Editar
-          </button>
+          </Button>
         </div>
       </div>
 
-      <Modal isOpen={isOpen} onClose={closeModal} className="m-4 max-w-[700px]">
+      <Modal isOpen={isOpen} onClose={handleClose} className="m-4 max-w-[700px]">
         <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
           <div className="px-2 pr-14">
             <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-              Editar Información Personal
+              Editar Usuario
             </h4>
             <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-              Actualice sus datos para mantener su perfil actualizado.
+              Actualice los datos, el rol o la contraseña de {userData.nombre}.
             </p>
           </div>
 
           {errorMsg && (
-            <div className="mx-2 mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-200">
+            <div
+              role="alert"
+              className="mx-2 mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-200"
+            >
               {errorMsg}
             </div>
           )}
 
           <form className="flex flex-col" onSubmit={handleSubmit}>
-            <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">
-              <div className="mt-7">
-                <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                  Información Personal
-                </h5>
+            <div className="custom-scrollbar max-h-[450px] overflow-y-auto px-2 pb-3">
+              <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
+                Información Personal
+              </h5>
 
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                  <div className="col-span-2">
-                    <Label className="text-black" htmlFor="nombre">
-                      Nombre
-                    </Label>
-                    <Input
-                      id="nombre"
-                      name="nombre"
-                      type="text"
-                      className="text-gray-dark"
-                      defaultValue={userData.nombre}
-                    />
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
+                <div className="col-span-2">
+                  <Label htmlFor="nombre">Nombre</Label>
+                  <Input id="nombre" name="nombre" type="text" defaultValue={userData.nombre} />
+                </div>
+
+                <div className="col-span-2 lg:col-span-1">
+                  <Label htmlFor="correo">Correo Electrónico</Label>
+                  <Input id="correo" name="correo" type="text" defaultValue={userData.correo} />
+                </div>
+
+                <div className="col-span-2 lg:col-span-1">
+                  <Label htmlFor="celular">Celular</Label>
+                  <Input id="celular" name="celular" type="text" defaultValue={userData.celular} />
+                </div>
+              </div>
+
+              <h5 className="mb-5 mt-7 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
+                Acceso
+              </h5>
+
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
+                <div className="col-span-2 lg:col-span-1">
+                  <Label htmlFor="rol">Rol</Label>
+                  <div className="relative">
+                    <select id="rol" name="rol" className={SELECT_CLASSES} defaultValue={userData.rol}>
+                      {roles.map((rol) => (
+                        <option key={rol} value={rol} className="dark:bg-gray-900">
+                          {rol}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronIcon />
                   </div>
+                </div>
 
-                  <div className="col-span-2">
-                    <Label className="text-black" htmlFor="correo">
-                      Correo Electrónico
-                    </Label>
-                    <Input
-                      id="correo"
-                      name="correo"
-                      type="text"
-                      className="text-gray-dark"
-                      defaultValue={userData.correo}
-                    />
-                  </div>
-
-                  <div className="col-span-2">
-                    <Label className="text-black" htmlFor="celular">
-                      Celular
-                    </Label>
-                    <Input
-                      id="celular"
-                      name="celular"
-                      type="text"
-                      className="text-gray-dark"
-                      defaultValue={userData.celular}
-                    />
-                  </div>
-
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label className="text-black" htmlFor="estado">
-                      Estado
-                    </Label>
-                    <Input
+                <div className="col-span-2 lg:col-span-1">
+                  <Label htmlFor="estado">Estado</Label>
+                  <div className="relative">
+                    <select
                       id="estado"
                       name="estado"
-                      type="text"
-                      className="text-gray-dark"
-                      defaultValue={userData.estado}
-                    />
-                  </div>
-
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label className="text-black" htmlFor="rol">
-                      Rol
-                    </Label>
-                    <Input
-                      id="rol"
-                      name="rol"
-                      type="text"
-                      className="text-gray-dark"
-                      defaultValue={userData.rol}
-                    />
+                      className={SELECT_CLASSES}
+                      defaultValue={estadoNormalizado(userData.estado)}
+                    >
+                      <option value="Activo" className="dark:bg-gray-900">Activo</option>
+                      <option value="Inactivo" className="dark:bg-gray-900">Inactivo</option>
+                    </select>
+                    <ChevronIcon />
                   </div>
                 </div>
 
-                <h5 className="mb-2 mt-7 text-lg font-medium text-gray-800 dark:text-white/90">
-                  Cambiar Contraseña
-                </h5>
-                <p className="mb-5 text-sm text-gray-500 dark:text-gray-400">
-                  Déjelo en blanco para mantener la contraseña actual.
+                <div className="col-span-2 lg:col-span-1">
+                  <Label htmlFor="nuevaContrasena">Nueva Contraseña</Label>
+                  <Input id="nuevaContrasena" name="nuevaContrasena" type="password" placeholder="********" />
+                </div>
+
+                <div className="col-span-2 lg:col-span-1">
+                  <Label htmlFor="confirmarContrasena">Confirmar Contraseña</Label>
+                  <Input id="confirmarContrasena" name="confirmarContrasena" type="password" placeholder="********" />
+                </div>
+
+                <p className="col-span-2 -mt-2 text-theme-xs text-gray-500 dark:text-gray-400">
+                  Deje la contraseña en blanco para mantener la actual. Un usuario inactivo no puede ingresar con su PIN.
                 </p>
-
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label className="text-black" htmlFor="nuevaContrasena">
-                      Nueva Contraseña
-                    </Label>
-                    <Input
-                      id="nuevaContrasena"
-                      name="nuevaContrasena"
-                      type="password"
-                      className="text-gray-dark"
-                      placeholder="********"
-                    />
-                  </div>
-
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label className="text-black" htmlFor="confirmarContrasena">
-                      Confirmar Contraseña
-                    </Label>
-                    <Input
-                      id="confirmarContrasena"
-                      name="confirmarContrasena"
-                      type="password"
-                      className="text-gray-dark"
-                      placeholder="********"
-                    />
-                  </div>
-                </div>
               </div>
             </div>
 
             <div className="mt-6 flex items-center gap-3 px-2 lg:justify-end">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={closeModal}
-                disabled={isSaving}
-              >
+              <Button type="button" size="sm" variant="outline" onClick={handleClose} disabled={isSaving}>
                 Cerrar
               </Button>
-              <Button  size="sm" disabled={isSaving}>
+              <Button type="submit" size="sm" disabled={isSaving}>
                 {isSaving ? "Guardando..." : "Guardar cambios"}
               </Button>
             </div>
