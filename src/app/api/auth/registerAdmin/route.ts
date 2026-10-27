@@ -3,13 +3,13 @@ import { prisma } from "@/lib/db";
 import bcrypt from "bcrypt";
 import { serializeBigInt } from "@/lib/serialize";
 import { validarNuevaContrasena } from "@/lib/contrasenaEmpleado";
-import { esRolEmpleado } from "@/lib/usuariosAdmin";
+import { decidirAltaEmpleado } from "@/lib/usuariosAdmin";
 import { obtenerSesionSucursal, requireEmpleado, esRespuestaError } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    let { nombre, correo, celular, contraseña, usuario, rol } = body;
+    const { nombre, correo, celular, contraseña, usuario, rol } = body;
 
     if (!correo || !/^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(correo)) {
       return NextResponse.json(
@@ -37,65 +37,65 @@ export async function POST(req: Request) {
     //     así que se exige una sesión de empleado con rol Administrador —
     //     de lo contrario, cualquiera con solo tokenSucursal podría crearse
     //     un admin nuevo o agregar empleados sin permiso.
-    const totalEmpleados = await prisma.empleados.count({
-      where: { sucursal_id: BigInt(sucursalIdStr) },
-    });
+    const sesionEmpleado = await requireEmpleado(["Administrador"]);
+    const esAdministrador = !esRespuestaError(sesionEmpleado);
 
-    if (totalEmpleados === 0) {
-      rol = "Administrador";
-    } else {
-      const sesionEmpleado = await requireEmpleado(["Administrador"]);
-      if (esRespuestaError(sesionEmpleado)) {
-        return NextResponse.json(
-          { message: "Solo un administrador puede registrar nuevos empleados" },
-          { status: 403 }
-        );
-      }
-      if (!esRolEmpleado(rol)) {
-        return NextResponse.json({ message: "Rol inválido" }, { status: 400 });
-      }
-    }
-
-    // Verificar si ya existe un administrador con el correo proporcionado
-    const existingAdmin = await prisma.empleados.findUnique({
-      where: { correo },
-    });
-
-    if (existingAdmin) {
-      return NextResponse.json(
-        { message: "Ya existe un administrador con ese correo" },
-        { status: 409 }
-      );
-    }
-
-    // Hashear la contraseña
+    // El hash va fuera de la transacción: bcrypt es lento y retendría el bloqueo
     const hashedPassword = await bcrypt.hash(contraseña, 10);
+    const sucursalId = BigInt(sucursalIdStr);
 
-    // Crear el nuevo administrador en la base de datos
-    const nuevoAdmin = await prisma.empleados.create({
-      data: {
-        sucursal_id: BigInt(sucursalIdStr),
-        rol,
-        nombre,
-        correo,
-        celular,
-        contrasena: hashedPassword,
-        creado: new Date(),
-        estado: "Activo", // Ajusta el valor según tu lógica de negocio
-        usuario,
-      },
-      select: {
-        id: true,
-        sucursal_id: true,
-        rol: true,
-        usuario: true,
-        correo: true,
-        nombre: true,
-        celular: true,
-        creado: true,
-        estado: true,
-      },
+    // Contar y crear tienen que ser atómicos: con dos peticiones simultáneas
+    // sobre una sucursal vacía, ambas verían 0 empleados y crearían un admin
+    // cada una sin sesión. FOR UPDATE sobre la fila de la sucursal las serializa.
+    const resultado = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM sucursales WHERE id = ${sucursalId} FOR UPDATE`;
+
+      const totalEmpleados = await tx.empleados.count({ where: { sucursal_id: sucursalId } });
+      const decision = decidirAltaEmpleado({ totalEmpleados, esAdministrador, rol });
+      if (decision.tipo === "prohibido") {
+        return { nuevoAdmin: null, error: { message: "Solo un administrador puede registrar nuevos empleados", status: 403 } };
+      }
+      if (decision.tipo === "rol_invalido") {
+        return { nuevoAdmin: null, error: { message: "Rol inválido", status: 400 } };
+      }
+
+      // Verificar si ya existe un empleado con el correo proporcionado
+      const existingAdmin = await tx.empleados.findUnique({ where: { correo } });
+      if (existingAdmin) {
+        return { nuevoAdmin: null, error: { message: "Ya existe un administrador con ese correo", status: 409 } };
+      }
+
+      const nuevoAdmin = await tx.empleados.create({
+        data: {
+          sucursal_id: sucursalId,
+          rol: decision.rol,
+          nombre,
+          correo,
+          celular,
+          contrasena: hashedPassword,
+          creado: new Date(),
+          estado: "Activo", // Ajusta el valor según tu lógica de negocio
+          usuario,
+        },
+        select: {
+          id: true,
+          sucursal_id: true,
+          rol: true,
+          usuario: true,
+          correo: true,
+          nombre: true,
+          celular: true,
+          creado: true,
+          estado: true,
+        },
+      });
+      return { nuevoAdmin, error: null };
     });
+
+    if (resultado.error) {
+      return NextResponse.json({ message: resultado.error.message }, { status: resultado.error.status });
+    }
+    const { nuevoAdmin } = resultado;
 
     return NextResponse.json(
       {

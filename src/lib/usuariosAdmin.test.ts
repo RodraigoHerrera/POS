@@ -8,6 +8,7 @@ import {
   estadoEmpleadoValido,
   esCorreoGmail,
   dejaSinAdministradores,
+  decidirAltaEmpleado,
 } from "./usuariosAdmin";
 
 describe("resumenUsuarios", () => {
@@ -100,5 +101,33 @@ describe("dejaSinAdministradores", () => {
   it("ignores targets that are not active administrators", () => {
     assert.equal(dejaSinAdministradores({ rol: "Cajero", estado: "Activo" }, { estado: "Inactivo" }, 0), false);
     assert.equal(dejaSinAdministradores({ rol: "Administrador", estado: "Inactivo" }, { rol: "Cajero" }, 0), false);
+  });
+});
+
+describe("decidirAltaEmpleado", () => {
+  it("forces Administrador on the first employee of a branch, ignoring the requested role", () => {
+    assert.deepEqual(decidirAltaEmpleado({ totalEmpleados: 0, esAdministrador: false, rol: "Cajero" }), {
+      tipo: "ok",
+      rol: "Administrador",
+    });
+  });
+
+  it("rejects creating employees on a populated branch without an administrator session", () => {
+    assert.deepEqual(decidirAltaEmpleado({ totalEmpleados: 3, esAdministrador: false, rol: "Cajero" }), {
+      tipo: "prohibido",
+    });
+  });
+
+  it("accepts a valid role from an administrator on a populated branch", () => {
+    assert.deepEqual(decidirAltaEmpleado({ totalEmpleados: 3, esAdministrador: true, rol: "Cajero" }), {
+      tipo: "ok",
+      rol: "Cajero",
+    });
+  });
+
+  it("rejects an unknown role from an administrator", () => {
+    assert.deepEqual(decidirAltaEmpleado({ totalEmpleados: 3, esAdministrador: true, rol: "Dios" }), {
+      tipo: "rol_invalido",
+    });
   });
 });

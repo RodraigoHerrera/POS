@@ -35,6 +35,24 @@ export function dejaSinAdministradores(
   return !seguiraAdminActivo && otrosAdministradoresActivos === 0;
 }
 
+export type DecisionAlta =
+  | { tipo: "ok"; rol: (typeof ROLES_EMPLEADO)[number] }
+  | { tipo: "prohibido" }
+  | { tipo: "rol_invalido" };
+
+// La primera alta de una sucursal (bootstrap) es siempre Administrador; después
+// solo un administrador puede dar de alta, y con un rol de la lista.
+export function decidirAltaEmpleado(entrada: {
+  totalEmpleados: number;
+  esAdministrador: boolean;
+  rol: unknown;
+}): DecisionAlta {
+  if (entrada.totalEmpleados === 0) return { tipo: "ok", rol: "Administrador" };
+  if (!entrada.esAdministrador) return { tipo: "prohibido" };
+  if (!esRolEmpleado(entrada.rol)) return { tipo: "rol_invalido" };
+  return { tipo: "ok", rol: entrada.rol };
+}
+
 export type ResumenUsuarios = {
   total: number;
   activos: number;
