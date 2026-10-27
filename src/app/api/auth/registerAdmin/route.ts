@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcrypt";
 import { serializeBigInt } from "@/lib/serialize";
-import { obtenerSesionSucursal, obtenerSesionEmpleado } from "@/lib/auth";
+import { obtenerSesionSucursal, requireEmpleado, esRespuestaError } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
@@ -37,8 +37,8 @@ export async function POST(req: Request) {
     if (totalEmpleados === 0) {
       rol = "Administrador";
     } else {
-      const sesionEmpleado = await obtenerSesionEmpleado();
-      if (!sesionEmpleado || sesionEmpleado.rol !== "Administrador") {
+      const sesionEmpleado = await requireEmpleado(["Administrador"]);
+      if (esRespuestaError(sesionEmpleado)) {
         return NextResponse.json(
           { message: "Solo un administrador puede registrar nuevos empleados" },
           { status: 403 }
