@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcrypt";
 import { serializeBigInt } from "@/lib/serialize";
+import { validarNuevaContrasena } from "@/lib/contrasenaEmpleado";
+import { esRolEmpleado } from "@/lib/usuariosAdmin";
 import { obtenerSesionSucursal, requireEmpleado, esRespuestaError } from "@/lib/auth";
 
 export async function POST(req: Request) {
@@ -14,6 +16,11 @@ export async function POST(req: Request) {
         { message: "El correo debe terminar en @gmail.com" },
         { status: 400 }
       );
+    }
+
+    const errorContrasena = validarNuevaContrasena(contraseña);
+    if (errorContrasena) {
+      return NextResponse.json({ message: errorContrasena }, { status: 400 });
     }
 
     const sesionSucursal = await obtenerSesionSucursal();
@@ -43,6 +50,9 @@ export async function POST(req: Request) {
           { message: "Solo un administrador puede registrar nuevos empleados" },
           { status: 403 }
         );
+      }
+      if (!esRolEmpleado(rol)) {
+        return NextResponse.json({ message: "Rol inválido" }, { status: 400 });
       }
     }
 
