@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { describe, it } from "node:test";
+import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import jwt from "jsonwebtoken";
 import { prisma } from "./db";
@@ -14,6 +14,23 @@ import {
 } from "./auth";
 
 const TEST_SECRET = process.env.JWT_SECRET || "142191_";
+
+// requireEmpleado revalida contra la fila del empleado; los ids de estos tests
+// son ficticios, así que se simula la base (sucursal 1, activos, rol por id).
+const ROL_EN_BD: Record<string, string> = { "1": "Administrador", "42": "Cajero", "101": "Cajero", "202": "Mesero" };
+let estadoEnBd = "activo";
+const findUniqueOriginal = prisma.empleados.findUnique;
+
+beforeEach(() => {
+  estadoEnBd = "activo";
+  (prisma.empleados.findUnique as any) = async (args: any) => {
+    const rol = ROL_EN_BD[String(args.where.id)];
+    return rol ? { sucursal_id: BigInt(1), rol, estado: estadoEnBd } : null;
+  };
+});
+afterEach(() => {
+  prisma.empleados.findUnique = findUniqueOriginal;
+});
 
 function createCookieReader(cookiesMap: Record<string, string>): TokenCookieReader {
   return {
@@ -515,6 +532,41 @@ describe("SEC-07: Caja RBAC Standardization Tests", () => {
     assert.equal(res.status, 403);
     const body = await res.json();
     assert.match(body.message, /requiere rol: Cajero o Administrador/);
+  });
+
+  it("rejects a still-valid token when the employee was deactivated afterwards", async () => {
+    const tokenSucursal = jwt.sign({ sucursalId: "1" }, TEST_SECRET);
+    const tokenEmpleado = jwt.sign({ empleadoId: "42", rol: "Cajero", sucursalId: "1" }, TEST_SECRET);
+    const reader = createCookieReader({ tokenSucursal, tokenEmpleado });
+
+    estadoEnBd = "Inactivo";
+    const res = await requireEmpleado(["Cajero", "Administrador"], reader);
+
+    assert.ok(esRespuestaError(res));
+    assert.equal(res.status, 401);
+  });
+
+  it("enforces the current role from the database over a stale Administrador token", async () => {
+    const tokenSucursal = jwt.sign({ sucursalId: "1" }, TEST_SECRET);
+    // Token emitido cuando 42 era Administrador; en la base ya es Cajero
+    const tokenEmpleado = jwt.sign({ empleadoId: "42", rol: "Administrador", sucursalId: "1" }, TEST_SECRET);
+    const reader = createCookieReader({ tokenSucursal, tokenEmpleado });
+
+    const res = await requireEmpleado(["Administrador"], reader);
+
+    assert.ok(esRespuestaError(res));
+    assert.equal(res.status, 403);
+  });
+
+  it("rejects a valid token whose employee no longer exists", async () => {
+    const tokenSucursal = jwt.sign({ sucursalId: "1" }, TEST_SECRET);
+    const tokenEmpleado = jwt.sign({ empleadoId: "999", rol: "Administrador", sucursalId: "1" }, TEST_SECRET);
+    const reader = createCookieReader({ tokenSucursal, tokenEmpleado });
+
+    const res = await requireEmpleado(["Administrador"], reader);
+
+    assert.ok(esRespuestaError(res));
+    assert.equal(res.status, 401);
   });
 
   it("rejects missing tokens on Caja APIs with 401 Unauthorized", async () => {

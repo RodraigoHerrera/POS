@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { reconciliarSesion } from "@/lib/sesionVigente";
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -76,10 +78,25 @@ export async function requireEmpleado(
   rolesPermitidos?: string[],
   cookieReader?: TokenCookieReader
 ): Promise<SesionEmpleado | NextResponse> {
-  const sesion = await obtenerSesionEmpleado(cookieReader);
+  const sesionToken = await obtenerSesionEmpleado(cookieReader);
+  if (!sesionToken) {
+    return NextResponse.json({ message: "No autorizado" }, { status: 401 });
+  }
+
+  let sesion: SesionEmpleado | null;
+  try {
+    const fila = await prisma.empleados.findUnique({
+      where: { id: BigInt(sesionToken.empleadoId) },
+      select: { sucursal_id: true, rol: true, estado: true },
+    });
+    sesion = reconciliarSesion(sesionToken, fila);
+  } catch {
+    sesion = null;
+  }
   if (!sesion) {
     return NextResponse.json({ message: "No autorizado" }, { status: 401 });
   }
+
   if (rolesPermitidos && !rolesPermitidos.includes(sesion.rol)) {
     return NextResponse.json(
       { message: `Esta acción requiere rol: ${rolesPermitidos.join(" o ")}` },
