@@ -13,11 +13,14 @@ Fix the two critical findings from the `admin/produccion` audit (2026-10-28).
 - `page.tsx` / `ProductionClient.tsx`: list only `prep` recipes; branch comes from the session (no selector).
 
 ## Constraints
-- Out of scope (other audit findings): rendimiento/merma, retry/timeout, FEFO NULL ordering, error leakage, audit trail.
+- High findings added by user request (T3-T5). Still out of scope: error leakage, audit trail, expired-lot policy.
 
 ## Tasks
 - [x] T1 Auth gate + session-scoped branch (Administrador only; body `sucursalId` ignored)
 - [x] T2 Only `prep` items can be produced (server guard + page filter)
+- [x] T3 Apply recipe `rendimiento` and `merma_pct` (MRP formula; waste >= 100% rejected)
+- [x] T4 FEFO: lots without expiry last (in-memory sort, matches `simularConsumoFEFO`)
+- [x] T5 `runWithRetry` (15s) instead of Serializable; guarded lot decrement; output stock via increment
 
 ## Acceptance criteria
 - Calling the action without a valid Administrador session fails without touching the DB.
@@ -33,7 +36,9 @@ Fix the two critical findings from the `admin/produccion` audit (2026-10-28).
 - `tsc --noEmit`: no errors in touched files.
 - ESLint: `no-explicit-any` errors on `tx: any` / `catch (error: any)`, same pre-existing pattern as `src/lib/mermas.ts`.
 - Not run: manual UI check, Administrador-vs-Cajero 403 path (requires DB).
+- T3-T5 RED: 9 failing; GREEN: 20/20 (`npx tsx --test src/lib/produccion.test.ts`). tsc clean on touched files.
+- Not run: real-DB concurrency (production vs sale on same lot).
 - RDD: off (global) — not started.
 
 ## Next step
-- Remaining audit findings (high: rendimiento/merma, retry/timeout, FEFO NULL ordering).
+- Decide expired-lot policy; then medium findings (error leakage, audit trail).

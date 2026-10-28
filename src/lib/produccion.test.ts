@@ -8,21 +8,39 @@ import {
   esItemProducible,
   ejecutarProduccionTx,
   ejecutarProduccion,
+  calcularCantidadInsumo,
+  ordenarLotesFEFO,
 } from "./produccion";
 
-function crearMockTx(tipoSalida: string) {
+interface OpcionesMockTx {
+  rendimiento?: number;
+  cantidadInsumo?: number;
+  lotesActualizados?: number;
+  inventarioSalida?: { stock: number; costo_promedio: number } | null;
+}
+
+function crearMockTx(tipoSalida: string, opciones: OpcionesMockTx = {}) {
   const escrituras: Array<{ op: string; data: any; where?: any }> = [];
-  const registrar = (op: string) => async (args: any) => {
+  const registrar = (op: string, resultado?: unknown) => async (args: any) => {
     escrituras.push({ op, data: args.data, where: args.where });
-    return { id: BigInt(900), ...args.data };
+    return resultado ?? { id: BigInt(900), ...args.data };
   };
 
+  const salida = opciones.inventarioSalida;
   const tx = {
     receta: {
       findUnique: async () => ({
         id: BigInt(1),
         item_vendible_id: BigInt(50),
-        items: [{ item_insumo_id: BigInt(10), cantidad: new Prisma.Decimal(2) }],
+        rendimiento: new Prisma.Decimal(opciones.rendimiento ?? 1),
+        merma_pct: null,
+        items: [
+          {
+            item_insumo_id: BigInt(10),
+            cantidad: new Prisma.Decimal(opciones.cantidadInsumo ?? 2),
+            merma_pct: null,
+          },
+        ],
       }),
     },
     item: {
@@ -32,14 +50,27 @@ function crearMockTx(tipoSalida: string) {
       findMany: async () => [
         {
           cantidad: new Prisma.Decimal(100),
-          lote: { id: BigInt(7), costo_unit: new Prisma.Decimal(3) },
+          lote: {
+            id: BigInt(7),
+            costo_unit: new Prisma.Decimal(3),
+            fecha_caducidad: null,
+            creado_en: new Date("2026-01-01"),
+          },
         },
       ],
-      update: registrar("stockLoteSucursal.update"),
+      updateMany: registrar("stockLoteSucursal.updateMany", {
+        count: opciones.lotesActualizados ?? 1,
+      }),
       create: registrar("stockLoteSucursal.create"),
     },
     inventarioSucursal: {
-      findUnique: async () => null,
+      findUnique: async () =>
+        salida
+          ? {
+              stock: new Prisma.Decimal(salida.stock),
+              costo_promedio: new Prisma.Decimal(salida.costo_promedio),
+            }
+          : null,
       update: registrar("inventarioSucursal.update"),
       create: registrar("inventarioSucursal.create"),
     },
@@ -89,12 +120,16 @@ describe("produccion: session-scoped auth gate", () => {
     });
 
     const conSucursal = escrituras.filter(
-      (e) => e.data?.sucursal_id !== undefined || e.where?.sucursal_id_lote_id || e.where?.sucursal_id_item_id
+      (e) =>
+        e.data?.sucursal_id !== undefined ||
+        e.where?.sucursal_id !== undefined ||
+        e.where?.sucursal_id_item_id
     );
     assert.ok(conSucursal.length >= 6);
     for (const e of conSucursal) {
       const sucursal =
         e.data?.sucursal_id ??
+        e.where?.sucursal_id ??
         e.where?.sucursal_id_lote_id?.sucursal_id ??
         e.where?.sucursal_id_item_id?.sucursal_id;
       assert.equal(sucursal, BigInt(4), `${e.op} used another branch`);
@@ -121,5 +156,107 @@ describe("produccion: only prep items are producible", () => {
       /preparación/
     );
     assert.equal(escrituras.length, 0);
+  });
+});
+
+describe("produccion: recipe yield and waste (same formula as MRP)", () => {
+  const base = {
+    cantidadProducir: new Prisma.Decimal(10),
+    rendimiento: new Prisma.Decimal(2),
+    mermaPctReceta: null,
+    cantidadInsumo: new Prisma.Decimal(3),
+    mermaPctInsumo: null,
+  };
+
+  it("divides by the recipe yield", () => {
+    assert.ok(calcularCantidadInsumo(base).equals(15));
+  });
+
+  it("applies recipe and ingredient waste", () => {
+    const r = calcularCantidadInsumo({
+      ...base,
+      mermaPctReceta: new Prisma.Decimal(50),
+      mermaPctInsumo: new Prisma.Decimal(25),
+    });
+    assert.ok(r.equals(40));
+  });
+
+  it("treats a non-positive yield as 1", () => {
+    assert.ok(calcularCantidadInsumo({ ...base, rendimiento: new Prisma.Decimal(0) }).equals(30));
+  });
+
+  it("rejects waste of 100% or more", () => {
+    assert.throws(
+      () => calcularCantidadInsumo({ ...base, mermaPctInsumo: new Prisma.Decimal(100) }),
+      /merma/i
+    );
+  });
+
+  it("deducts ingredients using the recipe yield", async () => {
+    const { tx, escrituras } = crearMockTx("prep", { rendimiento: 2, cantidadInsumo: 2 });
+    await ejecutarProduccionTx(tx, {
+      sucursalId: BigInt(1),
+      recetaId: BigInt(1),
+      cantidad: new Prisma.Decimal(5),
+    });
+    const salida = escrituras.find(
+      (e) => e.op === "movimientoInventario.create" && e.data.tipo === "Salida"
+    );
+    assert.ok(salida);
+    assert.ok(new Prisma.Decimal(salida.data.cantidad).equals(5));
+  });
+});
+
+describe("produccion: FEFO ordering", () => {
+  it("puts lots without expiry last, then oldest first", () => {
+    const lote = (id: number, caducidad: string | null, creado: string) => ({
+      lote: {
+        id: BigInt(id),
+        fecha_caducidad: caducidad ? new Date(caducidad) : null,
+        creado_en: new Date(creado),
+      },
+    });
+    const ordenados = ordenarLotesFEFO([
+      lote(1, null, "2026-01-01"),
+      lote(2, "2026-12-01", "2026-02-01"),
+      lote(3, "2026-11-01", "2026-03-01"),
+      lote(4, "2026-11-01", "2026-01-15"),
+    ]);
+    assert.deepEqual(
+      ordenados.map((l) => Number(l.lote.id)),
+      [4, 3, 2, 1]
+    );
+  });
+});
+
+describe("produccion: concurrency-safe writes", () => {
+  it("guards the lot decrement and fails when stock changed concurrently", async () => {
+    const { tx, escrituras } = crearMockTx("prep", { lotesActualizados: 0 });
+    await assert.rejects(
+      ejecutarProduccionTx(tx, {
+        sucursalId: BigInt(1),
+        recetaId: BigInt(1),
+        cantidad: new Prisma.Decimal(5),
+      }),
+      /^Error: Stock insuficiente/
+    );
+    const guarda = escrituras.find((e) => e.op === "stockLoteSucursal.updateMany");
+    assert.ok(guarda?.where.cantidad?.gte, "lot decrement must be conditional");
+  });
+
+  it("increments output stock instead of overwriting it", async () => {
+    const { tx, escrituras } = crearMockTx("prep", {
+      inventarioSalida: { stock: 10, costo_promedio: 2 },
+    });
+    await ejecutarProduccionTx(tx, {
+      sucursalId: BigInt(1),
+      recetaId: BigInt(1),
+      cantidad: new Prisma.Decimal(5),
+    });
+    const updates = escrituras.filter(
+      (e) => e.op === "inventarioSucursal.update" && e.where.sucursal_id_item_id.item_id === BigInt(50)
+    );
+    assert.ok(updates.some((u) => u.data.stock?.increment !== undefined));
+    assert.ok(updates.every((u) => !(u.data.stock instanceof Prisma.Decimal)));
   });
 });

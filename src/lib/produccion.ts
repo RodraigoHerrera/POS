@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
-import { prisma } from '@/lib/db';
 import { calculateFEFODeductions } from '@/lib/fefo-logic';
+import { runWithRetry } from '@/lib/transactionRetry';
 import { requireEmpleado, esRespuestaError, TokenCookieReader } from '@/lib/auth';
 import { ValidationError, parsePositiveBigInt } from '@/lib/validation';
 
@@ -48,6 +48,63 @@ export function esItemProducible(tipo: string): boolean {
   return tipo === 'prep';
 }
 
+type DecimalNullable = Prisma.Decimal | null | undefined;
+
+export interface ParametrosCantidadInsumo {
+  cantidadProducir: Prisma.Decimal;
+  rendimiento: DecimalNullable;
+  mermaPctReceta: DecimalNullable;
+  cantidadInsumo: Prisma.Decimal;
+  mermaPctInsumo: DecimalNullable;
+}
+
+function factorMerma(pct: DecimalNullable, donde: string): Prisma.Decimal {
+  const factor = new Prisma.Decimal(1).sub((pct ?? new Prisma.Decimal(0)).div(100));
+  if (factor.lessThanOrEqualTo(0)) {
+    throw new Error(`La merma ${donde} es ${pct}% (>= 100%); revise la receta`);
+  }
+  return factor;
+}
+
+/**
+ * Cantidad bruta de un insumo para producir `cantidadProducir` unidades.
+ * Misma fórmula que la explosión del MRP (src/lib/mrp/explosion.ts), salvo
+ * que una merma >= 100% se rechaza en lugar de recortarse.
+ */
+export function calcularCantidadInsumo({
+  cantidadProducir,
+  rendimiento,
+  mermaPctReceta,
+  cantidadInsumo,
+  mermaPctInsumo,
+}: ParametrosCantidadInsumo): Prisma.Decimal {
+  const rinde = rendimiento && rendimiento.gt(0) ? rendimiento : new Prisma.Decimal(1);
+  const lotesReceta = cantidadProducir.div(rinde).div(factorMerma(mermaPctReceta, 'de la receta'));
+  return lotesReceta.mul(cantidadInsumo).div(factorMerma(mermaPctInsumo, 'del insumo'));
+}
+
+interface LoteOrdenable {
+  lote: { id: bigint; fecha_caducidad: Date | null; creado_en: Date };
+}
+
+interface LoteStockProduccion extends LoteOrdenable {
+  cantidad: Prisma.Decimal;
+  lote: LoteOrdenable['lote'] & { costo_unit: Prisma.Decimal };
+}
+
+/**
+ * Orden FEFO: primero el que vence antes; los lotes sin caducidad van al
+ * final (MySQL los ordena primero en ASC). Igual que simularConsumoFEFO.
+ */
+export function ordenarLotesFEFO<T extends LoteOrdenable>(lotes: T[]): T[] {
+  const caducidad = (l: T) => l.lote.fecha_caducidad?.getTime() ?? Infinity;
+  return [...lotes].sort((a, b) =>
+    caducidad(a) - caducidad(b) ||
+    a.lote.creado_en.getTime() - b.lote.creado_en.getTime() ||
+    (a.lote.id < b.lote.id ? -1 : a.lote.id > b.lote.id ? 1 : 0)
+  );
+}
+
 /**
  * Executes a production batch, deducting raw materials via FEFO,
  * creating a new lot, and logging inventory movements.
@@ -81,21 +138,22 @@ export async function ejecutarProduccionTx(
 
   // 2. Process FEFO deductions
   for (const ingredient of recipe.items) {
-    const requiredTotal = ingredient.cantidad.mul(batchQty);
+    const requiredTotal = calcularCantidadInsumo({
+      cantidadProducir: batchQty,
+      rendimiento: recipe.rendimiento,
+      mermaPctReceta: recipe.merma_pct,
+      cantidadInsumo: ingredient.cantidad,
+      mermaPctInsumo: ingredient.merma_pct,
+    });
 
-    // Fetch lots ordered by expiration date.
-    const availableLots = await tx.stockLoteSucursal.findMany({
+    const availableLots = ordenarLotesFEFO<LoteStockProduccion>(await tx.stockLoteSucursal.findMany({
       where: {
         sucursal_id: sucursalId,
         lote: { item_id: ingredient.item_insumo_id },
         cantidad: { gt: 0 },
       },
       include: { lote: true },
-      orderBy: [
-        { lote: { fecha_caducidad: 'asc' } },
-        { lote: { creado_en: 'asc' } }
-      ]
-    });
+    }));
 
     const fefoLots = availableLots.map((lotInfo: any) => ({
       id: lotInfo.lote.id,
@@ -121,16 +179,21 @@ export async function ejecutarProduccionTx(
         cant: decDeducted,
       });
 
-      // Update stockLoteSucursal
-      await tx.stockLoteSucursal.update({
+      // Conditional decrement: fails if a concurrent sale consumed the lot
+      // after it was read (same guard as mermas, INV-4).
+      const { count } = await tx.stockLoteSucursal.updateMany({
         where: {
-          sucursal_id_lote_id: {
-            sucursal_id: sucursalId,
-            lote_id: deduction.lotId as bigint,
-          }
+          sucursal_id: sucursalId,
+          lote_id: deduction.lotId as bigint,
+          cantidad: { gte: decDeducted },
         },
         data: { cantidad: { decrement: decDeducted } }
       });
+      if (count === 0) {
+        throw new Error(
+          `Stock insuficiente: el lote ${deduction.lotId} cambió durante la producción, intente de nuevo`
+        );
+      }
 
       // Update inventarioSucursal
       await tx.inventarioSucursal.update({
@@ -187,22 +250,28 @@ export async function ejecutarProduccionTx(
   });
 
   // Update or create inventarioSucursal
-  const invSucursal = await tx.inventarioSucursal.findUnique({
-    where: { sucursal_id_item_id: { sucursal_id: sucursalId, item_id: recipe.item_vendible_id } }
-  });
+  const claveSalida = { sucursal_id_item_id: { sucursal_id: sucursalId, item_id: recipe.item_vendible_id } };
+  const existeSalida = await tx.inventarioSucursal.findUnique({ where: claveSalida });
 
-  if (invSucursal) {
+  if (existeSalida) {
+    // Increment first: the UPDATE locks the row and applies on its latest
+    // version, so a concurrent sale is never overwritten. The re-read then
+    // sees that locked version to recompute the average cost.
+    await tx.inventarioSucursal.update({
+      where: claveSalida,
+      data: { stock: { increment: batchQty } }
+    });
+    const invSucursal = await tx.inventarioSucursal.findUnique({ where: claveSalida });
+
     // Average cost simplified logic
-    const newTotalValue = invSucursal.stock.mul(invSucursal.costo_promedio).add(totalBatchCost);
-    const newTotalStock = invSucursal.stock.add(batchQty);
+    const newTotalStock = invSucursal.stock;
+    const stockPrevio = newTotalStock.sub(batchQty);
+    const newTotalValue = stockPrevio.mul(invSucursal.costo_promedio).add(totalBatchCost);
     const newCostoPromedio = newTotalStock.gt(0) ? newTotalValue.div(newTotalStock) : new Prisma.Decimal(0);
 
     await tx.inventarioSucursal.update({
-      where: { sucursal_id_item_id: { sucursal_id: sucursalId, item_id: recipe.item_vendible_id } },
-      data: {
-        stock: newTotalStock,
-        costo_promedio: newCostoPromedio,
-      }
+      where: claveSalida,
+      data: { costo_promedio: newCostoPromedio }
     });
   } else {
     await tx.inventarioSucursal.create({
@@ -275,9 +344,9 @@ export async function ejecutarProduccion(
   }
 
   try {
-    const newLotObj = await prisma.$transaction(
+    const newLotObj = await runWithRetry(
       (tx) => ejecutarProduccionTx(tx, { ...entrada, sucursalId: BigInt(sesion.sucursalId) }),
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+      { timeoutMs: 15000 }
     );
 
     return {
