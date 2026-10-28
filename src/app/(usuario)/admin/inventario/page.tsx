@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import LineChartOne from "@/components/charts/line/LineChartOne";
 import StockAlertsCard from "@/components/inventario/StockAlertsCard";
 import Button from "@/components/ui/button/Button";
-import { PlusIcon, TrashBinIcon, ListIcon, GroupIcon, BoxIcon } from "@/icons";
+import { PlusIcon, TrashBinIcon, ListIcon, GroupIcon, BoxIcon, FileIcon } from "@/icons";
 import { useModal } from "@/hooks/useModal";
 
 // Modales desacoplados
@@ -18,6 +18,7 @@ import KardexModal from "@/components/inventario/modals/KardexModal";
 import ListaItemsModal from "@/components/inventario/modals/ListaItemsModal";
 import AlertasModal from "@/components/inventario/modals/AlertasModal";
 import ControlStockModal from "@/components/inventario/modals/ControlStockModal";
+import CargaMasivaModal from "@/components/inventario/modals/CargaMasivaModal";
 
 import { opcionesUnidad } from "@/lib/unidad";
 
@@ -35,6 +36,7 @@ export default function Inventario() {
   const listaItemsModal = useModal();
   const alertasModal = useModal();
   const controlStockModal = useModal();
+  const cargaMasivaModal = useModal();
 
   // Item preseleccionado en EntradaModal cuando se llega vía "Reponer" desde StockAlertsCard o ControlStockModal
   const [presetItemId, setPresetItemId] = useState<string | undefined>(undefined);
@@ -110,6 +112,9 @@ export default function Inventario() {
               <Button size="sm" variant="outline" className="w-full" startIcon={<PlusIcon />} onClick={nuevoItemModal.openModal}>
                 Registrar nuevo item
               </Button>
+              <Button size="sm" variant="outline" className="w-full" startIcon={<FileIcon />} onClick={cargaMasivaModal.openModal}>
+                Carga masiva de items
+              </Button>
               <Button size="sm" variant="outline" className="w-full" startIcon={<GroupIcon />} onClick={alertasModal.openModal}>
                 Registrar nuevo proveedor
               </Button>
@@ -171,6 +176,12 @@ export default function Inventario() {
       <AlertasModal
         isOpen={alertasModal.isOpen}
         onClose={alertasModal.closeModal}
+        onSaved={handleDataChanged}
+      />
+
+      <CargaMasivaModal
+        isOpen={cargaMasivaModal.isOpen}
+        onClose={cargaMasivaModal.closeModal}
         onSaved={handleDataChanged}
       />
     </>
