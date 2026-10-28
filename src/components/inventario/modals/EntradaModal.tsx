@@ -8,7 +8,8 @@ import Input from "@/components/form/input/InputField";
 import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import DatePicker from '@/components/form/date-picker';
-import { hintUnidad } from "@/lib/unidad";
+import { hintUnidad, labelUnidad } from "@/lib/unidad";
+import CostoEntradaInput, { ModoCosto } from "@/components/inventario/CostoEntradaInput";
 import { mensajeErrorApi } from "@/lib/respuestaApi";
 
 type Option = { value: string; label: string };
@@ -38,9 +39,11 @@ export default function EntradaModal({ isOpen, onClose, onSaved, presetItemId }:
     fechaVenc: "",
     proveedor: "",
     motivo: "", // Agregué esto que faltaba en el state inicial
-    costo_unitario: "",
+    costo: "",
     referencia: "",
   });
+  // Una factura trae el total, por eso es el modo por defecto.
+  const [modoCosto, setModoCosto] = useState<ModoCosto>("total");
 
   // Efecto para cargar datos cuando se abre el modal
   useEffect(() => {
@@ -123,9 +126,14 @@ export default function EntradaModal({ isOpen, onClose, onSaved, presetItemId }:
       }
 
       // TODO: Reemplazar con tu llamada real a la API
+      // Se envía costo_total O costo_unitario (nunca ambos); el servidor deriva el unitario.
+      const { costo, ...resto } = payload;
       const res = await fetch('/api/inventarios/registrarEntrada', {
         method: 'POST',
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          ...resto,
+          ...(modoCosto === "total" ? { costo_total: costo } : { costo_unitario: costo }),
+        })
       });
       const data = await res.json().catch(() => ({}));
 
@@ -235,12 +243,13 @@ export default function EntradaModal({ isOpen, onClose, onSaved, presetItemId }:
                 </div>
 
                 <div className="col-span-2 lg:col-span-1">
-                  <Label className="text-black">Costo unitario</Label>
-                  <Input 
-                    className="text-gray-dark" 
-                    type="number" 
-                    placeholder="Ingrese el costo" step="any" 
-                    onChange={handleText("costo_unitario")} 
+                  <CostoEntradaInput
+                    modo={modoCosto}
+                    onModoChange={setModoCosto}
+                    valor={payload.costo}
+                    onValorChange={(v) => setPayload((p) => ({ ...p, costo: v }))}
+                    cantidad={payload.cantidad}
+                    unidad={labelUnidad(unidades[payload.item])}
                   />
                 </div>
                 

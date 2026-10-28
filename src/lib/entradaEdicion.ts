@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { ValidationError, parseNonNegativeNumber, parsePositiveNumber } from "./validation";
 import { round3Decimals } from "./fefo";
 import { round6Decimals } from "./inventario";
+import { costoUnitarioDesdeTotal } from "./costoEntrada";
 
 export const MOTIVOS_ENTRADA_EDITABLES = ["Compra", "Ajuste", "Traslado"] as const;
 export const CAMPOS_AUDITABLES = [
@@ -100,6 +101,17 @@ export function validarEdicionEntrada(body: unknown): EdicionEntradaSolicitada {
   }
   if ("costo_unit" in datos) {
     resultado.costo_unit = parseNonNegativeNumber(datos.costo_unit, "Costo unitario");
+  }
+  // costo_total es solo de entrada: se convierte a costo_unit con la cantidad
+  // editada, así el resto del flujo sigue trabajando con costo_unit.
+  if ("costo_total" in datos) {
+    if ("costo_unit" in datos) {
+      throw new ValidationError("Envíe costo_total o costo_unit, no ambos", "costo_total");
+    }
+    if (resultado.cantidad === undefined) {
+      throw new ValidationError("costo_total requiere indicar la cantidad", "costo_total");
+    }
+    resultado.costo_unit = costoUnitarioDesdeTotal(datos.costo_total, resultado.cantidad);
   }
 
   if (Object.keys(resultado).length === 0) {

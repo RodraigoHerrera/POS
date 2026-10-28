@@ -4,6 +4,8 @@ import { errorResponse } from "@/lib/apiError";
 import { requireEmpleado, esRespuestaError } from "@/lib/auth";
 import { runWithRetry } from "@/lib/transactionRetry";
 import { actualizarInventarioEntrada } from "@/lib/inventario";
+import { resolverCostoUnitario } from "@/lib/costoEntrada";
+import { ValidationError } from "@/lib/validation";
 
 // Motivos del enum MotivoMovimiento que tienen sentido para una entrada
 // manual de inventario. Se valida ANTES de escribir: antes un motivo
@@ -24,6 +26,7 @@ export async function POST(req: Request) {
       cantidad,
       costo_unitario,
       costo_unit: costo_unit_alt,
+      costo_total,
       fechaVenc: fecha_vencimiento,
       referencia,
       motivo,
@@ -33,16 +36,15 @@ export async function POST(req: Request) {
     const costo_unit = costo_unitario !== undefined ? costo_unitario : costo_unit_alt;
 
     // Validación: costo 0 es legítimo (donaciones/promos), negativo no.
-    // `costo_unit == null` cubre undefined y null sin rechazar el 0.
-    if (!item_id || cantidad == null || costo_unit == null) {
+    // `== null` cubre undefined y null sin rechazar el 0.
+    if (!item_id || cantidad == null || (costo_unit == null && costo_total == null)) {
       return NextResponse.json(
-        { message: "Faltan campos requeridos: item_id, cantidad, costo_unit" },
+        { message: "Faltan campos requeridos: item_id, cantidad, costo_unit (o costo_total)" },
         { status: 400 }
       );
     }
 
     const qtyEntrada = Number(cantidad);
-    const costoEntrada = Number(costo_unit);
 
     if (!Number.isFinite(qtyEntrada) || qtyEntrada <= 0) {
       return NextResponse.json(
@@ -50,11 +52,16 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    if (!Number.isFinite(costoEntrada) || costoEntrada < 0) {
-      return NextResponse.json(
-        { message: "El costo unitario debe ser un número mayor o igual a 0" },
-        { status: 400 }
-      );
+
+    // El servidor deriva el unitario del total (total / cantidad) cuando llega costo_total.
+    let costoEntrada: number;
+    try {
+      costoEntrada = resolverCostoUnitario({ costo_unit, costo_total, cantidad: qtyEntrada }) as number;
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return NextResponse.json({ message: error.message }, { status: 400 });
+      }
+      throw error;
     }
 
     const motivoEntrada = motivo || "Compra";

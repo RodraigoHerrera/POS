@@ -6,6 +6,7 @@ import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
 import Button from "@/components/ui/button/Button";
 import { mensajeErrorApi } from "@/lib/respuestaApi";
+import CostoEntradaInput, { ModoCosto } from "@/components/inventario/CostoEntradaInput";
 
 export interface EntradaEditable {
   id: string;
@@ -37,6 +38,9 @@ export default function EditarEntradaForm({ entrada, onSaved, onCancel }: Props)
     costo_unit: String(entrada.costo_unitario),
   }));
 
+  // Por defecto se edita el unitario tal como está guardado; "total" lo deriva el servidor.
+  const [modoCosto, setModoCosto] = useState<ModoCosto>("unitario");
+
   const handleText =
     (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((p) => ({ ...p, [key]: e.target.value }));
@@ -51,7 +55,9 @@ export default function EditarEntradaForm({ entrada, onSaved, onCancel }: Props)
       };
       if (entrada.cantidad_costo_editables) {
         body.cantidad = Number(form.cantidad);
-        body.costo_unit = Number(form.costo_unit);
+        // Total vacío viaja como texto para que el servidor lo rechace en vez de guardar 0.
+        if (modoCosto === "total") body.costo_total = form.costo_unit;
+        else body.costo_unit = Number(form.costo_unit);
       }
 
       const res = await fetch(`/api/inventarios/entradas/${entrada.id}`, {
@@ -117,16 +123,19 @@ export default function EditarEntradaForm({ entrada, onSaved, onCancel }: Props)
             disabled={!entrada.cantidad_costo_editables}
           />
         </div>
-        <div>
-          <Label className="text-black">Costo unitario</Label>
-          <Input
-            type="number"
-            step="any"
-            value={form.costo_unit}
-            onChange={handleText("costo_unit")}
-            disabled={!entrada.cantidad_costo_editables}
-          />
-        </div>
+        <CostoEntradaInput
+          modo={modoCosto}
+          onModoChange={(m) => {
+            // El valor escrito no es convertible entre modos: se parte del unitario guardado.
+            setModoCosto(m);
+            setForm((p) => ({ ...p, costo_unit: m === "unitario" ? String(entrada.costo_unitario) : "" }));
+          }}
+          valor={form.costo_unit}
+          onValorChange={(v) => setForm((p) => ({ ...p, costo_unit: v }))}
+          cantidad={form.cantidad}
+          unidad={entrada.unidad}
+          disabled={!entrada.cantidad_costo_editables}
+        />
         {!entrada.cantidad_costo_editables && (
           <p className="text-xs text-gray-500 dark:text-gray-400 lg:col-span-2">
             El lote ya tuvo movimientos; la cantidad y el costo no se pueden modificar.
