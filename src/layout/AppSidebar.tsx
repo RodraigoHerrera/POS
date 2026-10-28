@@ -17,6 +17,7 @@ import {
   TableIcon,
   UserCircleIcon,
   DocsIcon,
+  DollarLineIcon,
 } from "../icons/index";
 
 type NavItem = {
@@ -37,6 +38,11 @@ const navItems: NavItem[] = [
     name: "Ventas",
     icon: <DocsIcon />,
     path: "/admin/ventas",
+  },
+  {
+    icon: <DollarLineIcon />,
+    name: "Abrir Caja",
+    path: "/cajero",
   },
   {
     icon: <ListIcon />,
