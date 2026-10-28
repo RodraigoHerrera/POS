@@ -65,3 +65,6 @@ scratch/
 
 # smoke e2e
 /.next-smoke/
+
+# stray home-directory copy (e.g. ~/.claude/skills) created inside the repo
+/~/
