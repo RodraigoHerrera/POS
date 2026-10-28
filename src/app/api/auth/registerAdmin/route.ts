@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import bcrypt from "bcrypt";
 import { serializeBigInt } from "@/lib/serialize";
 import { validarNuevaContrasena } from "@/lib/contrasenaEmpleado";
-import { decidirAltaEmpleado } from "@/lib/usuariosAdmin";
+import { altaEmpleadoAtomica } from "@/lib/altaEmpleado";
 import { obtenerSesionSucursal, requireEmpleado, esRespuestaError } from "@/lib/auth";
 
 export async function POST(req: Request) {
@@ -42,54 +42,12 @@ export async function POST(req: Request) {
 
     // El hash va fuera de la transacción: bcrypt es lento y retendría el bloqueo
     const hashedPassword = await bcrypt.hash(contraseña, 10);
-    const sucursalId = BigInt(sucursalIdStr);
-
-    // Contar y crear tienen que ser atómicos: con dos peticiones simultáneas
-    // sobre una sucursal vacía, ambas verían 0 empleados y crearían un admin
-    // cada una sin sesión. FOR UPDATE sobre la fila de la sucursal las serializa.
-    const resultado = await prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM sucursales WHERE id = ${sucursalId} FOR UPDATE`;
-
-      const totalEmpleados = await tx.empleados.count({ where: { sucursal_id: sucursalId } });
-      const decision = decidirAltaEmpleado({ totalEmpleados, esAdministrador, rol });
-      if (decision.tipo === "prohibido") {
-        return { nuevoAdmin: null, error: { message: "Solo un administrador puede registrar nuevos empleados", status: 403 } };
-      }
-      if (decision.tipo === "rol_invalido") {
-        return { nuevoAdmin: null, error: { message: "Rol inválido", status: 400 } };
-      }
-
-      // Verificar si ya existe un empleado con el correo proporcionado
-      const existingAdmin = await tx.empleados.findUnique({ where: { correo } });
-      if (existingAdmin) {
-        return { nuevoAdmin: null, error: { message: "Ya existe un administrador con ese correo", status: 409 } };
-      }
-
-      const nuevoAdmin = await tx.empleados.create({
-        data: {
-          sucursal_id: sucursalId,
-          rol: decision.rol,
-          nombre,
-          correo,
-          celular,
-          contrasena: hashedPassword,
-          creado: new Date(),
-          estado: "Activo", // Ajusta el valor según tu lógica de negocio
-          usuario,
-        },
-        select: {
-          id: true,
-          sucursal_id: true,
-          rol: true,
-          usuario: true,
-          correo: true,
-          nombre: true,
-          celular: true,
-          creado: true,
-          estado: true,
-        },
-      });
-      return { nuevoAdmin, error: null };
+    const resultado = await altaEmpleadoAtomica(prisma, {
+      sucursalId: BigInt(sucursalIdStr),
+      esAdministrador,
+      rol,
+      datos: { nombre, correo, celular, usuario },
+      contrasenaHash: hashedPassword,
     });
 
     if (resultado.error) {
