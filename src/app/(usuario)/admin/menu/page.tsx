@@ -15,8 +15,8 @@ interface Item {
   fotoUrl?: string;
 }
 
-export default function menu() {
-  const { data: item, loading, reload: cargarItems } = useFetchData<Item[]>("/api/inventarios/productos", []);
+export default function MenuPage() {
+  const { data: item, loading, reload: cargarItems } = useFetchData<Item[]>("/api/inventarios/productos?all=true", []);
 
   return (
     <>

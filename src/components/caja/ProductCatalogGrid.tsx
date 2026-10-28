@@ -30,16 +30,22 @@ export default function ProductCatalogGrid({
   const [categoria, setCategoria] = useState(TODAS);
 
   const categorias = useMemo(() => {
-    const vistas = new Set(products.map((p) => p.categoria).filter(Boolean));
+    const vistas = new Set(
+      products
+        .filter((p) => !p.estado || p.estado.toLowerCase() === "activo")
+        .map((p) => p.categoria)
+        .filter(Boolean)
+    );
     return [TODAS, ...Array.from(vistas)];
   }, [products]);
 
   const filtrados = useMemo(() => {
     const q = query.trim().toLowerCase();
     return products.filter((p) => {
+      const isActivo = !p.estado || p.estado.toLowerCase() === "activo";
       const matchCategoria = categoria === TODAS || p.categoria === categoria;
       const matchQuery = !q || p.nombre.toLowerCase().includes(q);
-      return matchCategoria && matchQuery;
+      return isActivo && matchCategoria && matchQuery;
     });
   }, [products, query, categoria]);
 
