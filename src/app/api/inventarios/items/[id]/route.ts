@@ -53,21 +53,35 @@ export async function PUT(
       unidad_code = body.unidad_code;
     }
 
-    // 4. Actualizar
-    const itemActualizado = await prisma.item.update({
-      where: { id: itemId },
-      data: {
-        nombre: body.nombre?.trim() ?? itemExistente.nombre,
-        sku: body.sku !== undefined ? body.sku : itemExistente.sku,
-        unidad_code,
-      },
+    // 4. Actualizar item y sincronizar producto si cambió el nombre
+    const nuevoNombre = body.nombre?.trim() ?? itemExistente.nombre;
+
+    const itemActualizado = await prisma.$transaction(async (tx) => {
+      const updated = await tx.item.update({
+        where: { id: itemId },
+        data: {
+          nombre: nuevoNombre,
+          sku: body.sku !== undefined ? body.sku : itemExistente.sku,
+          unidad_code,
+        },
+      });
+
+      if (nuevoNombre !== itemExistente.nombre) {
+        await tx.producto.updateMany({
+          where: { item_inventario_id: itemId },
+          data: { nombre: nuevoNombre },
+        });
+      }
+
+      return updated;
     });
 
     return NextResponse.json(serializeBigInt(itemActualizado));
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error editando item:", error);
+    const mensaje = error instanceof Error ? error.message : "Error interno del servidor";
     return NextResponse.json(
-      { message: error?.message || "Error interno del servidor" },
+      { message: mensaje },
       { status: 500 }
     );
   }
@@ -98,10 +112,11 @@ export async function PATCH(
     });
 
     return NextResponse.json(serializeBigInt(itemDesactivado));
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error cambiando estado del item:", error);
+    const mensaje = error instanceof Error ? error.message : "Error interno del servidor";
     return NextResponse.json(
-      { message: error?.message || "Error interno del servidor" },
+      { message: mensaje },
       { status: 500 }
     );
   }

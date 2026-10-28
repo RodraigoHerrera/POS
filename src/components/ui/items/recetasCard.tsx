@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 // Asegúrate de que estas rutas de importación sean correctas en tu proyecto
 import { Plus } from "lucide-react";
 import { useModal } from "@/hooks/useModal";
@@ -72,7 +72,7 @@ const generateId = () => {
   if (typeof window !== 'undefined' && window.crypto && window.crypto.randomUUID) {
     try {
       return window.crypto.randomUUID();
-    } catch (e) {
+    } catch {
       // Fallback si falla crypto
     }
   }
@@ -342,24 +342,37 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
   return (
     <>
       {/* VISTA DE TARJETA (Card View) */}
-      <div className="rounded-2xl border border-gray-200 p-5 dark:border-gray-800 lg:p-6">
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 transition-all duration-200 hover:border-gray-300 hover:shadow-xs dark:border-gray-800 dark:bg-white/[0.02] dark:hover:border-gray-700 lg:p-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex w-full flex-col items-center gap-6 xl:flex-row">
             {/* Imagen del producto */}
-            <div className="h-20 w-20  overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800">
+            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
                 {itemData.fotoUrl ? (
                   <Image width={80} height={80} src={itemData.fotoUrl} alt={itemData.nombre} className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full items-center justify-center text-gray-400">
+                  <div className="flex h-full items-center justify-center text-gray-400 dark:text-gray-500">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" ><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
                   </div>
                 )}
             </div>
 
             <div className="text-center xl:text-left">
-              <h4 className="mb-2 text-lg font-bold text-gray-900 dark:text-white/90">
-                {itemData.nombre}
-              </h4>
+              <div className="mb-2 flex flex-wrap items-center justify-center gap-2 xl:justify-start">
+                <h4 className="text-lg font-bold text-gray-900 dark:text-white/90">
+                  {itemData.nombre}
+                </h4>
+                {itemData.tipo === "vendible" ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    Plato Vendible
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                    Preparación Base
+                  </span>
+                )}
+              </div>
               <div className="flex flex-col items-center gap-1 text-center xl:flex-row xl:gap-3 xl:text-left font-medium">
                 <p className="text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded">SKU: {itemData.sku}</p>
                 <div className="hidden h-3.5 w-px bg-gray-300 dark:bg-gray-700 xl:block" />
@@ -446,7 +459,7 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
                         <p className="text-gray-400">No hay insumos agregados aún.</p>
                     </div>
                 ) : (
-                    recetaActual.map((insumo, index) => (
+                    recetaActual.map((insumo) => (
                         <div key={insumo.id} className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800/50 sm:flex-row sm:items-end transition-all">
                             
                             {/* Selector de Item */}
@@ -515,7 +528,7 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
               Extras de: {itemData.nombre}
             </h4>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Define los insumos opcionales que el cajero puede agregar al pedido (ej. "+Tocino"). Cada extra descuenta inventario igual que la receta base.
+              Define los insumos opcionales que el cajero puede agregar al pedido (ej. &ldquo;+Tocino&rdquo;). Cada extra descuenta inventario igual que la receta base.
             </p>
           </div>
 

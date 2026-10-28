@@ -10,6 +10,7 @@ import {
 
 // PATCH /api/inventarios/entradas/[id]
 // { codigo_lote?, fecha_caducidad?, referencia?, cantidad?, costo_unit? }
+// costo_total? (requiere cantidad, excluyente con costo_unit; se convierte a costo_unit)
 // Edita una entrada manual de la sucursal de la sesión. Metadatos siempre;
 // cantidad y costo solo si el lote no tiene otros movimientos. Toda la lógica
 // vive en src/lib/entradaEdicion.ts (locks, reglas, auditoría).

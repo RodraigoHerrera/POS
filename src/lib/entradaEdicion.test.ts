@@ -16,6 +16,38 @@ import {
 } from "./entradaEdicion";
 
 describe("validarEdicionEntrada", () => {
+  it("costo_total calcula costo_unit dividiendo por la cantidad", () => {
+    const r = validarEdicionEntrada({ cantidad: 3, costo_total: 100 });
+    assert.deepEqual(r, { cantidad: 3, costo_unit: 33.333333 });
+  });
+
+  it("costo_total 0 da costo_unit 0", () => {
+    assert.deepEqual(validarEdicionEntrada({ cantidad: "2", costo_total: "0" }), {
+      cantidad: 2,
+      costo_unit: 0,
+    });
+  });
+
+  it("costo_total sin cantidad es un error de validación", () => {
+    assert.throws(() => validarEdicionEntrada({ costo_total: 100 }), ValidationError);
+  });
+
+  it("costo_total y costo_unit juntos es un error de validación mapeado a 400", () => {
+    try {
+      validarEdicionEntrada({ cantidad: 3, costo_total: 100, costo_unit: 5 });
+      assert.fail("debió lanzar");
+    } catch (e) {
+      assert.ok(e instanceof ValidationError);
+      assert.equal(mapearErrorEdicion(e).status, 400);
+    }
+  });
+
+  it("costo_total negativo o inválido es un error de validación", () => {
+    assert.throws(() => validarEdicionEntrada({ cantidad: 3, costo_total: -1 }), ValidationError);
+    assert.throws(() => validarEdicionEntrada({ cantidad: 3, costo_total: "abc" }), ValidationError);
+    assert.throws(() => validarEdicionEntrada({ cantidad: 3, costo_total: null }), ValidationError);
+  });
+
   it("trims strings and normalizes accepted fields", () => {
     const r = validarEdicionEntrada({
       codigo_lote: "  L-001  ",
