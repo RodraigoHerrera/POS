@@ -20,6 +20,12 @@ const base: CierreCajaData = {
   efectivoEsperado: 350.5,
   totalContado: 350.5,
   diferenciaEfectivo: 0,
+  tarjetaEsperado: 80,
+  totalTarjeta: 80,
+  diferenciaTarjeta: 0,
+  qrEsperado: 30.25,
+  totalQr: 30.25,
+  diferenciaQr: 0,
 };
 
 describe('formatearBs', () => {
@@ -71,6 +77,43 @@ describe('construirTicketCierre', () => {
       assert.equal(t.diferencia.etiqueta, 'Exacta');
       assert.equal(t.diferencia.monto, 'Bs 0.00');
     }
+  });
+
+  it('builds conciliacion rows in fixed order Efectivo, Tarjeta, QR', () => {
+    const t = construirTicketCierre(base);
+    assert.deepEqual(
+      t.conciliacion.map((c) => c.metodo),
+      ['Efectivo', 'Tarjeta', 'QR']
+    );
+    assert.deepEqual(t.conciliacion[0], {
+      metodo: 'Efectivo',
+      esperado: 'Bs 350.50',
+      declarado: 'Bs 350.50',
+      diferencia: { etiqueta: 'Exacta', monto: 'Bs 0.00' },
+    });
+    assert.deepEqual(t.conciliacion[1], {
+      metodo: 'Tarjeta',
+      esperado: 'Bs 80.00',
+      declarado: 'Bs 80.00',
+      diferencia: { etiqueta: 'Exacta', monto: 'Bs 0.00' },
+    });
+    assert.equal(t.conciliacion[2].esperado, 'Bs 30.25');
+    assert.equal(t.conciliacion[2].declarado, 'Bs 30.25');
+  });
+
+  it('classifies tarjeta and QR differences independently', () => {
+    const t = construirTicketCierre({
+      ...base,
+      totalTarjeta: 75,
+      diferenciaTarjeta: -5,
+      totalQr: 32.25,
+      diferenciaQr: 2,
+    });
+    assert.deepEqual(t.conciliacion[1].diferencia, { etiqueta: 'Faltante', monto: 'Bs 5.00' });
+    assert.equal(t.conciliacion[1].declarado, 'Bs 75.00');
+    assert.deepEqual(t.conciliacion[2].diferencia, { etiqueta: 'Sobrante', monto: 'Bs 2.00' });
+    assert.equal(t.conciliacion[2].declarado, 'Bs 32.25');
+    assert.equal(t.conciliacion[0].diferencia.etiqueta, 'Exacta');
   });
 
   it('does not include observaciones in the ticket', () => {

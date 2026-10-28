@@ -4,6 +4,10 @@ import { SMOKE } from "./smokeEnv";
 
 const APERTURA = 100;
 const CONTADO = APERTURA + SMOKE.precio;
+// Totales electrónicos declarados: la venta del smoke es en efectivo, así que
+// lo esperado por Tarjeta/QR es 0. Tarjeta declara 10 (sobrante), QR declara 0.
+const TARJETA_DECLARADA = 10;
+const QR_DECLARADO = 0;
 const bs = (monto: number) => `Bs ${monto.toFixed(2)}`;
 
 test("caja: abrir -> vender -> cerrar -> ticket de cierre imprimible", async ({ page }) => {
@@ -29,7 +33,7 @@ test("caja: abrir -> vender -> cerrar -> ticket de cierre imprimible", async ({ 
   await page.getByRole("button", { name: "Confirmar Cobro" }).click();
   await page.waitForURL(/\/cajero\/ventas/);
 
-  await cerrarCaja(page, CONTADO);
+  await cerrarCaja(page, CONTADO, { tarjeta: TARJETA_DECLARADA, qr: QR_DECLARADO });
 
   // Ticket en pantalla
   const imprimir = page.getByRole("button", { name: "Imprimir" });
@@ -39,8 +43,9 @@ test("caja: abrir -> vender -> cerrar -> ticket de cierre imprimible", async ({ 
   await expect(page.getByText(/^Apertura:/)).toBeVisible();
   await expect(page.getByText(/^Cierre:/)).toBeVisible();
   await expect(page.getByText("Ventas por método")).toBeVisible();
+  const ventasPorMetodo = page.getByText("Ventas por método").locator("xpath=..");
   for (const metodo of ["Efectivo", "Tarjeta", "QR", "Transferencia", "Gift Card", "Otros"]) {
-    await expect(page.getByText(metodo, { exact: true })).toBeVisible();
+    await expect(ventasPorMetodo.getByText(metodo, { exact: true })).toBeVisible();
   }
   const fila = (etiqueta: string) => page.getByText(etiqueta, { exact: true }).locator("xpath=..");
   await expect(fila("Caja abierta con")).toContainText(bs(APERTURA));
@@ -48,6 +53,17 @@ test("caja: abrir -> vender -> cerrar -> ticket de cierre imprimible", async ({ 
   await expect(fila("Caja cerrada con")).toContainText(bs(CONTADO));
   await expect(fila("Total ventas")).toContainText(bs(SMOKE.precio));
   await expect(fila("Exacta")).toContainText(bs(0));
+
+  // Conciliación por método: Esperado (Sistema) / Declarado (Manual) / Diferencia
+  await expect(page.getByText("Conciliación", { exact: true })).toBeVisible();
+  const conciliacion = (metodo: string) => page.getByTestId(`conciliacion-${metodo}`);
+  await expect(conciliacion("Efectivo")).toContainText(bs(CONTADO));
+  await expect(conciliacion("Efectivo")).toContainText("Diferencia: Exacta");
+  await expect(conciliacion("Tarjeta")).toContainText(`Esperado (Sistema)${bs(0)}`);
+  await expect(conciliacion("Tarjeta")).toContainText(`Declarado (Manual)${bs(TARJETA_DECLARADA)}`);
+  await expect(conciliacion("Tarjeta")).toContainText(`Diferencia: Sobrante${bs(TARJETA_DECLARADA)}`);
+  await expect(conciliacion("QR")).toContainText(`Declarado (Manual)${bs(QR_DECLARADO)}`);
+  await expect(conciliacion("QR")).toContainText("Diferencia: Exacta");
   await expect(imprimir).toBeVisible();
   await expect(salir).toBeVisible();
 

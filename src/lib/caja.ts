@@ -90,6 +90,16 @@ export async function calcularResumenCaja(caja: {
   };
 }
 
+/**
+ * Diferencia de conciliación = declarado - esperado, con Prisma.Decimal.
+ * Un residuo menor a medio centavo (coma flotante) se descarta como 0;
+ * en otro caso se redondea a 2 decimales. Positivo = sobrante, negativo = faltante.
+ */
+export function calcularDiferenciaConciliacion(declarado: number, esperado: number): number {
+  const diff = new Prisma.Decimal(declarado.toString()).sub(new Prisma.Decimal(esperado.toString()));
+  return diff.abs().lessThan(0.005) ? 0 : diff.toDecimalPlaces(2).toNumber();
+}
+
 export interface OrderBillingValidationInput {
   lockedOrder?: {
     id?: bigint;

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { serializeBigInt } from "@/lib/serialize";
-import { calcularResumenCaja } from "@/lib/caja";
+import { calcularResumenCaja, calcularDiferenciaConciliacion } from "@/lib/caja";
 import { errorResponse } from "@/lib/apiError";
 import { requireEmpleado, esRespuestaError } from "@/lib/auth";
 import {
@@ -11,18 +11,22 @@ import {
   validationErrorResponse,
 } from "@/lib/validation";
 
-// POST /api/caja/cerrar  { totalContado: number, observaciones?: string }
+// POST /api/caja/cerrar
+//   { totalContado: number, totalTarjeta: number, totalQr: number, observaciones?: string }
 // Cierra la caja abierta del empleado actual: agrega las ventas facturadas
 // mientras estuvo abierta (mismo cálculo que /api/caja/resumen, vía
-// calcularResumenCaja), calcula la diferencia de efectivo contra lo contado
-// físicamente, y marca la caja como "cerrada".
+// calcularResumenCaja), concilia contra lo declarado por el cajero (efectivo
+// contado, lote POS de tarjeta y comprobantes QR) persistiendo las diferencias
+// de efectivo, tarjeta y QR, y marca la caja como "cerrada".
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { totalContado, observaciones } = body;
+    const { totalContado, totalTarjeta, totalQr, observaciones } = body;
 
     // Validación fail-fast de cotas no negativas al inicio del handler
     const validTotalContado = parseNonNegativeNumber(totalContado, "totalContado");
+    const validTotalTarjeta = parseNonNegativeNumber(totalTarjeta, "totalTarjeta");
+    const validTotalQr = parseNonNegativeNumber(totalQr, "totalQr");
 
     const sesion = await requireEmpleado(["Cajero", "Administrador"]);
     if (esRespuestaError(sesion)) return sesion;
@@ -53,9 +57,14 @@ export async function POST(req: Request) {
     ]);
     const contadoDec = new Prisma.Decimal(validTotalContado.toString());
     const esperadoDec = new Prisma.Decimal(resumen.efectivoEsperado?.toString() || "0");
-    const diff = contadoDec.sub(esperadoDec);
-    // Tolerancia menor a medio centavo para descartar residuos de coma flotante
-    const diferenciaEfectivo = diff.abs().lessThan(0.005) ? 0 : diff.toDecimalPlaces(2).toNumber();
+    const diferenciaEfectivo = calcularDiferenciaConciliacion(
+      validTotalContado,
+      esperadoDec.toNumber()
+    );
+    const tarjetaEsperado = resumen.ventasPorMetodo.ventas_tarjeta;
+    const qrEsperado = resumen.ventasPorMetodo.ventas_qr;
+    const diferenciaTarjeta = calcularDiferenciaConciliacion(validTotalTarjeta, tarjetaEsperado);
+    const diferenciaQr = calcularDiferenciaConciliacion(validTotalQr, qrEsperado);
 
     const fechaCierre = new Date();
     const cajaCerrada = await prisma.caja.update({
@@ -72,6 +81,8 @@ export async function POST(req: Request) {
         ventas_giftcard: resumen.ventasPorMetodo.ventas_giftcard,
         ventas_otros: resumen.ventasPorMetodo.ventas_otros,
         diferencia_efectivo: diferenciaEfectivo,
+        diferencia_tarjeta: diferenciaTarjeta,
+        diferencia_qr: diferenciaQr,
         observaciones: observaciones || cajaAbierta.observaciones,
       },
     });
@@ -92,6 +103,12 @@ export async function POST(req: Request) {
         efectivoEsperado: resumen.efectivoEsperado,
         totalContado: validTotalContado,
         diferenciaEfectivo,
+        tarjetaEsperado,
+        totalTarjeta: validTotalTarjeta,
+        diferenciaTarjeta,
+        qrEsperado,
+        totalQr: validTotalQr,
+        diferenciaQr,
       })
     );
 

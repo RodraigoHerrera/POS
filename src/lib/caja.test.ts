@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { prisma } from './db';
 import {
   calcularResumenCaja,
+  calcularDiferenciaConciliacion,
   validateOrderForBilling,
   validateOrderEditState,
   validateSimulationResults,
@@ -323,5 +324,33 @@ describe('Caja Domain Utilities (calcularResumenCaja)', () => {
     } finally {
       prisma.factura.findMany = originalFindMany;
     }
+  });
+});
+
+describe('calcularDiferenciaConciliacion (pure helper)', () => {
+  it('returns 0 when declared equals expected', () => {
+    assert.equal(calcularDiferenciaConciliacion(120.5, 120.5), 0);
+  });
+
+  it('returns positive difference (sobrante) rounded to 2 decimals', () => {
+    assert.equal(calcularDiferenciaConciliacion(130.75, 120.5), 10.25);
+  });
+
+  it('returns negative difference (faltante)', () => {
+    assert.equal(calcularDiferenciaConciliacion(100, 120.5), -20.5);
+  });
+
+  it('discards floating point residue (0.1 + 0.2 vs 0.3)', () => {
+    assert.equal(calcularDiferenciaConciliacion(0.1 + 0.2, 0.3), 0);
+  });
+
+  it('treats a residue below half a cent as 0, both signs', () => {
+    assert.equal(calcularDiferenciaConciliacion(10.004, 10), 0);
+    assert.equal(calcularDiferenciaConciliacion(10, 10.004), 0);
+  });
+
+  it('handles zero expected', () => {
+    assert.equal(calcularDiferenciaConciliacion(15.5, 0), 15.5);
+    assert.equal(calcularDiferenciaConciliacion(0, 0), 0);
   });
 });

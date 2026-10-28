@@ -21,9 +21,22 @@ export interface CierreCajaData {
   efectivoEsperado: number;
   totalContado: number;
   diferenciaEfectivo: number;
+  tarjetaEsperado: number;
+  totalTarjeta: number;
+  diferenciaTarjeta: number;
+  qrEsperado: number;
+  totalQr: number;
+  diferenciaQr: number;
 }
 
 export type EtiquetaDiferencia = "Exacta" | "Sobrante" | "Faltante";
+
+export interface FilaConciliacion {
+  metodo: "Efectivo" | "Tarjeta" | "QR";
+  esperado: string;
+  declarado: string;
+  diferencia: { etiqueta: EtiquetaDiferencia; monto: string };
+}
 
 export interface TicketCierre {
   cajaId: string;
@@ -36,6 +49,7 @@ export interface TicketCierre {
   efectivoEsperado: string;
   totalContado: string;
   diferencia: { etiqueta: EtiquetaDiferencia; monto: string };
+  conciliacion: FilaConciliacion[];
 }
 
 // Orden fijo de los métodos de pago en el ticket.
@@ -75,5 +89,26 @@ export function construirTicketCierre(data: CierreCajaData): TicketCierre {
     efectivoEsperado: formatearBs(data.efectivoEsperado),
     totalContado: formatearBs(data.totalContado),
     diferencia: clasificarDiferencia(data.diferenciaEfectivo),
+    // Conciliación por método auditado, en orden fijo: Efectivo, Tarjeta, QR.
+    conciliacion: [
+      {
+        metodo: "Efectivo",
+        esperado: formatearBs(data.efectivoEsperado),
+        declarado: formatearBs(data.totalContado),
+        diferencia: clasificarDiferencia(data.diferenciaEfectivo),
+      },
+      {
+        metodo: "Tarjeta",
+        esperado: formatearBs(data.tarjetaEsperado),
+        declarado: formatearBs(data.totalTarjeta),
+        diferencia: clasificarDiferencia(data.diferenciaTarjeta),
+      },
+      {
+        metodo: "QR",
+        esperado: formatearBs(data.qrEsperado),
+        declarado: formatearBs(data.totalQr),
+        diferencia: clasificarDiferencia(data.diferenciaQr),
+      },
+    ],
   };
 }
