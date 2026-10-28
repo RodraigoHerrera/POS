@@ -51,6 +51,8 @@ yarn.lock
 
 # database dumps
 *.sql
+# ...but Prisma migrations must be versioned
+!prisma/migrations/**/migration.sql
 
 # temporary / scratch directories
 scratch/
