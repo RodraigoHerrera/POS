@@ -8,12 +8,9 @@ function labelFor(denom: number, tipo: "Billete" | "Moneda") {
 }
 
 async function fillDenominacion(page: Page, label: string, cantidad: number) {
-  // Las filas de DenominacionesForm no tienen id/name; cada Label ("Bs. 200")
-  // es hermano del Input dentro de la misma fila, así que ubicamos la fila
-  // por el texto exacto del label (evita que "Bs. 10" matchee "Bs. 100").
-  const labelEl = page.getByText(label, { exact: true });
-  const row = labelEl.locator("xpath=ancestor::div[contains(@class,'items-center')][1]");
-  await row.locator("input").fill(String(cantidad));
+  // Cada input de cantidad tiene aria-label "Cantidad Bs. 200" (exact evita
+  // que "Bs. 10" matchee "Bs. 100"; los steppers usan otros labels).
+  await page.getByLabel(`Cantidad ${label}`, { exact: true }).fill(String(cantidad));
 }
 
 /** Llena la grilla de denominaciones para alcanzar exactamente `montoTotal` y envía el formulario. */
