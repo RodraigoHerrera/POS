@@ -84,7 +84,13 @@ export async function abrirCaja(page: Page, montoTotal: number) {
   await page.waitForURL("**/cajero/ventas");
 }
 
-export async function cerrarCaja(page: Page, montoTotal: number) {
+export async function cerrarCaja(
+  page: Page,
+  montoTotal: number,
+  electronicos: { tarjeta: number; qr: number } = { tarjeta: 0, qr: 0 }
+) {
   await page.goto("/cajero/cierre");
+  await page.locator("#total-tarjeta").fill(String(electronicos.tarjeta));
+  await page.locator("#total-qr").fill(String(electronicos.qr));
   await contarEfectivo(page, montoTotal, "Confirmar Cierre");
 }

@@ -386,6 +386,10 @@ model caja {
   diferencia_tarjeta  Decimal?  @db.Decimal(18, 2) // Opcional, usualmente es 0
   diferencia_qr       Decimal?  @db.Decimal(18, 2) // Opcional
 
+  // Montos declarados por el cajero al cerrar (lote POS / comprobantes QR)
+  declarado_tarjeta   Decimal?  @db.Decimal(18, 2)
+  declarado_qr        Decimal?  @db.Decimal(18, 2)
+
   estado              String    @default("abierta") @db.VarChar(20) // abierta, cerrada, arqueada
   observaciones       String?   @db.Text // Para explicar faltantes o sobrantes
 

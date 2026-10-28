@@ -37,12 +37,31 @@ const LABEL_METODO: Record<string, string> = {
   ventas_otros: "Otros",
 };
 
+const MONTO_VALIDO = /^\d+([.,]\d{1,2})?$/;
+
+// Valida un monto declarado de forma estricta: no vacío, solo dígitos con hasta
+// 2 decimales (sin signo negativo ni letras). Devuelve el número o un mensaje.
+function parsearMontoDeclarado(
+  texto: string,
+  nombre: string
+): { valor: number } | { error: string } {
+  const limpio = texto.trim();
+  if (limpio === "") return { error: `${nombre} es obligatorio (ingresa 0 si no hubo cobros)` };
+  if (!MONTO_VALIDO.test(limpio)) {
+    return { error: `${nombre} debe ser un número mayor o igual a 0, con hasta 2 decimales` };
+  }
+  return { valor: Number(limpio.replace(",", ".")) };
+}
+
 export default function CierreCajaPage() {
   const router = useRouter();
   const [cargando, setCargando] = useState(true);
   const [sinCajaAbierta, setSinCajaAbierta] = useState(false);
   const [resumen, setResumen] = useState<ResumenCaja | null>(null);
   const [observaciones, setObservaciones] = useState("");
+  const [totalTarjeta, setTotalTarjeta] = useState("");
+  const [totalQr, setTotalQr] = useState("");
+  const [errorConciliacion, setErrorConciliacion] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [resultado, setResultado] = useState<ResultadoCierre | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -89,12 +108,30 @@ export default function CierreCajaPage() {
   }, []);
 
   const cerrarCaja = async (total: number, _detalle: DetalleDenominacion[]) => {
+    // Fail-fast en cliente: no se envía nada si los totales electrónicos son inválidos.
+    const tarjeta = parsearMontoDeclarado(totalTarjeta, "Total Tarjeta");
+    const qr = parsearMontoDeclarado(totalQr, "Total QR");
+    if ("error" in tarjeta) {
+      setErrorConciliacion(tarjeta.error);
+      return;
+    }
+    if ("error" in qr) {
+      setErrorConciliacion(qr.error);
+      return;
+    }
+    setErrorConciliacion(null);
+
     try {
       setIsSaving(true);
       const res = await fetch("/api/caja/cerrar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ totalContado: total, observaciones: observaciones || undefined }),
+        body: JSON.stringify({
+          totalContado: total,
+          totalTarjeta: tarjeta.valor,
+          totalQr: qr.valor,
+          observaciones: observaciones || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "No se pudo cerrar la caja");
@@ -189,6 +226,55 @@ export default function CierreCajaPage() {
                       </p>
                     </div>
                   )}
+
+                  <div className="px-5 pb-5">
+                    <h5 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      Cobros electrónicos (conciliación)
+                    </h5>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label
+                          htmlFor="total-tarjeta"
+                          className="mb-1 block text-xs text-gray-500 dark:text-gray-400"
+                        >
+                          Total Tarjeta (lote POS / vouchers)
+                        </label>
+                        <input
+                          id="total-tarjeta"
+                          type="text"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          placeholder="0.00"
+                          value={totalTarjeta}
+                          onChange={(e) => setTotalTarjeta(e.target.value)}
+                          className="w-full rounded-lg border border-gray-300 p-2 text-sm tabular-nums dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor="total-qr"
+                          className="mb-1 block text-xs text-gray-500 dark:text-gray-400"
+                        >
+                          Total QR (comprobantes)
+                        </label>
+                        <input
+                          id="total-qr"
+                          type="text"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          placeholder="0.00"
+                          value={totalQr}
+                          onChange={(e) => setTotalQr(e.target.value)}
+                          className="w-full rounded-lg border border-gray-300 p-2 text-sm tabular-nums dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                    {errorConciliacion && (
+                      <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
+                        {errorConciliacion}
+                      </p>
+                    )}
+                  </div>
 
                   <div className="px-5 pb-5">
                     <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">

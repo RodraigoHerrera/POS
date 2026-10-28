@@ -66,18 +66,27 @@ export default function TicketCierreCaja({ cierre, onSalir, saliendo = false }: 
             <span>Caja abierta con</span>
             <span className="tabular-nums">{t.saldoInicial}</span>
           </div>
-          <div className="flex justify-between">
-            <span>Efectivo esperado</span>
-            <span className="tabular-nums">{t.efectivoEsperado}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Caja cerrada con</span>
-            <span className="tabular-nums">{t.totalContado}</span>
-          </div>
-          <div className="flex justify-between font-bold mt-1">
-            <span>{t.diferencia.etiqueta}</span>
-            <span className="tabular-nums">{t.diferencia.monto}</span>
-          </div>
+        </div>
+
+        <div className="border-b border-black pb-2 mb-4">
+          <p className="font-bold mb-1">Conciliación</p>
+          {t.conciliacion.map((c) => (
+            <div key={c.metodo} className="mb-2 last:mb-0" data-testid={`conciliacion-${c.metodo}`}>
+              <p className="font-bold">{c.metodo}</p>
+              <div className="flex justify-between text-xs">
+                <span>Esperado (Sistema)</span>
+                <span className="tabular-nums">{c.esperado}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span>Declarado (Manual)</span>
+                <span className="tabular-nums">{c.declarado}</span>
+              </div>
+              <div className="flex justify-between text-xs font-bold">
+                <span>Diferencia: {c.diferencia.etiqueta}</span>
+                <span className="tabular-nums">{c.diferencia.monto}</span>
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className="text-center mt-6 text-xs">
