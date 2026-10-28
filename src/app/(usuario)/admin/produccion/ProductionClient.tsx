@@ -6,21 +6,18 @@ import Button from "@/components/ui/button/Button";
 
 type Props = {
   recipes: Array<{ id: string; name: string }>;
-  sucursales: Array<{ id: string; name: string }>;
+  sucursalNombre: string;
 };
 
-export default function ProductionClient({ recipes, sucursales }: Props) {
+export default function ProductionClient({ recipes, sucursalNombre }: Props) {
   const [recipeId, setRecipeId] = useState<string>("");
-  const [sucursalId, setSucursalId] = useState<string>(
-    sucursales.length > 0 ? sucursales[0].id : ""
-  );
   const [quantity, setQuantity] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recipeId || !sucursalId || quantity === "" || Number(quantity) <= 0) {
+    if (!recipeId || quantity === "" || Number(quantity) <= 0) {
       setMessage({ text: "Por favor complete todos los campos correctamente.", type: "error" });
       return;
     }
@@ -31,7 +28,6 @@ export default function ProductionClient({ recipes, sucursales }: Props) {
     try {
       const input: ProductionBatchInput = {
         recipeId,
-        sucursalId,
         quantity: Number(quantity),
       };
 
@@ -58,20 +54,9 @@ export default function ProductionClient({ recipes, sucursales }: Props) {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Sucursal
           </label>
-          <select
-            value={sucursalId}
-            onChange={(e) => setSucursalId(e.target.value)}
-            disabled={loading}
-            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            required
-          >
-            <option value="" disabled>Seleccione una sucursal</option>
-            {sucursales.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+          <p className="w-full p-2 rounded-md border border-gray-300 bg-gray-50 text-gray-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            {sucursalNombre || "Sucursal actual"}
+          </p>
         </div>
 
         <div>

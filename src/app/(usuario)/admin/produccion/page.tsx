@@ -1,5 +1,7 @@
 import React from "react";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { obtenerSesionEmpleado } from "@/lib/auth";
 import ProductionClient from "./ProductionClient";
 
 export const metadata = {
@@ -7,27 +9,26 @@ export const metadata = {
 };
 
 export default async function ProduccionPage() {
+  const sesion = await obtenerSesionEmpleado();
+  if (!sesion) redirect("/usuarios");
+
+  // Solo los items de preparación se producen por lote: los vendibles ya
+  // descuentan su receta al venderse.
   const recetasData = await prisma.receta.findMany({
+    where: { item_vendible: { tipo: "prep" } },
     include: {
       item_vendible: true,
     },
   });
 
-  const sucursalesData = await prisma.sucursales.findMany({
-    select: {
-      id: true,
-      nombre: true,
-    },
+  const sucursal = await prisma.sucursales.findUnique({
+    where: { id: BigInt(sesion.sucursalId) },
+    select: { nombre: true },
   });
 
   const recipes = recetasData.map((r) => ({
     id: r.id.toString(),
     name: r.item_vendible.nombre,
-  }));
-
-  const sucursales = sucursalesData.map((s) => ({
-    id: s.id.toString(),
-    name: s.nombre,
   }));
 
   return (
@@ -41,7 +42,7 @@ export default async function ProduccionPage() {
         </p>
       </div>
 
-      <ProductionClient recipes={recipes} sucursales={sucursales} />
+      <ProductionClient recipes={recipes} sucursalNombre={sucursal?.nombre ?? ""} />
     </div>
   );
 }
