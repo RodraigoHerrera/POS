@@ -83,6 +83,8 @@ export async function POST(req: Request) {
         diferencia_efectivo: diferenciaEfectivo,
         diferencia_tarjeta: diferenciaTarjeta,
         diferencia_qr: diferenciaQr,
+        declarado_tarjeta: new Prisma.Decimal(validTotalTarjeta.toString()).toDecimalPlaces(2).toNumber(),
+        declarado_qr: new Prisma.Decimal(validTotalQr.toString()).toDecimalPlaces(2).toNumber(),
         observaciones: observaciones || cajaAbierta.observaciones,
       },
     });

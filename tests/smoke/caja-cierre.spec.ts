@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { PrismaClient } from "@prisma/client";
 import { loginSucursal, seleccionarEmpleadoYPin, abrirCaja, cerrarCaja } from "../e2e/helpers";
-import { SMOKE } from "./smokeEnv";
+import { SMOKE, resolveSmokeDatabaseUrl } from "./smokeEnv";
 
 const APERTURA = 100;
 const CONTADO = APERTURA + SMOKE.precio;
@@ -66,6 +67,26 @@ test("caja: abrir -> vender -> cerrar -> ticket de cierre imprimible", async ({ 
   await expect(conciliacion("QR")).toContainText("Diferencia: Exacta");
   await expect(imprimir).toBeVisible();
   await expect(salir).toBeVisible();
+
+  // Persistencia de la conciliación: sistema, declarado y diferencia por método
+  const prisma = new PrismaClient({ datasourceUrl: resolveSmokeDatabaseUrl() });
+  try {
+    const caja = await prisma.caja.findFirstOrThrow({
+      where: { estado: "cerrada", empleado: { usuario: SMOKE.cajero } },
+      orderBy: { fecha_cierre: "desc" },
+    });
+    expect(Number(caja.saldo_final)).toBe(CONTADO);
+    expect(Number(caja.diferencia_efectivo)).toBe(0);
+    expect(Number(caja.ventas_tarjeta)).toBe(0);
+    expect(Number(caja.declarado_tarjeta)).toBe(TARJETA_DECLARADA);
+    expect(Number(caja.diferencia_tarjeta)).toBe(TARJETA_DECLARADA);
+    expect(Number(caja.ventas_qr)).toBe(0);
+    expect(caja.declarado_qr).not.toBeNull();
+    expect(Number(caja.declarado_qr)).toBe(QR_DECLARADO);
+    expect(Number(caja.diferencia_qr)).toBe(0);
+  } finally {
+    await prisma.$disconnect();
+  }
 
   // Imprimir dispara window.print (stub)
   await imprimir.click();

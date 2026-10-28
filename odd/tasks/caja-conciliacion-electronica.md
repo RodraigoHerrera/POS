@@ -56,5 +56,10 @@ Today the close only audits physical cash (`diferencia_efectivo`). Electronic pa
 
 - Run 4 (user stopped the :3000 dev server): `npm run test:smoke`: 2 passed (2.4m) — caja-cierre (1.4m) and dashboard-periodo (8.5s).
 
+## Declared amounts persisted (2026-10-28)
+- User asked to store the cashier's declared card/QR totals explicitly (before, only derivable as esperado + diferencia). Added nullable `caja.declarado_tarjeta` / `caja.declarado_qr` (Decimal(18,2)); migration `20261028120000_add_declarado_tarjeta_qr` (SQL matches `prisma migrate diff` output), applied to dev DB with `prisma migrate deploy`. Route persists both with Prisma.Decimal, 2 decimals. Closings before this migration keep NULL.
+- Pre-existing drift noticed, NOT touched: `prisma migrate diff` against dev DB also proposes `ALTER TABLE item MODIFY tipo ENUM('vendible','insumo','prep','oficina')`.
+- TDD (smoke is the only route-level harness): smoke spec now asserts persisted saldo_final, ventas/declarado/diferencia for tarjeta and QR. RED: `npm run test:smoke -- caja-cierre` failed at `declarado_tarjeta` (expected 10, received 0). GREEN: `npm run test:smoke` 2 passed (2.5m). `npx tsc --noEmit` clean.
+
 ## Next step
 - Open the PR to main when the user decides.
