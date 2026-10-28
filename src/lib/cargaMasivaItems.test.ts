@@ -42,6 +42,7 @@ describe("parsearCSVItems", () => {
     const res = parsearCSVItems(csvQuotes);
     assert.equal(res.ok, true);
     if (!res.ok) return;
+    assert.equal(res.filas.length, 1);
     assert.equal(res.filas[0].nombre, "Pan, con sésamo");
   });
 
@@ -218,8 +219,9 @@ describe("ejecutarCargaMasivaItems (Lógica de Upsert)", () => {
     assert.equal(createdProductos.length, 1); // Creó el producto vendible
   });
 
-  test("actualiza ítem existente encontrado por sku sin modificar activo ni vida_util_dias", async () => {
+  test("actualiza ítem existente encontrado por sku sin modificar activo ni vida_util_dias y sincroniza producto", async () => {
     const updatedItems: { where: { id: bigint }; data: Record<string, unknown> }[] = [];
+    const updatedProductos: { where: { item_inventario_id: bigint }; data: Record<string, unknown> }[] = [];
 
     const mockPrisma = {
       item: {
@@ -239,6 +241,12 @@ describe("ejecutarCargaMasivaItems (Lógica de Upsert)", () => {
         update: async ({ where, data }: { where: { id: bigint }; data: Record<string, unknown> }) => {
           updatedItems.push({ where, data });
           return { id: where.id, ...data };
+        },
+      },
+      producto: {
+        updateMany: async ({ where, data }: { where: { item_inventario_id: bigint }; data: Record<string, unknown> }) => {
+          updatedProductos.push({ where, data });
+          return { count: 1 };
         },
       },
       movimientoInventario: { count: async () => 0 },
@@ -279,6 +287,8 @@ describe("ejecutarCargaMasivaItems (Lógica de Upsert)", () => {
     assert.equal(updatedItems[0].data.nombre, "Carne Premium");
     assert.equal(updatedItems[0].data.activo, undefined); // No se modifica activo
     assert.equal(updatedItems[0].data.vida_util_dias, undefined); // No se modifica vida_util_dias
+    assert.equal(updatedProductos.length, 1); // Se sincronizó producto vinculado
+    assert.equal(updatedProductos[0].data.nombre, "Carne Premium");
   });
 
   test("rechaza actualización si intenta cambiar el tipo de un ítem existente", async () => {

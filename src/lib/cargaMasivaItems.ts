@@ -422,6 +422,13 @@ export async function ejecutarCargaMasivaItems(
           },
         });
 
+        if (item.nombre !== existing.nombre && prismaClient.producto) {
+          await prismaClient.producto.updateMany({
+            where: { item_inventario_id: existing.id },
+            data: { nombre: item.nombre },
+          });
+        }
+
         actualizados++;
         detalles.push({
           fila: fila.numeroFila,

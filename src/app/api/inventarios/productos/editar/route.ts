@@ -12,7 +12,7 @@ import {
 // --- SOLUCIÓN BIGINT ---
 // Esto define cómo se debe comportar BigInt al convertirse a JSON.
 // Lo convertimos a string para no perder precisión y evitar el error.
-// @ts-ignore
+// @ts-expect-error BigInt prototype serialization
 BigInt.prototype.toJSON = function () { 
   return this.toString(); 
 };
@@ -44,19 +44,30 @@ export async function PUT(request: Request) {
     const validId = parsePositiveBigInt(id, "ID del producto");
     const validPrecio = parseNonNegativeNumber(precio, "Precio del producto");
 
-    // 3. ACTUALIZACIÓN CON PRISMA
-    const updatedProduct = await prisma.producto.update({
-      where: { 
-        id: Number(validId)
-      },
-      data: {
-        nombre,
-        precio: validPrecio,
-        estado,
-        categoria,
-        descripcion,
-        ...(fotoUrl && { fotoUrl }),
+    // 3. ACTUALIZACIÓN CON PRISMA (y sincronización con item si está vinculado)
+    const updatedProduct = await prisma.$transaction(async (tx) => {
+      const prod = await tx.producto.update({
+        where: { 
+          id: Number(validId)
+        },
+        data: {
+          nombre,
+          precio: validPrecio,
+          estado,
+          categoria,
+          descripcion,
+          ...(fotoUrl && { fotoUrl }),
+        }
+      });
+
+      if (prod.item_inventario_id && nombre) {
+        await tx.item.update({
+          where: { id: prod.item_inventario_id },
+          data: { nombre: nombre.trim() },
+        });
       }
+
+      return prod;
     });
     
     console.log(`[API] Producto ID ${validId.toString()} actualizado.`);
@@ -64,7 +75,7 @@ export async function PUT(request: Request) {
     // 4. Retornar el producto actualizado
     return NextResponse.json(updatedProduct);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof ValidationError) {
       return validationErrorResponse(error);
     }
@@ -72,7 +83,7 @@ export async function PUT(request: Request) {
     console.error('[API Error] Fallo al actualizar producto:', error);
     
     // Manejo de errores específicos de Prisma
-    if (error?.code === 'P2025') {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === 'P2025') {
       return NextResponse.json(
         { message: 'El producto a editar no existe.' },
         { status: 404 }
