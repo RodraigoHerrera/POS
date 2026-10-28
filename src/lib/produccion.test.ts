@@ -10,6 +10,7 @@ import {
   ejecutarProduccion,
   calcularCantidadInsumo,
   ordenarLotesFEFO,
+  prepararRecetasProduccion,
 } from "./produccion";
 
 interface OpcionesMockTx {
@@ -226,6 +227,61 @@ describe("produccion: FEFO ordering", () => {
       ordenados.map((l) => Number(l.lote.id)),
       [4, 3, 2, 1]
     );
+  });
+});
+
+describe("produccion: page view model", () => {
+  const receta = (overrides: Record<string, unknown> = {}) => ({
+    id: BigInt(1),
+    rendimiento: new Prisma.Decimal(2),
+    merma_pct: null,
+    item_vendible: { nombre: "Salsa", unidad_code: "L", vida_util_dias: 3 },
+    items: [
+      {
+        item_insumo_id: BigInt(10),
+        cantidad: new Prisma.Decimal(3),
+        merma_pct: null,
+        item_insumo: { nombre: "Tomate", unidad_code: "kg" },
+      },
+    ],
+    ...overrides,
+  });
+
+  it("computes per-unit quantity with the authoritative formula plus stock and cost", () => {
+    const [vista] = prepararRecetasProduccion(
+      [receta()],
+      new Map([["10", new Prisma.Decimal("7.5")]]),
+      new Map([["10", new Prisma.Decimal(4)]])
+    );
+    assert.equal(vista.id, "1");
+    assert.equal(vista.nombre, "Salsa");
+    assert.equal(vista.unidad, "L");
+    assert.equal(vista.vidaUtilDias, 3);
+    assert.equal(vista.error, null);
+    assert.deepEqual(vista.insumos, [
+      { itemId: "10", nombre: "Tomate", unidad: "kg", porUnidad: 1.5, disponible: 7.5, costoUnit: 4 },
+    ]);
+  });
+
+  it("defaults missing stock and cost to zero", () => {
+    const [vista] = prepararRecetasProduccion([receta()], new Map(), new Map());
+    assert.equal(vista.insumos[0].disponible, 0);
+    assert.equal(vista.insumos[0].costoUnit, 0);
+  });
+
+  it("flags a recipe with invalid waste instead of throwing", () => {
+    const [vista] = prepararRecetasProduccion(
+      [receta({ merma_pct: new Prisma.Decimal(100) })],
+      new Map(),
+      new Map()
+    );
+    assert.match(vista.error ?? "", /merma/i);
+    assert.deepEqual(vista.insumos, []);
+  });
+
+  it("flags a recipe without ingredients", () => {
+    const [vista] = prepararRecetasProduccion([receta({ items: [] })], new Map(), new Map());
+    assert.match(vista.error ?? "", /insumos/i);
   });
 });
 

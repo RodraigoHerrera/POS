@@ -83,6 +83,85 @@ export function calcularCantidadInsumo({
   return lotesReceta.mul(cantidadInsumo).div(factorMerma(mermaPctInsumo, 'del insumo'));
 }
 
+export interface InsumoProduccionVista {
+  itemId: string;
+  nombre: string;
+  unidad: string;
+  /** Cantidad del insumo por cada unidad producida (rendimiento y merma aplicados). */
+  porUnidad: number;
+  disponible: number;
+  costoUnit: number;
+}
+
+export interface RecetaProduccionVista {
+  id: string;
+  nombre: string;
+  unidad: string;
+  vidaUtilDias: number | null;
+  insumos: InsumoProduccionVista[];
+  error: string | null;
+}
+
+interface RecetaParaVista {
+  id: bigint;
+  rendimiento: Prisma.Decimal;
+  merma_pct: DecimalNullable;
+  item_vendible: { nombre: string; unidad_code: string; vida_util_dias: number | null };
+  items: Array<{
+    item_insumo_id: bigint;
+    cantidad: Prisma.Decimal;
+    merma_pct: DecimalNullable;
+    item_insumo: { nombre: string; unidad_code: string };
+  }>;
+}
+
+/**
+ * Modelo de la página de producción. La cantidad requerida es lineal en lo
+ * que se produce, así que basta con el factor por unidad calculado con la
+ * misma fórmula que la transacción; el cliente solo lo multiplica.
+ */
+export function prepararRecetasProduccion(
+  recetas: RecetaParaVista[],
+  stockPorInsumo: Map<string, Prisma.Decimal>,
+  costoPorInsumo: Map<string, Prisma.Decimal>
+): RecetaProduccionVista[] {
+  return recetas.map((receta) => {
+    const base = {
+      id: receta.id.toString(),
+      nombre: receta.item_vendible.nombre,
+      unidad: receta.item_vendible.unidad_code,
+      vidaUtilDias: receta.item_vendible.vida_util_dias,
+    };
+
+    if (receta.items.length === 0) {
+      return { ...base, insumos: [], error: 'La receta no tiene insumos' };
+    }
+
+    try {
+      const insumos = receta.items.map((ri) => {
+        const clave = ri.item_insumo_id.toString();
+        return {
+          itemId: clave,
+          nombre: ri.item_insumo.nombre,
+          unidad: ri.item_insumo.unidad_code,
+          porUnidad: calcularCantidadInsumo({
+            cantidadProducir: new Prisma.Decimal(1),
+            rendimiento: receta.rendimiento,
+            mermaPctReceta: receta.merma_pct,
+            cantidadInsumo: ri.cantidad,
+            mermaPctInsumo: ri.merma_pct,
+          }).toNumber(),
+          disponible: stockPorInsumo.get(clave)?.toNumber() ?? 0,
+          costoUnit: costoPorInsumo.get(clave)?.toNumber() ?? 0,
+        };
+      });
+      return { ...base, insumos, error: null };
+    } catch (error: any) {
+      return { ...base, insumos: [], error: error.message };
+    }
+  });
+}
+
 interface LoteOrdenable {
   lote: { id: bigint; fecha_caducidad: Date | null; creado_en: Date };
 }

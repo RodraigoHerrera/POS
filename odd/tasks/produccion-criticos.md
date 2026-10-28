@@ -21,6 +21,7 @@ Fix the two critical findings from the `admin/produccion` audit (2026-10-28).
 - [x] T3 Apply recipe `rendimiento` and `merma_pct` (MRP formula; waste >= 100% rejected)
 - [x] T4 FEFO: lots without expiry last (in-memory sort, matches `simularConsumoFEFO`)
 - [x] T5 `runWithRetry` (15s) instead of Serializable; guarded lot decrement; output stock via increment
+- [x] T6 UI redesign in system style: live ingredient preview (required vs available), cost/max/expiry stat cards, recent productions table, empty state
 
 ## Acceptance criteria
 - Calling the action without a valid Administrador session fails without touching the DB.
@@ -38,6 +39,8 @@ Fix the two critical findings from the `admin/produccion` audit (2026-10-28).
 - Not run: manual UI check, Administrador-vs-Cajero 403 path (requires DB).
 - T3-T5 RED: 9 failing; GREEN: 20/20 (`npx tsx --test src/lib/produccion.test.ts`). tsc clean on touched files.
 - Not run: real-DB concurrency (production vs sale on same lot).
+- T6 RED: 4 failing (`prepararRecetasProduccion`); GREEN: 24/24. tsc clean; ESLint clean on UI files.
+- Not run: visual check in browser (Chrome extension not connected).
 - RDD: off (global) — not started.
 
 ## Next step
