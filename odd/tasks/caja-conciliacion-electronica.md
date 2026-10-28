@@ -54,5 +54,7 @@ Today the close only audits physical cash (`diferencia_efectivo`). Electronic pa
 - `npm run test:smoke` x3 against `smash_test`. Run 1-2: `Timed out waiting 180000ms from config.webServer`. Manual probe: smoke `next dev` needs ~33s to start and ~112s to compile `/` while the user's dev server on :3000 is running.
 - Run 3 (warm `.next-smoke` cache): server started, both specs (caja-cierre and the untouched dashboard-periodo) timed out at login navigation (`page.waitForURL` 120s in `tests/e2e/helpers.ts:75/78`) — on-demand route compilation, before reaching any changed code.
 
+- Run 4 (user stopped the :3000 dev server): `npm run test:smoke`: 2 passed (2.4m) — caja-cierre (1.4m) and dashboard-periodo (8.5s).
+
 ## Next step
-- Rerun `npm run test:smoke` with the :3000 dev server stopped.
+- Open the PR to main when the user decides.
