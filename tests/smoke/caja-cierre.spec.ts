@@ -49,10 +49,10 @@ test("caja: abrir -> vender -> cerrar -> ticket de cierre imprimible", async ({ 
   }
   const fila = (etiqueta: string) => page.getByText(etiqueta, { exact: true }).locator("xpath=..");
   await expect(fila("Caja abierta con")).toContainText(bs(APERTURA));
-  await expect(fila("Efectivo esperado")).toContainText(bs(CONTADO));
-  await expect(fila("Caja cerrada con")).toContainText(bs(CONTADO));
   await expect(fila("Total ventas")).toContainText(bs(SMOKE.precio));
-  await expect(fila("Exacta")).toContainText(bs(0));
+  // El efectivo esperado/contado solo aparece en la conciliación.
+  await expect(page.getByText("Efectivo esperado")).toHaveCount(0);
+  await expect(page.getByText("Caja cerrada con")).toHaveCount(0);
 
   // Conciliación por método: Esperado (Sistema) / Declarado (Manual) / Diferencia
   await expect(page.getByText("Conciliación", { exact: true })).toBeVisible();
@@ -77,7 +77,7 @@ test("caja: abrir -> vender -> cerrar -> ticket de cierre imprimible", async ({ 
   await expect(salir).toBeHidden();
   await expect(page.getByText("Cierre de Caja", { exact: true })).toBeVisible();
   await expect(page.getByText("-- Fin de Cierre --")).toBeVisible();
-  await expect(fila("Exacta")).toBeVisible();
+  await expect(page.getByTestId("conciliacion-Efectivo")).toBeVisible();
   await page.emulateMedia({ media: "screen" });
 
   await salir.click();

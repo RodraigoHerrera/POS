@@ -46,9 +46,7 @@ export interface TicketCierre {
   lineasMetodo: { etiqueta: string; monto: string }[];
   totalVentas: string;
   saldoInicial: string;
-  efectivoEsperado: string;
-  totalContado: string;
-  diferencia: { etiqueta: EtiquetaDiferencia; monto: string };
+  // Efectivo esperado/contado y su diferencia viven solo en `conciliacion`.
   conciliacion: FilaConciliacion[];
 }
 
@@ -86,9 +84,6 @@ export function construirTicketCierre(data: CierreCajaData): TicketCierre {
     })),
     totalVentas: formatearBs(data.totalVentas),
     saldoInicial: formatearBs(data.saldoInicial),
-    efectivoEsperado: formatearBs(data.efectivoEsperado),
-    totalContado: formatearBs(data.totalContado),
-    diferencia: clasificarDiferencia(data.diferenciaEfectivo),
     // Conciliación por método auditado, en orden fijo: Efectivo, Tarjeta, QR.
     conciliacion: [
       {

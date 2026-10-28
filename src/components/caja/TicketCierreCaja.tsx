@@ -66,18 +66,6 @@ export default function TicketCierreCaja({ cierre, onSalir, saliendo = false }: 
             <span>Caja abierta con</span>
             <span className="tabular-nums">{t.saldoInicial}</span>
           </div>
-          <div className="flex justify-between">
-            <span>Efectivo esperado</span>
-            <span className="tabular-nums">{t.efectivoEsperado}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Caja cerrada con</span>
-            <span className="tabular-nums">{t.totalContado}</span>
-          </div>
-          <div className="flex justify-between font-bold mt-1">
-            <span>{t.diferencia.etiqueta}</span>
-            <span className="tabular-nums">{t.diferencia.monto}</span>
-          </div>
         </div>
 
         <div className="border-b border-black pb-2 mb-4">

@@ -47,5 +47,12 @@ Today the close only audits physical cash (`diferencia_efectivo`). Electronic pa
 - `npx eslint <touched files>`: 4 errors + 1 warning, all pre-existing: `no-explicit-any` at caja.ts:111,116 (`items?: any[]`) and caja.test.ts:307; cierre/page.tsx unused `_detalle` and `any` in catch. None in new code.
 - Smoke spec updated, NOT run (policy: on demand, separate test DB).
 
+## Changes after delivery
+- 2026-10-28: user asked to remove the old cash rows from the ticket ("Efectivo esperado", "Caja cerrada con", standalone difference) since cash now lives in the reconciliation section. "Caja abierta con" (opening balance) kept: not duplicated. Removed `efectivoEsperado`, `totalContado`, `diferencia` from `TicketCierre` (input `CierreCajaData` unchanged). TDD: RED `npx tsx --test src/lib/ticketCierre.test.ts` 10 tests, 9 pass, 1 fail; GREEN with caja tests 34/34. `npx tsc --noEmit` clean. Smoke spec assertions updated accordingly.
+
+## Smoke run (2026-10-28) — NOT passing, environmental
+- `npm run test:smoke` x3 against `smash_test`. Run 1-2: `Timed out waiting 180000ms from config.webServer`. Manual probe: smoke `next dev` needs ~33s to start and ~112s to compile `/` while the user's dev server on :3000 is running.
+- Run 3 (warm `.next-smoke` cache): server started, both specs (caja-cierre and the untouched dashboard-periodo) timed out at login navigation (`page.waitForURL` 120s in `tests/e2e/helpers.ts:75/78`) — on-demand route compilation, before reaching any changed code.
+
 ## Next step
-- Run smoke spec on demand against the test DB; then commit/push per project policy.
+- Rerun `npm run test:smoke` with the :3000 dev server stopped.
