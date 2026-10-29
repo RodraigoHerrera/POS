@@ -23,11 +23,11 @@ Keep the sales report (`/admin/reporte-ventas`) cheap for the database and the b
 
 ## Acceptance / Checks
 - `npx tsx --test src/lib/reporteVentas.test.ts` green; `npx tsc --noEmit`; `npx next lint`; `npx prisma validate`.
-- Migration not applied to any DB here (user applies with `prisma migrate deploy`).
+- Migration applied with `prisma migrate deploy` on local DB.
 
 ## Progress
 - T1-T4 done. Checks: tests 39/39 pass, tsc clean, prisma validate ok, lint clean on touched code (one user-edit warning: unused FileSpreadsheet import).
-- Pending: apply migration with `npx prisma migrate deploy`; browser check not run.
+- Migration applied by user on local DB `smash` (2026-10-29). Pending: browser check not run.
 
 ## Next step
 - None planned. Optional later: stream large CSV exports.
