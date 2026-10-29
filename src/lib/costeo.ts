@@ -37,6 +37,19 @@ export function costoTeoricoDesdeRequerimientos(
   }, 0);
 }
 
+/** Calcula el costo total de los insumos de una receta a partir del mapa de referencia. */
+export function calcularCostoReceta(
+  items: { item_insumo_id: bigint | string; cantidad: number | string | { toString(): string } }[],
+  costoReferenciaPorInsumo: Map<string, CostoReferenciaInsumo>
+): number {
+  return items.reduce((acc, ri) => {
+    const cantidad = Number(ri.cantidad);
+    const referencia = costoReferenciaPorInsumo.get(ri.item_insumo_id.toString());
+    const costoReferencia = referencia?.costo ?? 0;
+    return acc + cantidad * costoReferencia;
+  }, 0);
+}
+
 /**
  * Costo de referencia por insumo en una sucursal: costo_estandar si está
  * fijado, si no costo_promedio actual. Una sola consulta a cada tabla para
@@ -111,4 +124,47 @@ export async function calcularCostoTeoricoUnitario(
 
   const costoTeoricoUnitario = detalle.reduce((acc, d) => acc + d.costoTeorico, 0);
   return { costoTeoricoUnitario, detalle };
+}
+
+/**
+ * Calcula en batch el costo teórico unitario de un conjunto de items vendibles
+ * (o de todas las recetas si no se pasan IDs) en la sucursal dada.
+ * Ejecuta únicamente 3 consultas a la base de datos en total, resolviendo el antipatrón N+1.
+ */
+export async function calcularCostosTeoricosUnitarios(
+  sucursalId: bigint,
+  itemVendibleIds?: bigint[]
+): Promise<Record<string, number>> {
+  if (itemVendibleIds && itemVendibleIds.length === 0) return {};
+
+  const recetas = await prisma.receta.findMany({
+    where: itemVendibleIds ? { item_vendible_id: { in: itemVendibleIds } } : undefined,
+    include: { items: true },
+  });
+
+  const resultado: Record<string, number> = {};
+
+  if (itemVendibleIds) {
+    for (const id of itemVendibleIds) {
+      resultado[id.toString()] = 0;
+    }
+  }
+
+  if (recetas.length === 0) return resultado;
+
+  const insumoIds = Array.from(
+    new Set(recetas.flatMap((r) => r.items.map((ri) => ri.item_insumo_id)))
+  );
+
+  const costoReferenciaPorInsumo = await obtenerCostoReferenciaPorInsumo(
+    sucursalId,
+    insumoIds
+  );
+
+  for (const receta of recetas) {
+    const costo = calcularCostoReceta(receta.items, costoReferenciaPorInsumo);
+    resultado[receta.item_vendible_id.toString()] = Math.round(costo * 100) / 100;
+  }
+
+  return resultado;
 }

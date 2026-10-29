@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import RecetasCard from "@/components/ui/items/recetasCard";
 import ListCardSkeleton from "@/components/ui/skeleton/ListCardSkeleton";
 import { useFetchData } from "@/hooks/useFetchData";
@@ -40,10 +40,27 @@ function normalizeText(text: string): string {
 }
 
 export default function RecetasPage() {
-  const { data: items, loading, reload: cargarItems } = useFetchData<Item[]>(
-    "/api/inventarios/items",
-    []
+  const {
+    data: items,
+    loading: loadingItems,
+    reload: reloadItems,
+  } = useFetchData<Item[]>("/api/inventarios/items", []);
+
+  const {
+    data: costosRes,
+    loading: loadingCostos,
+    reload: reloadCostos,
+  } = useFetchData<{ success: boolean; costos: Record<string, number> }>(
+    "/api/recetas/costoTeorico",
+    { success: false, costos: {} }
   );
+
+  const loading = loadingItems || loadingCostos;
+
+  const cargarItems = useCallback(() => {
+    reloadItems();
+    reloadCostos();
+  }, [reloadItems, reloadCostos]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("todos");
@@ -328,7 +345,12 @@ export default function RecetasPage() {
             Array.from({ length: 4 }).map((_, i) => <ListCardSkeleton key={i} />)
           ) : filteredItems.length > 0 ? (
             filteredItems.map((item) => (
-              <RecetasCard key={item.id} itemData={item} onSaved={cargarItems} />
+              <RecetasCard
+                key={item.id}
+                itemData={item}
+                costoTeorico={costosRes?.costos?.[item.id] ?? 0}
+                onSaved={cargarItems}
+              />
             ))
           ) : (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 py-16 px-4 text-center dark:border-gray-800">
