@@ -16,14 +16,22 @@ import {
   filasProductoDetalle,
   filasProductoResumen,
   generarCSV,
+  parseFormatoReporte,
   parseRangoFechas,
   parseTipoReporte,
+  recortarVistaPrevia,
+  LIMITE_VISTA_PREVIA,
+  ventasProductoDesdeGrupos,
+  ventasUsuarioDesdeGrupos,
+  type Celda,
   type EmpleadoInfo,
 } from "@/lib/reporteVentas";
 
 export const dynamic = "force-dynamic";
 
 type Rango = { inicio: Date; fin: Date };
+// `total` is set only when the query was already limited in the DB (preview).
+type Reporte = { cabeceras: readonly string[]; filas: Celda[][]; total?: number };
 
 async function cargarEmpleados(ids: bigint[]): Promise<Map<string, EmpleadoInfo>> {
   if (ids.length === 0) return new Map();
@@ -36,44 +44,51 @@ async function cargarEmpleados(ids: bigint[]): Promise<Map<string, EmpleadoInfo>
   );
 }
 
+const reporte = (cabeceras: readonly string[], filas: Celda[][]): Reporte => ({ cabeceras, filas });
+
 const idsUnicos = (ids: bigint[]) => [...new Set(ids.map((i) => i.toString()))].map((i) => BigInt(i));
 
-async function reporteUsuario(sucursalId: bigint, { inicio, fin }: Rango) {
-  const ventas = await prisma.historialVentas.findMany({
+async function reporteUsuario(sucursalId: bigint, { inicio, fin }: Rango): Promise<Reporte> {
+  // One row per order instead of per line; the builder still counts distinct orders.
+  const grupos = await prisma.historialVentas.groupBy({
+    by: ["empleado_id", "pedido_id"],
     where: { sucursal_id: sucursalId, fecha_venta: { gte: inicio, lt: fin } },
-    select: { empleado_id: true, pedido_id: true, cantidad: true, venta_total: true, costo_total: true },
+    _sum: { cantidad: true, venta_total: true, costo_total: true },
   });
+  const ventas = ventasUsuarioDesdeGrupos(grupos);
+  const empleados = await cargarEmpleados(idsUnicos(grupos.map((g) => g.empleado_id)));
+  return reporte(CABECERAS_USUARIO, filasPorUsuario(ventas, empleados));
+}
+
+async function reporteProductoResumen(sucursalId: bigint, { inicio, fin }: Rango): Promise<Reporte> {
+  const grupos = await prisma.historialVentas.groupBy({
+    by: ["producto_id", "producto_nombre", "sku_producto", "categoria"],
+    where: { sucursal_id: sucursalId, fecha_venta: { gte: inicio, lt: fin } },
+    _sum: { cantidad: true, venta_total: true, costo_total: true, costo_teorico_total: true },
+  });
+  return reporte(CABECERAS_PRODUCTO_RESUMEN, filasProductoResumen(ventasProductoDesdeGrupos(grupos)));
+}
+
+async function reporteProductoDetalle(
+  sucursalId: bigint,
+  { inicio, fin }: Rango,
+  tz: string,
+  limite?: number
+): Promise<Reporte> {
+  const where = { sucursal_id: sucursalId, fecha_venta: { gte: inicio, lt: fin } };
+  const [ventas, total] = await Promise.all([
+    prisma.historialVentas.findMany({
+      where,
+      orderBy: [{ fecha_venta: "asc" }, { id: "asc" }],
+      take: limite,
+    }),
+    limite === undefined ? undefined : prisma.historialVentas.count({ where }),
+  ]);
   const empleados = await cargarEmpleados(idsUnicos(ventas.map((v) => v.empleado_id)));
-  return generarCSV(CABECERAS_USUARIO, filasPorUsuario(ventas, empleados));
+  return { ...reporte(CABECERAS_PRODUCTO_DETALLE, filasProductoDetalle(ventas, empleados, tz)), total };
 }
 
-async function reporteProductoResumen(sucursalId: bigint, { inicio, fin }: Rango) {
-  const ventas = await prisma.historialVentas.findMany({
-    where: { sucursal_id: sucursalId, fecha_venta: { gte: inicio, lt: fin } },
-    select: {
-      producto_id: true,
-      producto_nombre: true,
-      sku_producto: true,
-      categoria: true,
-      cantidad: true,
-      venta_total: true,
-      costo_total: true,
-      costo_teorico_total: true,
-    },
-  });
-  return generarCSV(CABECERAS_PRODUCTO_RESUMEN, filasProductoResumen(ventas));
-}
-
-async function reporteProductoDetalle(sucursalId: bigint, { inicio, fin }: Rango, tz: string) {
-  const ventas = await prisma.historialVentas.findMany({
-    where: { sucursal_id: sucursalId, fecha_venta: { gte: inicio, lt: fin } },
-    orderBy: [{ fecha_venta: "asc" }, { id: "asc" }],
-  });
-  const empleados = await cargarEmpleados(idsUnicos(ventas.map((v) => v.empleado_id)));
-  return generarCSV(CABECERAS_PRODUCTO_DETALLE, filasProductoDetalle(ventas, empleados, tz));
-}
-
-async function reporteCaja(sucursalId: bigint, { inicio, fin }: Rango, tz: string) {
+async function reporteCaja(sucursalId: bigint, { inicio, fin }: Rango, tz: string): Promise<Reporte> {
   const cajas = await prisma.caja.findMany({
     where: { sucursal_id: sucursalId, fecha_apertura: { gte: inicio, lt: fin } },
     include: { empleado: { select: { nombre: true } } },
@@ -90,7 +105,7 @@ async function reporteCaja(sucursalId: bigint, { inicio, fin }: Rango, tz: strin
       select: { caja_id: true, tipo: true, monto: true },
     }),
   ]);
-  return generarCSV(
+  return reporte(
     CABECERAS_CAJA,
     filasPorCaja(
       cajas.map((c) => ({ ...c, cajero: c.empleado.nombre })),
@@ -105,7 +120,7 @@ async function reporteCaja(sucursalId: bigint, { inicio, fin }: Rango, tz: strin
   );
 }
 
-async function reporteAnuladas(sucursalId: bigint, { inicio, fin }: Rango, tz: string) {
+async function reporteAnuladas(sucursalId: bigint, { inicio, fin }: Rango, tz: string): Promise<Reporte> {
   const pedidos = await prisma.pedido.findMany({
     where: { sucursal_id: sucursalId, estado: "ANULADO", creado_en: { gte: inicio, lt: fin } },
     include: {
@@ -115,7 +130,7 @@ async function reporteAnuladas(sucursalId: bigint, { inicio, fin }: Rango, tz: s
     },
     orderBy: { creado_en: "asc" },
   });
-  return generarCSV(
+  return reporte(
     CABECERAS_ANULADAS,
     filasAnuladas(
       pedidos.map((p) => ({
@@ -143,26 +158,33 @@ export async function GET(req: Request) {
     const tz = obtenerZonaMrp();
     const rango = parseRangoFechas(searchParams.get("desde"), searchParams.get("hasta"), tz);
 
-    let csv: string;
+    const formato = parseFormatoReporte(searchParams.get("formato"));
+
+    let datos: Reporte;
     switch (tipo) {
       case "usuario":
-        csv = await reporteUsuario(sucursalId, rango);
+        datos = await reporteUsuario(sucursalId, rango);
         break;
       case "producto-resumen":
-        csv = await reporteProductoResumen(sucursalId, rango);
+        datos = await reporteProductoResumen(sucursalId, rango);
         break;
       case "producto-detalle":
-        csv = await reporteProductoDetalle(sucursalId, rango, tz);
+        datos = await reporteProductoDetalle(sucursalId, rango, tz, formato === "json" ? LIMITE_VISTA_PREVIA : undefined);
         break;
       case "caja":
-        csv = await reporteCaja(sucursalId, rango, tz);
+        datos = await reporteCaja(sucursalId, rango, tz);
         break;
       case "anuladas":
-        csv = await reporteAnuladas(sucursalId, rango, tz);
+        datos = await reporteAnuladas(sucursalId, rango, tz);
         break;
     }
 
-    return new NextResponse(csv, {
+    if (formato === "json") {
+      const vista = recortarVistaPrevia(datos.filas, datos.total);
+      return NextResponse.json({ cabeceras: datos.cabeceras, ...vista }, { headers: { "Cache-Control": "no-store, max-age=0" } });
+    }
+
+    return new NextResponse(generarCSV(datos.cabeceras, datos.filas), {
       status: 200,
       headers: {
         "Content-Type": "text/csv; charset=utf-8",

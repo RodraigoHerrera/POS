@@ -14,6 +14,28 @@ export function parseTipoReporte(valor: string | null | undefined): TipoReporte 
   return TIPOS.find((t) => t === valor) ?? null;
 }
 
+export type FormatoReporte = "csv" | "json";
+
+/** `json` devuelve cabeceras y filas para la vista previa; cualquier otro valor es CSV. */
+export function parseFormatoReporte(valor: string | null | undefined): FormatoReporte {
+  return valor === "json" ? "json" : "csv";
+}
+
+/** Filas maximas que devuelve la vista previa JSON; el CSV siempre va completo. */
+export const LIMITE_VISTA_PREVIA = 500;
+
+/**
+ * Recorta las filas de la vista previa. `total` permite informar el conteo real
+ * cuando la consulta ya vino limitada desde la base.
+ */
+export function recortarVistaPrevia<T>(
+  filas: readonly T[],
+  total: number = filas.length,
+  limite: number = LIMITE_VISTA_PREVIA
+): { filas: T[]; total: number; truncado: boolean } {
+  return { filas: filas.slice(0, limite), total, truncado: total > limite };
+}
+
 export class ReporteVentasError extends Error {
   constructor(message: string) {
     super(message);
@@ -86,16 +108,17 @@ function escaparCelda(celda: Celda): string {
   let texto: string;
   if (typeof celda === "number") {
     if (!Number.isFinite(celda)) return "";
-    texto = celda.toFixed(2);
+    // Decimal comma: Spanish-locale Excel reads "1234.50" as 123450.
+    texto = celda.toFixed(2).replace(".", ",");
   } else {
     texto = /^[=+\-@]/.test(celda) ? `'${celda}` : celda;
   }
-  return /[",\r\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
+  return /[";\r\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
 }
 
-/** CSV con BOM UTF-8, separador "," y CRLF (convencion del repo; abre bien en Excel). */
+/** CSV con BOM UTF-8, separador ";", coma decimal y CRLF: formato de Excel con configuracion regional en espanol. */
 export function generarCSV(cabeceras: readonly string[], filas: readonly (readonly Celda[])[]): string {
-  const lineas = [cabeceras, ...filas].map((f) => f.map(escaparCelda).join(","));
+  const lineas = [cabeceras, ...filas].map((f) => f.map(escaparCelda).join(";"));
   return `﻿${lineas.join("\r\n")}\r\n`;
 }
 
@@ -167,6 +190,23 @@ export function filasPorUsuario(
     });
 }
 
+/** Adapta `groupBy([empleado_id, pedido_id])` a las filas de `filasPorUsuario` (una por pedido). */
+export function ventasUsuarioDesdeGrupos(
+  grupos: readonly {
+    empleado_id: Num;
+    pedido_id: Num;
+    _sum: { cantidad: number | null; venta_total: Num; costo_total: Num };
+  }[]
+): VentaUsuarioInput[] {
+  return grupos.map((g) => ({
+    empleado_id: g.empleado_id,
+    pedido_id: g.pedido_id,
+    cantidad: g._sum.cantidad ?? 0,
+    venta_total: g._sum.venta_total ?? 0,
+    costo_total: g._sum.costo_total ?? 0,
+  }));
+}
+
 // ---------------------------------------------------------------- por producto
 
 export const CABECERAS_PRODUCTO_RESUMEN = [
@@ -184,6 +224,28 @@ export interface VentaProductoInput {
   venta_total: Num;
   costo_total: Num;
   costo_teorico_total: Num;
+}
+
+/** Adapta `groupBy([producto_id, producto_nombre, sku_producto, categoria])` a `filasProductoResumen`. */
+export function ventasProductoDesdeGrupos(
+  grupos: readonly {
+    producto_id: Num;
+    producto_nombre: string;
+    sku_producto: string | null;
+    categoria: string | null;
+    _sum: { cantidad: number | null; venta_total: Num; costo_total: Num; costo_teorico_total: Num };
+  }[]
+): VentaProductoInput[] {
+  return grupos.map((g) => ({
+    producto_id: g.producto_id,
+    producto_nombre: g.producto_nombre,
+    sku_producto: g.sku_producto,
+    categoria: g.categoria,
+    cantidad: g._sum.cantidad ?? 0,
+    venta_total: g._sum.venta_total ?? 0,
+    costo_total: g._sum.costo_total ?? 0,
+    costo_teorico_total: g._sum.costo_teorico_total ?? 0,
+  }));
 }
 
 export function filasProductoResumen(ventas: readonly VentaProductoInput[]): Celda[][] {

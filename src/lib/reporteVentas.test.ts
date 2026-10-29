@@ -6,6 +6,11 @@ import {
   generarCSV,
   formatearFechaLocal,
   parseTipoReporte,
+  parseFormatoReporte,
+  recortarVistaPrevia,
+  LIMITE_VISTA_PREVIA,
+  ventasUsuarioDesdeGrupos,
+  ventasProductoDesdeGrupos,
   filasPorUsuario,
   filasProductoResumen,
   filasProductoDetalle,
@@ -84,25 +89,30 @@ describe('formatearFechaLocal', () => {
 });
 
 describe('generarCSV', () => {
-  it('BOM + CRLF + separador coma', () => {
+  it('BOM + CRLF + separador punto y coma', () => {
     const csv = generarCSV(['A', 'B'], [['x', 'y']]);
-    assert.equal(csv, '﻿A,B\r\nx,y\r\n');
+    assert.equal(csv, '﻿A;B\r\nx;y\r\n');
   });
 
-  it('escapa comas, comillas y saltos de línea', () => {
-    const csv = generarCSV(['H'], [['a,b'], ['di "hola"'], ['l1\nl2'], ['l1\r\nl2']]);
+  it('escapa punto y coma, comillas y saltos de línea; la coma ya no requiere comillas', () => {
+    const csv = generarCSV(['H'], [['a;b'], ['a,b'], ['di "hola"'], ['l1\nl2'], ['l1\r\nl2']]);
     const lineas = csv.slice(1);
-    assert.equal(lineas, 'H\r\n"a,b"\r\n"di ""hola"""\r\n"l1\nl2"\r\n"l1\r\nl2"\r\n');
+    assert.equal(lineas, 'H\r\n"a;b"\r\na,b\r\n"di ""hola"""\r\n"l1\nl2"\r\n"l1\r\nl2"\r\n');
   });
 
-  it('null/undefined vacío; números con 2 decimales', () => {
+  it('null/undefined vacío; números con 2 decimales y coma decimal', () => {
     const csv = generarCSV(['A', 'B', 'C', 'D'], [[null, undefined, 3, 2.5]]);
-    assert.equal(csv, '﻿A,B,C,D\r\n,,3.00,2.50\r\n');
+    assert.equal(csv, '﻿A;B;C;D\r\n;;3,00;2,50\r\n');
+  });
+
+  it('miles sin separador para que Excel no los confunda', () => {
+    const csv = generarCSV(['A'], [[1234567.891]]);
+    assert.equal(csv, '﻿A\r\n1234567,89\r\n');
   });
 
   it('negativos numéricos no se tocan; no finitos quedan vacíos', () => {
     const csv = generarCSV(['A', 'B'], [[-1.256, Number.NaN]]);
-    assert.equal(csv, '﻿A,B\r\n-1.26,\r\n');
+    assert.equal(csv, '﻿A;B\r\n-1,26;\r\n');
   });
 
   it('guarda contra inyección de fórmulas en strings', () => {
@@ -111,8 +121,8 @@ describe('generarCSV', () => {
   });
 
   it('el prefijo de guarda convive con el quoting', () => {
-    const csv = generarCSV(['H'], [['=a,b']]);
-    assert.equal(csv, "﻿H\r\n\"'=a,b\"\r\n");
+    const csv = generarCSV(['H'], [['=a;b']]);
+    assert.equal(csv, "﻿H\r\n\"'=a;b\"\r\n");
   });
 
   it('sin filas: solo cabeceras', () => {
@@ -328,5 +338,83 @@ describe('filasAnuladas', () => {
       'No', '', '', 90, 'ANULADO (Admin #1): error',
     ]);
     assert.equal(CABECERAS_ANULADAS.length, 13);
+  });
+});
+
+describe('parseFormatoReporte', () => {
+  it('defaults to csv when missing or unknown', () => {
+    assert.equal(parseFormatoReporte(null), 'csv');
+    assert.equal(parseFormatoReporte(undefined), 'csv');
+    assert.equal(parseFormatoReporte('xml'), 'csv');
+  });
+
+  it('accepts json and csv', () => {
+    assert.equal(parseFormatoReporte('json'), 'json');
+    assert.equal(parseFormatoReporte('csv'), 'csv');
+  });
+});
+
+describe('recortarVistaPrevia', () => {
+  const filas = Array.from({ length: 5 }, (_, i) => [i]);
+
+  it('returns every row when under the limit', () => {
+    assert.deepEqual(recortarVistaPrevia(filas, undefined, 10), { filas, total: 5, truncado: false });
+  });
+
+  it('cuts to the limit and flags truncation', () => {
+    assert.deepEqual(recortarVistaPrevia(filas, undefined, 2), { filas: [[0], [1]], total: 5, truncado: true });
+  });
+
+  it('uses the given total when rows were already limited in the DB', () => {
+    assert.deepEqual(recortarVistaPrevia(filas, 1200, 5), { filas, total: 1200, truncado: true });
+  });
+
+  it('defaults to LIMITE_VISTA_PREVIA', () => {
+    const muchas = Array.from({ length: LIMITE_VISTA_PREVIA + 1 }, () => [1]);
+    const r = recortarVistaPrevia(muchas);
+    assert.equal(r.filas.length, LIMITE_VISTA_PREVIA);
+    assert.equal(r.truncado, true);
+  });
+});
+
+describe('grouped DB rows feed the summary builders', () => {
+  it('ventasUsuarioDesdeGrupos maps sums and treats null as zero', () => {
+    const r = ventasUsuarioDesdeGrupos([
+      { empleado_id: BigInt(1), pedido_id: BigInt(10), _sum: { cantidad: 3, venta_total: '30.5', costo_total: '10' } },
+      { empleado_id: BigInt(2), pedido_id: BigInt(11), _sum: { cantidad: null, venta_total: null, costo_total: null } },
+    ]);
+    assert.deepEqual(r, [
+      { empleado_id: BigInt(1), pedido_id: BigInt(10), cantidad: 3, venta_total: '30.5', costo_total: '10' },
+      { empleado_id: BigInt(2), pedido_id: BigInt(11), cantidad: 0, venta_total: 0, costo_total: 0 },
+    ]);
+  });
+
+  it('per-order groups give the same user report as raw lines', () => {
+    const lineas = [
+      { empleado_id: BigInt(1), pedido_id: BigInt(10), cantidad: 1, venta_total: '10', costo_total: '4' },
+      { empleado_id: BigInt(1), pedido_id: BigInt(10), cantidad: 2, venta_total: '20', costo_total: '6' },
+      { empleado_id: BigInt(1), pedido_id: BigInt(12), cantidad: 1, venta_total: '5', costo_total: '1' },
+    ];
+    const grupos = ventasUsuarioDesdeGrupos([
+      { empleado_id: BigInt(1), pedido_id: BigInt(10), _sum: { cantidad: 3, venta_total: '30', costo_total: '10' } },
+      { empleado_id: BigInt(1), pedido_id: BigInt(12), _sum: { cantidad: 1, venta_total: '5', costo_total: '1' } },
+    ]);
+    const empleados = new Map([['1', { nombre: 'Ana', usuario: 'ana', rol: 'Cajero' }]]);
+    assert.deepEqual(filasPorUsuario(grupos, empleados), filasPorUsuario(lineas, empleados));
+  });
+
+  it('ventasProductoDesdeGrupos maps sums and treats null as zero', () => {
+    const r = ventasProductoDesdeGrupos([
+      {
+        producto_id: BigInt(5), producto_nombre: 'Burger', sku_producto: null, categoria: 'Comida',
+        _sum: { cantidad: null, venta_total: '12', costo_total: null, costo_teorico_total: '3' },
+      },
+    ]);
+    assert.deepEqual(r, [
+      {
+        producto_id: BigInt(5), producto_nombre: 'Burger', sku_producto: null, categoria: 'Comida',
+        cantidad: 0, venta_total: '12', costo_total: 0, costo_teorico_total: '3',
+      },
+    ]);
   });
 });
