@@ -338,6 +338,7 @@ export default function ReporteVentasClient() {
             <DatePicker
               id="rv-periodo"
               mode="range"
+              staticPosition={false}
               placeholder="Desde – hasta"
               value={[rango.desde, rango.hasta]}
               onChange={(fechas) => {

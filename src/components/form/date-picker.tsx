@@ -17,6 +17,8 @@ type PropsType = {
   value?: DateOption | DateOption[];
   label?: string;
   placeholder?: string;
+  /** Render the calendar inside the input wrapper (always below). Use false outside modals so it flips to fit the viewport. */
+  staticPosition?: boolean;
 };
 
 const fechasDe = (value: PropsType["value"]) =>
@@ -32,6 +34,7 @@ export default function DatePicker({
   defaultDate,
   value,
   placeholder,
+  staticPosition = true,
 }: PropsType) {
   const instanceRef = useRef<flatpickr.Instance | null>(null);
   // Refs keep the latest props without re-creating flatpickr on every render
@@ -44,7 +47,7 @@ export default function DatePicker({
   useEffect(() => {
     const flatPickr = flatpickr(`#${id}`, {
       mode: mode || "single",
-      static: true,
+      static: staticPosition,
       monthSelectorType: "static",
       dateFormat: "Y-m-d",
       locale: Spanish,
@@ -63,7 +66,7 @@ export default function DatePicker({
       }
       instanceRef.current = null;
     };
-  }, [mode, id, defaultDate]);
+  }, [mode, id, defaultDate, staticPosition]);
 
   const clave = claveValor(value);
   useEffect(() => {

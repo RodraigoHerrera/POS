@@ -140,6 +140,7 @@ export default function VentasFilters({
             <DatePicker
               id="ventas-periodo"
               mode="range"
+              staticPosition={false}
               placeholder="Todas las fechas"
               value={[filters.desde, filters.hasta]}
               onChange={(fechas) => {
