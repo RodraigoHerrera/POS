@@ -9,6 +9,8 @@ import {
   parseFormatoReporte,
   recortarVistaPrevia,
   LIMITE_VISTA_PREVIA,
+  ventasUsuarioDesdeGrupos,
+  ventasProductoDesdeGrupos,
   filasPorUsuario,
   filasProductoResumen,
   filasProductoDetalle,
@@ -367,5 +369,47 @@ describe('recortarVistaPrevia', () => {
     const r = recortarVistaPrevia(muchas);
     assert.equal(r.filas.length, LIMITE_VISTA_PREVIA);
     assert.equal(r.truncado, true);
+  });
+});
+
+describe('grouped DB rows feed the summary builders', () => {
+  it('ventasUsuarioDesdeGrupos maps sums and treats null as zero', () => {
+    const r = ventasUsuarioDesdeGrupos([
+      { empleado_id: BigInt(1), pedido_id: BigInt(10), _sum: { cantidad: 3, venta_total: '30.5', costo_total: '10' } },
+      { empleado_id: BigInt(2), pedido_id: BigInt(11), _sum: { cantidad: null, venta_total: null, costo_total: null } },
+    ]);
+    assert.deepEqual(r, [
+      { empleado_id: BigInt(1), pedido_id: BigInt(10), cantidad: 3, venta_total: '30.5', costo_total: '10' },
+      { empleado_id: BigInt(2), pedido_id: BigInt(11), cantidad: 0, venta_total: 0, costo_total: 0 },
+    ]);
+  });
+
+  it('per-order groups give the same user report as raw lines', () => {
+    const lineas = [
+      { empleado_id: BigInt(1), pedido_id: BigInt(10), cantidad: 1, venta_total: '10', costo_total: '4' },
+      { empleado_id: BigInt(1), pedido_id: BigInt(10), cantidad: 2, venta_total: '20', costo_total: '6' },
+      { empleado_id: BigInt(1), pedido_id: BigInt(12), cantidad: 1, venta_total: '5', costo_total: '1' },
+    ];
+    const grupos = ventasUsuarioDesdeGrupos([
+      { empleado_id: BigInt(1), pedido_id: BigInt(10), _sum: { cantidad: 3, venta_total: '30', costo_total: '10' } },
+      { empleado_id: BigInt(1), pedido_id: BigInt(12), _sum: { cantidad: 1, venta_total: '5', costo_total: '1' } },
+    ]);
+    const empleados = new Map([['1', { nombre: 'Ana', usuario: 'ana', rol: 'Cajero' }]]);
+    assert.deepEqual(filasPorUsuario(grupos, empleados), filasPorUsuario(lineas, empleados));
+  });
+
+  it('ventasProductoDesdeGrupos maps sums and treats null as zero', () => {
+    const r = ventasProductoDesdeGrupos([
+      {
+        producto_id: BigInt(5), producto_nombre: 'Burger', sku_producto: null, categoria: 'Comida',
+        _sum: { cantidad: null, venta_total: '12', costo_total: null, costo_teorico_total: '3' },
+      },
+    ]);
+    assert.deepEqual(r, [
+      {
+        producto_id: BigInt(5), producto_nombre: 'Burger', sku_producto: null, categoria: 'Comida',
+        cantidad: 0, venta_total: '12', costo_total: 0, costo_teorico_total: '3',
+      },
+    ]);
   });
 });

@@ -21,6 +21,8 @@ import {
   parseTipoReporte,
   recortarVistaPrevia,
   LIMITE_VISTA_PREVIA,
+  ventasProductoDesdeGrupos,
+  ventasUsuarioDesdeGrupos,
   type Celda,
   type EmpleadoInfo,
 } from "@/lib/reporteVentas";
@@ -47,29 +49,24 @@ const reporte = (cabeceras: readonly string[], filas: Celda[][]): Reporte => ({ 
 const idsUnicos = (ids: bigint[]) => [...new Set(ids.map((i) => i.toString()))].map((i) => BigInt(i));
 
 async function reporteUsuario(sucursalId: bigint, { inicio, fin }: Rango): Promise<Reporte> {
-  const ventas = await prisma.historialVentas.findMany({
+  // One row per order instead of per line; the builder still counts distinct orders.
+  const grupos = await prisma.historialVentas.groupBy({
+    by: ["empleado_id", "pedido_id"],
     where: { sucursal_id: sucursalId, fecha_venta: { gte: inicio, lt: fin } },
-    select: { empleado_id: true, pedido_id: true, cantidad: true, venta_total: true, costo_total: true },
+    _sum: { cantidad: true, venta_total: true, costo_total: true },
   });
-  const empleados = await cargarEmpleados(idsUnicos(ventas.map((v) => v.empleado_id)));
+  const ventas = ventasUsuarioDesdeGrupos(grupos);
+  const empleados = await cargarEmpleados(idsUnicos(grupos.map((g) => g.empleado_id)));
   return reporte(CABECERAS_USUARIO, filasPorUsuario(ventas, empleados));
 }
 
 async function reporteProductoResumen(sucursalId: bigint, { inicio, fin }: Rango): Promise<Reporte> {
-  const ventas = await prisma.historialVentas.findMany({
+  const grupos = await prisma.historialVentas.groupBy({
+    by: ["producto_id", "producto_nombre", "sku_producto", "categoria"],
     where: { sucursal_id: sucursalId, fecha_venta: { gte: inicio, lt: fin } },
-    select: {
-      producto_id: true,
-      producto_nombre: true,
-      sku_producto: true,
-      categoria: true,
-      cantidad: true,
-      venta_total: true,
-      costo_total: true,
-      costo_teorico_total: true,
-    },
+    _sum: { cantidad: true, venta_total: true, costo_total: true, costo_teorico_total: true },
   });
-  return reporte(CABECERAS_PRODUCTO_RESUMEN, filasProductoResumen(ventas));
+  return reporte(CABECERAS_PRODUCTO_RESUMEN, filasProductoResumen(ventasProductoDesdeGrupos(grupos)));
 }
 
 async function reporteProductoDetalle(

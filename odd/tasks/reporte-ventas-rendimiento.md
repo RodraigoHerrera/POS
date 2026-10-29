@@ -18,14 +18,16 @@ Keep the sales report (`/admin/reporte-ventas`) cheap for the database and the b
 ## Tasks
 - [x] T1 composite indexes + migration `20261029120000_add_reporte_ventas_indexes`
 - [x] T2 preview cap (lib helper + route + client)
+- [x] T3 debounce date inputs (400 ms); presets query immediately
+- [x] T4 usuario / producto-resumen aggregate in DB with `groupBy` (adapters `ventasUsuarioDesdeGrupos`, `ventasProductoDesdeGrupos`); output identical
 
 ## Acceptance / Checks
 - `npx tsx --test src/lib/reporteVentas.test.ts` green; `npx tsc --noEmit`; `npx next lint`; `npx prisma validate`.
 - Migration not applied to any DB here (user applies with `prisma migrate deploy`).
 
 ## Progress
-- T1, T2 done. Checks: tests 36/36 pass, tsc clean, prisma validate ok, lint clean on touched code (one pre-existing user-edit warning: unused FileSpreadsheet import).
+- T1-T4 done. Checks: tests 39/39 pass, tsc clean, prisma validate ok, lint clean on touched code (one user-edit warning: unused FileSpreadsheet import).
 - Pending: apply migration with `npx prisma migrate deploy`; browser check not run.
 
 ## Next step
-- Optional: debounce date inputs; move usuario/producto-resumen sums to DB groupBy.
+- None planned. Optional later: stream large CSV exports.

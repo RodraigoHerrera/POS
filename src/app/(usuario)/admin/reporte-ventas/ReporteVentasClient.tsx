@@ -77,6 +77,8 @@ const INFO: Record<TipoReporte, { titulo: string; descripcion: string }> = {
   },
 };
 
+const DEBOUNCE_FECHAS_MS = 400;
+
 type Celda = string | number | null;
 interface DatosReporte {
   cabeceras: string[];
@@ -181,6 +183,8 @@ function TablaReporte({ datos }: { datos: DatosReporte }) {
 
 export default function ReporteVentasClient() {
   const [rango, setRango] = useState(() => rangoPreset("mes"));
+  // Range actually queried: lags behind typed dates so each keystroke doesn't hit the API.
+  const [rangoConsulta, setRangoConsulta] = useState(rango);
   const [modoProducto, setModoProducto] = useState<"resumen" | "detalle">("resumen");
   const [seleccion, setSeleccion] = useState<Seleccion>("usuario");
   const [datos, setDatos] = useState<DatosReporte | null>(null);
@@ -197,7 +201,12 @@ export default function ReporteVentasClient() {
   })?.id;
 
   useEffect(() => {
-    if (!rangoValido) {
+    const t = setTimeout(() => setRangoConsulta(rango), DEBOUNCE_FECHAS_MS);
+    return () => clearTimeout(t);
+  }, [rango]);
+
+  useEffect(() => {
+    if (!rangoConsulta.desde || !rangoConsulta.hasta) {
       setDatos(null);
       setErrorVista("Selecciona las fechas desde y hasta.");
       return;
@@ -205,7 +214,12 @@ export default function ReporteVentasClient() {
     const controller = new AbortController();
     setCargandoVista(true);
     setErrorVista(null);
-    const params = new URLSearchParams({ tipo, desde: rango.desde, hasta: rango.hasta, formato: "json" });
+    const params = new URLSearchParams({
+      tipo,
+      desde: rangoConsulta.desde,
+      hasta: rangoConsulta.hasta,
+      formato: "json",
+    });
     fetch(`/api/admin/reportes/ventas?${params.toString()}`, { signal: controller.signal })
       .then(async (res) => {
         const data = await res.json().catch(() => null);
@@ -225,7 +239,7 @@ export default function ReporteVentasClient() {
         if (!controller.signal.aborted) setCargandoVista(false);
       });
     return () => controller.abort();
-  }, [tipo, rango.desde, rango.hasta, rangoValido]);
+  }, [tipo, rangoConsulta]);
 
   const descargar = async () => {
     if (!rangoValido) {
@@ -320,7 +334,11 @@ export default function ReporteVentasClient() {
             <button
               key={p.id}
               type="button"
-              onClick={() => setRango(rangoPreset(p.id))}
+              onClick={() => {
+                const r = rangoPreset(p.id);
+                setRango(r);
+                setRangoConsulta(r);
+              }}
               aria-pressed={presetActivo === p.id}
               className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
                 presetActivo === p.id

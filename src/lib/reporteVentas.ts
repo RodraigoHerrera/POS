@@ -189,6 +189,23 @@ export function filasPorUsuario(
     });
 }
 
+/** Adapta `groupBy([empleado_id, pedido_id])` a las filas de `filasPorUsuario` (una por pedido). */
+export function ventasUsuarioDesdeGrupos(
+  grupos: readonly {
+    empleado_id: Num;
+    pedido_id: Num;
+    _sum: { cantidad: number | null; venta_total: Num; costo_total: Num };
+  }[]
+): VentaUsuarioInput[] {
+  return grupos.map((g) => ({
+    empleado_id: g.empleado_id,
+    pedido_id: g.pedido_id,
+    cantidad: g._sum.cantidad ?? 0,
+    venta_total: g._sum.venta_total ?? 0,
+    costo_total: g._sum.costo_total ?? 0,
+  }));
+}
+
 // ---------------------------------------------------------------- por producto
 
 export const CABECERAS_PRODUCTO_RESUMEN = [
@@ -206,6 +223,28 @@ export interface VentaProductoInput {
   venta_total: Num;
   costo_total: Num;
   costo_teorico_total: Num;
+}
+
+/** Adapta `groupBy([producto_id, producto_nombre, sku_producto, categoria])` a `filasProductoResumen`. */
+export function ventasProductoDesdeGrupos(
+  grupos: readonly {
+    producto_id: Num;
+    producto_nombre: string;
+    sku_producto: string | null;
+    categoria: string | null;
+    _sum: { cantidad: number | null; venta_total: Num; costo_total: Num; costo_teorico_total: Num };
+  }[]
+): VentaProductoInput[] {
+  return grupos.map((g) => ({
+    producto_id: g.producto_id,
+    producto_nombre: g.producto_nombre,
+    sku_producto: g.sku_producto,
+    categoria: g.categoria,
+    cantidad: g._sum.cantidad ?? 0,
+    venta_total: g._sum.venta_total ?? 0,
+    costo_total: g._sum.costo_total ?? 0,
+    costo_teorico_total: g._sum.costo_teorico_total ?? 0,
+  }));
 }
 
 export function filasProductoResumen(ventas: readonly VentaProductoInput[]): Celda[][] {
