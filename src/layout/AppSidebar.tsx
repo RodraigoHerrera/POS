@@ -2,6 +2,16 @@
 import React, { useEffect, useRef, useState,useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { 
+  NotebookPen, 
+  ChartNoAxesCombined,
+  BanknoteArrowDown,
+  ListOrdered,
+  ShoppingCart,
+  ReceiptIndianRupee,
+  FileBox,
+  ListTodo,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import {
@@ -35,25 +45,25 @@ const navItems: NavItem[] = [
     path: "/admin",
   },
   {
+    icon: <DollarLineIcon />,
+    name: "Abrir Caja",
+    path: "/cajero",
+  },
+  {
     icon: <CalenderIcon />,
     name: "Gestión productiva",
     subItems: [
-      { icon: <ListIcon />, name: "Inventario", path: "/admin/inventario", pro: false },
-      { icon: <PieChartIcon />, name: "Producción", path: "/admin/produccion", pro: false },
-      { icon: <BoxCubeIcon />, name: "Planificación (MRP)", path: "/admin/mrp", pro: false },
+      { icon: <ListOrdered />, name: "Inventario", path: "/admin/inventario", pro: false },
+      { icon: <FileBox />, name: "Producción", path: "/admin/produccion", pro: false },
+      { icon: <ListTodo />, name: "Planificación (MRP)", path: "/admin/mrp", pro: false },
       { icon: <DocsIcon />, name: "Recetas", path: "/admin/recetas", pro: false },
       { icon: <PageIcon />, name: "Modificar Menu", path: "/admin/menu", pro: false },
     ],
   },
   {
     name: "Ventas",
-    icon: <DocsIcon />,
+    icon: <ChartNoAxesCombined />,
     path: "/admin/ventas",
-  },
-  {
-    icon: <DollarLineIcon />,
-    name: "Abrir Caja",
-    path: "/cajero",
   },
   {
     icon: <UserCircleIcon />,
@@ -61,16 +71,17 @@ const navItems: NavItem[] = [
     path: "/admin/usuarios",
   },
 
-  // {
-  //   name: "Informes",
-  //   icon: <DocsIcon />,
-  //   subItems: [{ name: "Reporte de Ventas", path: "/admin/informes/reporte-ventas", pro: false },
-  //     { name: "Reporte de Gastos", path: "/admin/informes/reporte-gastos", pro: false },
-  //     { name: "Reporte de Inventario", path: "/admin/informes/reporte-inventario", pro: false },
-  //     { name: "Reporte de Clientes", path: "/admin/informes/reporte-clientes", pro: false },
-  //     { name: "Reporte de Proveedores", path: "/admin/informes/reporte-proveedores", pro: false },
-  //   ],
-  // },
+  {
+    name: "Reportes",
+    icon: <DocsIcon />,
+    subItems: [
+      { icon: <ChartNoAxesCombined />, name: "Ventas", path: "/admin/reporte-ventas", pro: false },
+      { icon: <BanknoteArrowDown />, name: "Gastos", path: "/admin/reporte-gastos", pro: false },
+      { icon: <ListOrdered />, name: "Inventario", path: "/admin/reporte-inventario", pro: false },
+      { icon: <ShoppingCart />, name: "Compras", path: "/admin/reporte-compras", pro: false },
+      { icon: <ReceiptIndianRupee />, name: "Cajas", path: "/admin/reporte-cajas", pro: false },
+    ],
+  },
   // {
   //   name: "Contabilidad",
   //   icon: <TableIcon />,
