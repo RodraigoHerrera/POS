@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
+import DatePicker from "@/components/form/date-picker";
+import { rangoDesdeSeleccion } from "@/lib/rangoFechas";
 import {
   Calendar,
   Download,
@@ -75,8 +77,6 @@ const INFO: Record<TipoReporte, { titulo: string; descripcion: string }> = {
     descripcion: "Pedidos anulados: quién los tomó, si estaban cobrados, método, total y motivo.",
   },
 };
-
-const DEBOUNCE_FECHAS_MS = 400;
 
 type Celda = string | number | null;
 interface DatosReporte {
@@ -182,8 +182,6 @@ function TablaReporte({ datos }: { datos: DatosReporte }) {
 
 export default function ReporteVentasClient() {
   const [rango, setRango] = useState(() => rangoPreset("mes"));
-  // Range actually queried: lags behind typed dates so each keystroke doesn't hit the API.
-  const [rangoConsulta, setRangoConsulta] = useState(rango);
   const [modoProducto, setModoProducto] = useState<"resumen" | "detalle">("resumen");
   const [seleccion, setSeleccion] = useState<Seleccion>("usuario");
   const [datos, setDatos] = useState<DatosReporte | null>(null);
@@ -200,12 +198,7 @@ export default function ReporteVentasClient() {
   })?.id;
 
   useEffect(() => {
-    const t = setTimeout(() => setRangoConsulta(rango), DEBOUNCE_FECHAS_MS);
-    return () => clearTimeout(t);
-  }, [rango]);
-
-  useEffect(() => {
-    if (!rangoConsulta.desde || !rangoConsulta.hasta) {
+    if (!rango.desde || !rango.hasta) {
       setDatos(null);
       setErrorVista("Selecciona las fechas desde y hasta.");
       return;
@@ -215,8 +208,8 @@ export default function ReporteVentasClient() {
     setErrorVista(null);
     const params = new URLSearchParams({
       tipo,
-      desde: rangoConsulta.desde,
-      hasta: rangoConsulta.hasta,
+      desde: rango.desde,
+      hasta: rango.hasta,
       formato: "json",
     });
     fetch(`/api/admin/reportes/ventas?${params.toString()}`, { signal: controller.signal })
@@ -238,7 +231,7 @@ export default function ReporteVentasClient() {
         if (!controller.signal.aborted) setCargandoVista(false);
       });
     return () => controller.abort();
-  }, [tipo, rangoConsulta]);
+  }, [tipo, rango]);
 
   const descargar = async () => {
     if (!rangoValido) {
@@ -271,8 +264,6 @@ export default function ReporteVentasClient() {
     }
   };
 
-  const claseInput =
-    "rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200";
   const info = INFO[tipo];
   const totalFilas = datos?.total ?? 0;
 
@@ -332,11 +323,7 @@ export default function ReporteVentasClient() {
             <button
               key={p.id}
               type="button"
-              onClick={() => {
-                const r = rangoPreset(p.id);
-                setRango(r);
-                setRangoConsulta(r);
-              }}
+              onClick={() => setRango(rangoPreset(p.id))}
               aria-pressed={presetActivo === p.id}
               className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
                 presetActivo === p.id
@@ -347,23 +334,17 @@ export default function ReporteVentasClient() {
               {p.label}
             </button>
           ))}
-          <div className="flex items-center gap-1.5">
-            <input
-              aria-label="Desde"
-              type="date"
-              value={rango.desde}
-              max={rango.hasta || undefined}
-              onChange={(e) => setRango((r) => ({ ...r, desde: e.target.value }))}
-              className={claseInput}
-            />
-            <span className="text-xs text-gray-400">a</span>
-            <input
-              aria-label="Hasta"
-              type="date"
-              value={rango.hasta}
-              min={rango.desde || undefined}
-              onChange={(e) => setRango((r) => ({ ...r, hasta: e.target.value }))}
-              className={claseInput}
+          <div className="w-full sm:w-64">
+            <DatePicker
+              id="rv-periodo"
+              mode="range"
+              staticPosition={false}
+              placeholder="Desde – hasta"
+              value={[rango.desde, rango.hasta]}
+              onChange={(fechas) => {
+                const r = rangoDesdeSeleccion(fechas);
+                if (r?.desde) setRango(r);
+              }}
             />
           </div>
         </div>

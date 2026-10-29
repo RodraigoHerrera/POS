@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { Search, Calendar, RotateCcw, Filter, X } from "lucide-react";
+import DatePicker from "@/components/form/date-picker";
+import { rangoDesdeSeleccion } from "@/lib/rangoFechas";
 
 export interface VentasFilterValues {
   desde: string;
@@ -131,27 +133,20 @@ export default function VentasFilters({
 
         {/* Bottom row: Date Range & Estado Selector & Reset */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 pt-2 border-t border-gray-100 dark:border-gray-800/60">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              Desde
+          <div className="sm:col-span-2">
+            <label htmlFor="ventas-periodo" className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              Periodo
             </label>
-            <input
-              type="date"
-              value={filters.desde}
-              onChange={(e) => onChange({ desde: e.target.value, page: 1 })}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              Hasta
-            </label>
-            <input
-              type="date"
-              value={filters.hasta}
-              onChange={(e) => onChange({ hasta: e.target.value, page: 1 })}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+            <DatePicker
+              id="ventas-periodo"
+              mode="range"
+              staticPosition={false}
+              placeholder="Todas las fechas"
+              value={[filters.desde, filters.hasta]}
+              onChange={(fechas) => {
+                const r = rangoDesdeSeleccion(fechas);
+                if (r) onChange({ ...r, page: 1 });
+              }}
             />
           </div>
 
