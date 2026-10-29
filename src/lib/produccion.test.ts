@@ -115,6 +115,7 @@ describe("produccion: session-scoped auth gate", () => {
   it("writes every row to the session branch", async () => {
     const { tx, escrituras } = crearMockTx("prep");
     await ejecutarProduccionTx(tx, {
+      empleadoId: BigInt(3),
       sucursalId: BigInt(4),
       recetaId: BigInt(1),
       cantidad: new Prisma.Decimal(5),
@@ -150,6 +151,7 @@ describe("produccion: only prep items are producible", () => {
     const { tx, escrituras } = crearMockTx("vendible");
     await assert.rejects(
       ejecutarProduccionTx(tx, {
+        empleadoId: BigInt(3),
         sucursalId: BigInt(1),
         recetaId: BigInt(1),
         cantidad: new Prisma.Decimal(5),
@@ -193,9 +195,24 @@ describe("produccion: recipe yield and waste (same formula as MRP)", () => {
     );
   });
 
+  it("stamps every Kardex row with the session employee", async () => {
+    const { tx, escrituras } = crearMockTx("prep");
+    await ejecutarProduccionTx(tx, {
+      empleadoId: BigInt(3),
+      sucursalId: BigInt(1),
+      recetaId: BigInt(1),
+      cantidad: new Prisma.Decimal(5),
+    });
+    const kardex = escrituras.filter((e) => e.op === "movimientoInventario.create");
+    // una Salida por insumo y una Entrada del lote producido
+    assert.deepEqual(kardex.map((e) => e.data.tipo).sort(), ["Entrada", "Salida"]);
+    for (const e of kardex) assert.equal(e.data.empleado_id, BigInt(3));
+  });
+
   it("deducts ingredients using the recipe yield", async () => {
     const { tx, escrituras } = crearMockTx("prep", { rendimiento: 2, cantidadInsumo: 2 });
     await ejecutarProduccionTx(tx, {
+      empleadoId: BigInt(3),
       sucursalId: BigInt(1),
       recetaId: BigInt(1),
       cantidad: new Prisma.Decimal(5),
@@ -290,6 +307,7 @@ describe("produccion: concurrency-safe writes", () => {
     const { tx, escrituras } = crearMockTx("prep", { lotesActualizados: 0 });
     await assert.rejects(
       ejecutarProduccionTx(tx, {
+        empleadoId: BigInt(3),
         sucursalId: BigInt(1),
         recetaId: BigInt(1),
         cantidad: new Prisma.Decimal(5),
@@ -305,6 +323,7 @@ describe("produccion: concurrency-safe writes", () => {
       inventarioSalida: { stock: 10, costo_promedio: 2 },
     });
     await ejecutarProduccionTx(tx, {
+      empleadoId: BigInt(3),
       sucursalId: BigInt(1),
       recetaId: BigInt(1),
       cantidad: new Prisma.Decimal(5),

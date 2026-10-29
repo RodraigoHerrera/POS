@@ -183,6 +183,7 @@ export function calcularAsignacionesMermaFEFO(
 
 export interface ParametrosEjecucionMerma {
   sucursalId: bigint;
+  empleadoId: bigint;
   itemId: bigint;
   cantidadMerma: number;
   referencia: string;
@@ -198,7 +199,8 @@ export async function ejecutarRegistroMermaTx(
   tx: Prisma.TransactionClient | any,
   params: ParametrosEjecucionMerma
 ): Promise<{ costoTotalPerdido: number; lotesAfectados: number }> {
-  const { sucursalId, itemId, cantidadMerma, referencia, allocations, costoTotalPerdido } = params;
+  const { sucursalId, empleadoId, itemId, cantidadMerma, referencia, allocations, costoTotalPerdido } =
+    params;
 
   // INV-1: Asegurar orden ascendente de id de lote
   const sortedAllocations = [...allocations].sort((a, b) => compareBigIntAsc(a.id, b.id));
@@ -222,6 +224,7 @@ export async function ejecutarRegistroMermaTx(
       sucursal_id: sucursalId,
       item_id: itemId,
       lote_id: alloc.lote_id,
+      empleado_id: empleadoId,
       tipo: "Salida" as const,
       motivo: "Merma" as const,
       cantidad: alloc.aDescontar,

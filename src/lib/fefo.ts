@@ -302,7 +302,8 @@ export async function applySortedStockDecrements(
   sucursalId: bigint | string | number,
   lotDecrements: LotDecrement[],
   inventarioDecrements: InventarioDecrement[],
-  referencia: string
+  referencia: string,
+  empleadoId: bigint
 ): Promise<void> {
   const sucursalBigInt = BigInt(sucursalId);
 
@@ -333,6 +334,7 @@ export async function applySortedStockDecrements(
         sucursal_id: sucursalBigInt,
         item_id: lote.item_id,
         lote_id: lote.lote_id,
+        empleado_id: empleadoId,
         tipo: 'Salida' as const,
         motivo: 'Venta' as const,
         cantidad: round3Decimals(lote.total),
@@ -380,7 +382,8 @@ export async function applySortedStockRestorations(
   tx: Prisma.TransactionClient | any,
   sucursalId: bigint | string | number,
   consumos: MovimientoConsumo[],
-  referencia: string
+  referencia: string,
+  empleadoId: bigint
 ): Promise<void> {
   const sucursalBigInt = BigInt(sucursalId);
 
@@ -437,6 +440,7 @@ export async function applySortedStockRestorations(
         sucursal_id: sucursalBigInt,
         item_id: BigInt(mov.item_id),
         lote_id: mov.lote_id !== null && mov.lote_id !== undefined ? BigInt(mov.lote_id) : null,
+        empleado_id: empleadoId,
         tipo: 'Entrada' as const,
         motivo: 'Ajuste' as const,
         cantidad: round3Decimals(Number(mov.cantidad)),

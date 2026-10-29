@@ -488,7 +488,7 @@ test('applySortedStockDecrements - executes updates in strictly ascending order 
     { item_id: BigInt(100), total: 3 },
   ];
 
-  await applySortedStockDecrements(mockTx, BigInt(1), lotDecrements, invDecrements, 'Pedido #123');
+  await applySortedStockDecrements(mockTx, BigInt(1), lotDecrements, invDecrements, 'Pedido #123', BigInt(7));
 
   // Must execute lot updates sorted by id ASC (INV-1)
   assert.deepEqual(lotUpdateLog, [BigInt(10), BigInt(50)]);
@@ -500,6 +500,8 @@ test('applySortedStockDecrements - executes updates in strictly ascending order 
   assert.equal(kardexBatched.length, 2);
   assert.equal(kardexBatched[0].tipo, 'Salida');
   assert.equal(kardexBatched[0].referencia, 'Pedido #123');
+  // Every Kardex row records the employee who made the movement
+  assert.deepEqual(kardexBatched.map((k) => k.empleado_id), [BigInt(7), BigInt(7)]);
 
   // Verify failure when count === 0 (concurrent depletion guard INV-4)
   const failingTx = {
@@ -510,7 +512,7 @@ test('applySortedStockDecrements - executes updates in strictly ascending order 
 
   await assert.rejects(
     async () => {
-      await applySortedStockDecrements(failingTx, BigInt(1), lotDecrements, invDecrements, 'Pedido #123');
+      await applySortedStockDecrements(failingTx, BigInt(1), lotDecrements, invDecrements, 'Pedido #123', BigInt(7));
     },
     (err: any) => {
       assert.ok(err.message.startsWith('Stock insuficiente'));
@@ -555,7 +557,7 @@ test('applySortedStockRestorations - restores stock deterministically sorted by 
     { sucursal_id: BigInt(1), item_id: BigInt(300), lote_id: BigInt(30), cantidad: 3, costo_unit: 4 },
   ];
 
-  await applySortedStockRestorations(mockTx, BigInt(1), consumos, 'Reversa Edición Pedido #456');
+  await applySortedStockRestorations(mockTx, BigInt(1), consumos, 'Reversa Edición Pedido #456', BigInt(9));
 
   // Lot upserts must be executed sorted by lote_id ASC (INV-1)
   assert.deepEqual(lotUpsertLog, [BigInt(10), BigInt(30)]);
@@ -568,4 +570,5 @@ test('applySortedStockRestorations - restores stock deterministically sorted by 
   assert.equal(kardexBatched[0].tipo, 'Entrada');
   assert.equal(kardexBatched[0].motivo, 'Ajuste');
   assert.equal(kardexBatched[0].referencia, 'Reversa Edición Pedido #456');
+  assert.deepEqual(kardexBatched.map((k) => k.empleado_id), [BigInt(9), BigInt(9), BigInt(9)]);
 });

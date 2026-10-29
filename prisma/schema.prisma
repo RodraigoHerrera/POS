@@ -31,6 +31,7 @@ model empleados {
   cajas caja[] // Relación inversa
   pedidos_atendidos pedido[]
   auditorias_entrada auditoriaEntrada[]
+  movimientos_inventario movimientoInventario[]
 
   @@index([sucursal_id])
   @@index([correo])
@@ -214,6 +215,9 @@ model movimientoInventario {
   item_id     BigInt
   lote        lote?      @relation(fields: [lote_id], references: [id])
   lote_id     BigInt?
+  // Quién realizó el movimiento. Nullable: las filas históricas no lo tienen.
+  empleado    empleados? @relation(fields: [empleado_id], references: [id])
+  empleado_id BigInt?
   tipo        TipoMovimiento
   motivo      MotivoMovimiento
   cantidad    Decimal    @db.Decimal(18, 3)
@@ -225,6 +229,7 @@ model movimientoInventario {
   @@index([sucursal_id, item_id, creado_en])
   @@index([lote_id])
   @@index([tipo, creado_en])
+  @@index([empleado_id])
 
   auditorias_entrada auditoriaEntrada[]
 }

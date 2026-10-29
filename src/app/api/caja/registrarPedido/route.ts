@@ -228,7 +228,8 @@ export async function POST(req: Request) {
         sucursalBigInt,
         simulation.lotDecrements,
         simulation.inventarioDecrements,
-        `Pedido #${pedido.id}`
+        `Pedido #${pedido.id}`,
+        BigInt(empleadoId)
       );
 
       return pedido;

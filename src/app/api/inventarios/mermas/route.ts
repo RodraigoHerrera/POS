@@ -75,6 +75,7 @@ export async function POST(req: Request) {
 
         return await ejecutarRegistroMermaTx(tx, {
           sucursalId: sucursalBigInt,
+          empleadoId: BigInt(sesion.empleadoId),
           itemId: itemBigInt,
           cantidadMerma,
           referencia,
