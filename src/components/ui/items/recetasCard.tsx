@@ -41,6 +41,7 @@ interface InventoryItem {
 interface InventoryItemCardProps {
   itemData: InventoryItem;
   onSaved?: () => void;
+  costoTeorico?: number | null;
 }
 
 // Formas de las respuestas JSON consumidas por los modales
@@ -79,7 +80,11 @@ const generateId = () => {
   return `temp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 };
 
-export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCardProps) {
+export default function InventoryItemCard({
+  itemData,
+  onSaved,
+  costoTeorico: propCostoTeorico,
+}: InventoryItemCardProps) {
   const { isOpen, openModal, closeModal } = useModal();
   const [isSaving, setIsSaving] = useState(false);
 
@@ -101,23 +106,27 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
   const [loadingExtras, setLoadingExtras] = useState(false);
   const [extrasLoadError, setExtrasLoadError] = useState<string | null>(null);
 
-  // Costo teórico (BOM x costo_promedio actual) de este producto, visible en la tarjeta
-  const [costoTeorico, setCostoTeorico] = useState<number | null>(null);
+  // Costo teórico (BOM x costo_promedio actual) de este producto, visible en la tarjeta.
+  // Si viene por prop (batch), evitamos la petición N+1 al servidor.
+  const [internalCostoTeorico, setInternalCostoTeorico] = useState<number | null>(null);
+  const costoTeorico = propCostoTeorico !== undefined ? propCostoTeorico : internalCostoTeorico;
 
   useEffect(() => {
+    if (propCostoTeorico !== undefined) return;
+
     const fetchCostoTeorico = async () => {
       try {
         const res = await fetch(`/api/recetas/costoTeorico?itemId=${itemData.id}`);
         if (res.ok) {
           const data = await res.json();
-          setCostoTeorico(data.costoTeoricoUnitario);
+          setInternalCostoTeorico(data.costoTeoricoUnitario);
         }
       } catch (error) {
         console.error("Error cargando costo teórico:", error);
       }
     };
     fetchCostoTeorico();
-  }, [itemData.id]);
+  }, [itemData.id, propCostoTeorico]);
 
   // Cargar la receta existente al abrir el modal. Las opciones de insumos y las
   // filas guardadas se piden juntas y se confirman en el mismo tick, de modo que
