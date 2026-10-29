@@ -15,6 +15,8 @@ interface InputProps {
   step?: number | "any";
   disabled?: boolean;
   readOnly?: boolean;
+  required?: boolean;
+  list?: string; // id de un <datalist> con sugerencias
   success?: boolean;
   error?: boolean;
   hint?: string;
@@ -36,6 +38,8 @@ const Input: FC<InputProps> = ({
   step,
   disabled = false,
   readOnly = false,
+  required,
+  list,
   success = false,
   error = false,
   hint,
@@ -69,6 +73,8 @@ const Input: FC<InputProps> = ({
         step={step}
         disabled={disabled}
         readOnly={readOnly}
+        required={required}
+        list={list}
         className={inputClasses}
         style={style}
       />
