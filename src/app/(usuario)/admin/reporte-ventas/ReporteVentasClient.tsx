@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import {
   Calendar,
   Download,
-  FileSpreadsheet,
   Loader2,
   Users,
   Wallet,
@@ -282,7 +281,6 @@ export default function ReporteVentasClient() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-title-sm font-bold text-gray-900 dark:text-white">
-            <FileSpreadsheet className="h-6 w-6 text-brand-500" />
             Reporte de ventas
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -342,7 +340,7 @@ export default function ReporteVentasClient() {
               aria-pressed={presetActivo === p.id}
               className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
                 presetActivo === p.id
-                  ? "border-brand-500 bg-brand-50 text-brand-700 dark:border-brand-500/60 dark:bg-brand-500/10 dark:text-brand-300"
+                  ? "border-brand-500 bg-brand-500/50 dark:border-brand-500/60 dark:bg-brand-500/10 dark:text-brand-300"
                   : "border-gray-200 bg-white text-gray-700 hover:border-brand-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700/80"
               }`}
             >
@@ -380,7 +378,7 @@ export default function ReporteVentasClient() {
                 {formatearDia(rango.desde)} – {formatearDia(rango.hasta)}
               </span>
               {datos && !cargandoVista && (
-                <span className="rounded-md bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
+                <span className="rounded-md bg-brand-700/20 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:text-brand-300">
                   {totalFilas} {totalFilas === 1 ? "fila" : "filas"}
                 </span>
               )}
