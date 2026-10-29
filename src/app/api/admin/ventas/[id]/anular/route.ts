@@ -170,6 +170,7 @@ export async function POST(
                 tipo: "EGRESO",
                 monto: pedido.total,
                 descripcion: `Devolución Anulación Pedido #${pedidoBigInt}`,
+                origen: "ANULACION",
               },
             });
           } else {

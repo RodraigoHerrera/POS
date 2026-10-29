@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, Clock } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, Clock } from "lucide-react";
 import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
 import Button from "@/components/ui/button/Button";
 
@@ -28,6 +28,9 @@ interface TopBarCajeroProps {
 
   /** Si se omite, no se muestra el botón (comandas sin cobrar ni anular). */
   onVerPedidos?: () => void;
+
+  /** Si se omite, no se muestra el botón (registro manual de entradas/salidas de efectivo). */
+  onMovimientoCaja?: () => void;
 }
 
 function useDuracionTurno(turnoInicio?: string) {
@@ -65,6 +68,7 @@ export default function TopBarCajero({
   titulo,
   onCerrarCaja,
   onVerPedidos,
+  onMovimientoCaja,
 }: TopBarCajeroProps) {
   const duracion = useDuracionTurno(turnoInicio);
 
@@ -153,6 +157,18 @@ export default function TopBarCajero({
             className="px-3 py-1.5"
           >
             Pedidos abiertos
+          </Button>
+        )}
+
+        {onMovimientoCaja && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onMovimientoCaja}
+            startIcon={<ArrowLeftRight size={16} />}
+            className="px-3 py-1.5"
+          >
+            Movimiento de caja
           </Button>
         )}
 

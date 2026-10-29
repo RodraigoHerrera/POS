@@ -24,7 +24,7 @@ type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
+  subItems?: {icon?: React.ReactNode; name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
 const navItems: NavItem[] = [
@@ -33,6 +33,17 @@ const navItems: NavItem[] = [
     name: "Dashboard",
     // subItems: [{ name: "Ecommerce", path: "/", pro: false }],
     path: "/admin",
+  },
+  {
+    icon: <CalenderIcon />,
+    name: "Gestión productiva",
+    subItems: [
+      { icon: <ListIcon />, name: "Inventario", path: "/admin/inventario", pro: false },
+      { icon: <PieChartIcon />, name: "Producción", path: "/admin/produccion", pro: false },
+      { icon: <BoxCubeIcon />, name: "Planificación (MRP)", path: "/admin/mrp", pro: false },
+      { icon: <DocsIcon />, name: "Recetas", path: "/admin/recetas", pro: false },
+      { icon: <PageIcon />, name: "Modificar Menu", path: "/admin/menu", pro: false },
+    ],
   },
   {
     name: "Ventas",
@@ -45,52 +56,30 @@ const navItems: NavItem[] = [
     path: "/cajero",
   },
   {
-    icon: <ListIcon />,
-    name: "Inventario",
-    path: "/admin/inventario",
-  },
-  {
-    icon: <PieChartIcon />,
-    name: "Producción",
-    path: "/admin/produccion",
-  },
-  {
-    icon: <BoxCubeIcon />,
-    name: "Planificación (MRP)",
-    path: "/admin/mrp",
-  },
-  {
     icon: <UserCircleIcon />,
     name: "Usuarios",
     path: "/admin/usuarios",
   },
-  {
-    name: "Menú",
-    icon: <PageIcon />,
-    subItems: [
-      { name: "Recetas", path: "/admin/recetas", pro: false },
-      { name: "Modificar Menu", path: "/admin/menu", pro: false },
-    ],
-  },
-  {
-    name: "Informes",
-    icon: <DocsIcon />,
-    subItems: [{ name: "Reporte de Ventas", path: "/admin/informes/reporte-ventas", pro: false },
-      { name: "Reporte de Gastos", path: "/admin/informes/reporte-gastos", pro: false },
-      { name: "Reporte de Inventario", path: "/admin/informes/reporte-inventario", pro: false },
-      { name: "Reporte de Clientes", path: "/admin/informes/reporte-clientes", pro: false },
-      { name: "Reporte de Proveedores", path: "/admin/informes/reporte-proveedores", pro: false },
-    ],
-  },
-  {
-    name: "Contabilidad",
-    icon: <TableIcon />,
-    subItems: [{ name: "Impuestos", path: "/admin/impuestos", pro: false },
-      { name: "Gastos", path: "/admin/gastos", pro: false },
-      { name: "Balance General", path: "/admin/balance-general", pro: false },
+
+  // {
+  //   name: "Informes",
+  //   icon: <DocsIcon />,
+  //   subItems: [{ name: "Reporte de Ventas", path: "/admin/informes/reporte-ventas", pro: false },
+  //     { name: "Reporte de Gastos", path: "/admin/informes/reporte-gastos", pro: false },
+  //     { name: "Reporte de Inventario", path: "/admin/informes/reporte-inventario", pro: false },
+  //     { name: "Reporte de Clientes", path: "/admin/informes/reporte-clientes", pro: false },
+  //     { name: "Reporte de Proveedores", path: "/admin/informes/reporte-proveedores", pro: false },
+  //   ],
+  // },
+  // {
+  //   name: "Contabilidad",
+  //   icon: <TableIcon />,
+  //   subItems: [{ name: "Impuestos", path: "/admin/impuestos", pro: false },
+  //     { name: "Gastos", path: "/admin/gastos", pro: false },
+  //     { name: "Balance General", path: "/admin/balance-general", pro: false },
       
-    ],
-  },
+  //   ],
+  // },
   
 ];
 
@@ -221,7 +210,18 @@ const AppSidebar: React.FC = () => {
                           : "menu-dropdown-item-inactive"
                       }`}
                     >
-                      {subItem.name}
+                      {subItem.icon && (
+                        <span
+                          className={`${
+                            isActive(subItem.path)
+                              ? "menu-item-icon-active"
+                              : "menu-item-icon-inactive"
+                          }`}
+                        >
+                          {subItem.icon}
+                        </span>
+                      )}
+                      <span>{subItem.name}</span>
                       <span className="flex items-center gap-1 ml-auto">
                         {subItem.new && (
                           <span

@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFetchData } from "@/hooks/useFetchData";
 import TopBarCajero from "@/components/caja/TopBarCajero";
+import MovimientoCajaModal from "@/components/caja/MovimientoCajaModal";
 import ProductCatalogGrid from "@/components/caja/ProductCatalogGrid";
 import PersonalizeDrawer from "@/components/caja/PersonalizeDrawer";
 import CartCheckoutPanel from "@/components/caja/CartCheckoutPanel";
@@ -25,6 +26,7 @@ function VentasContent() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cliente, setCliente] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [movimientoOpen, setMovimientoOpen] = useState(false);
 
   // Drawer de personalización: producto en edición (null = cerrado)
   const [customizing, setCustomizing] = useState<Item | null>(null);
@@ -209,8 +211,10 @@ function VentasContent() {
         onClienteChange={setCliente}
         clienteDisabled={isSubmitting}
         onVerPedidos={() => router.push("/cajero/pedidos")}
+        onMovimientoCaja={() => setMovimientoOpen(true)}
         onCerrarCaja={() => router.push("/cajero/cierre")}
       />
+      <MovimientoCajaModal isOpen={movimientoOpen} onClose={() => setMovimientoOpen(false)} />
 
       <div className="flex w-full flex-1 flex-col lg:flex-row overflow-hidden">
         {/* Catálogo: contenedor relative para anclar el drawer encima de él, no de todo el layout */}
