@@ -16,14 +16,17 @@ import {
   filasProductoDetalle,
   filasProductoResumen,
   generarCSV,
+  parseFormatoReporte,
   parseRangoFechas,
   parseTipoReporte,
+  type Celda,
   type EmpleadoInfo,
 } from "@/lib/reporteVentas";
 
 export const dynamic = "force-dynamic";
 
 type Rango = { inicio: Date; fin: Date };
+type Reporte = { cabeceras: readonly string[]; filas: Celda[][] };
 
 async function cargarEmpleados(ids: bigint[]): Promise<Map<string, EmpleadoInfo>> {
   if (ids.length === 0) return new Map();
@@ -36,18 +39,20 @@ async function cargarEmpleados(ids: bigint[]): Promise<Map<string, EmpleadoInfo>
   );
 }
 
+const reporte = (cabeceras: readonly string[], filas: Celda[][]): Reporte => ({ cabeceras, filas });
+
 const idsUnicos = (ids: bigint[]) => [...new Set(ids.map((i) => i.toString()))].map((i) => BigInt(i));
 
-async function reporteUsuario(sucursalId: bigint, { inicio, fin }: Rango) {
+async function reporteUsuario(sucursalId: bigint, { inicio, fin }: Rango): Promise<Reporte> {
   const ventas = await prisma.historialVentas.findMany({
     where: { sucursal_id: sucursalId, fecha_venta: { gte: inicio, lt: fin } },
     select: { empleado_id: true, pedido_id: true, cantidad: true, venta_total: true, costo_total: true },
   });
   const empleados = await cargarEmpleados(idsUnicos(ventas.map((v) => v.empleado_id)));
-  return generarCSV(CABECERAS_USUARIO, filasPorUsuario(ventas, empleados));
+  return reporte(CABECERAS_USUARIO, filasPorUsuario(ventas, empleados));
 }
 
-async function reporteProductoResumen(sucursalId: bigint, { inicio, fin }: Rango) {
+async function reporteProductoResumen(sucursalId: bigint, { inicio, fin }: Rango): Promise<Reporte> {
   const ventas = await prisma.historialVentas.findMany({
     where: { sucursal_id: sucursalId, fecha_venta: { gte: inicio, lt: fin } },
     select: {
@@ -61,19 +66,19 @@ async function reporteProductoResumen(sucursalId: bigint, { inicio, fin }: Rango
       costo_teorico_total: true,
     },
   });
-  return generarCSV(CABECERAS_PRODUCTO_RESUMEN, filasProductoResumen(ventas));
+  return reporte(CABECERAS_PRODUCTO_RESUMEN, filasProductoResumen(ventas));
 }
 
-async function reporteProductoDetalle(sucursalId: bigint, { inicio, fin }: Rango, tz: string) {
+async function reporteProductoDetalle(sucursalId: bigint, { inicio, fin }: Rango, tz: string): Promise<Reporte> {
   const ventas = await prisma.historialVentas.findMany({
     where: { sucursal_id: sucursalId, fecha_venta: { gte: inicio, lt: fin } },
     orderBy: [{ fecha_venta: "asc" }, { id: "asc" }],
   });
   const empleados = await cargarEmpleados(idsUnicos(ventas.map((v) => v.empleado_id)));
-  return generarCSV(CABECERAS_PRODUCTO_DETALLE, filasProductoDetalle(ventas, empleados, tz));
+  return reporte(CABECERAS_PRODUCTO_DETALLE, filasProductoDetalle(ventas, empleados, tz));
 }
 
-async function reporteCaja(sucursalId: bigint, { inicio, fin }: Rango, tz: string) {
+async function reporteCaja(sucursalId: bigint, { inicio, fin }: Rango, tz: string): Promise<Reporte> {
   const cajas = await prisma.caja.findMany({
     where: { sucursal_id: sucursalId, fecha_apertura: { gte: inicio, lt: fin } },
     include: { empleado: { select: { nombre: true } } },
@@ -90,7 +95,7 @@ async function reporteCaja(sucursalId: bigint, { inicio, fin }: Rango, tz: strin
       select: { caja_id: true, tipo: true, monto: true },
     }),
   ]);
-  return generarCSV(
+  return reporte(
     CABECERAS_CAJA,
     filasPorCaja(
       cajas.map((c) => ({ ...c, cajero: c.empleado.nombre })),
@@ -105,7 +110,7 @@ async function reporteCaja(sucursalId: bigint, { inicio, fin }: Rango, tz: strin
   );
 }
 
-async function reporteAnuladas(sucursalId: bigint, { inicio, fin }: Rango, tz: string) {
+async function reporteAnuladas(sucursalId: bigint, { inicio, fin }: Rango, tz: string): Promise<Reporte> {
   const pedidos = await prisma.pedido.findMany({
     where: { sucursal_id: sucursalId, estado: "ANULADO", creado_en: { gte: inicio, lt: fin } },
     include: {
@@ -115,7 +120,7 @@ async function reporteAnuladas(sucursalId: bigint, { inicio, fin }: Rango, tz: s
     },
     orderBy: { creado_en: "asc" },
   });
-  return generarCSV(
+  return reporte(
     CABECERAS_ANULADAS,
     filasAnuladas(
       pedidos.map((p) => ({
@@ -143,26 +148,32 @@ export async function GET(req: Request) {
     const tz = obtenerZonaMrp();
     const rango = parseRangoFechas(searchParams.get("desde"), searchParams.get("hasta"), tz);
 
-    let csv: string;
+    const formato = parseFormatoReporte(searchParams.get("formato"));
+
+    let datos: Reporte;
     switch (tipo) {
       case "usuario":
-        csv = await reporteUsuario(sucursalId, rango);
+        datos = await reporteUsuario(sucursalId, rango);
         break;
       case "producto-resumen":
-        csv = await reporteProductoResumen(sucursalId, rango);
+        datos = await reporteProductoResumen(sucursalId, rango);
         break;
       case "producto-detalle":
-        csv = await reporteProductoDetalle(sucursalId, rango, tz);
+        datos = await reporteProductoDetalle(sucursalId, rango, tz);
         break;
       case "caja":
-        csv = await reporteCaja(sucursalId, rango, tz);
+        datos = await reporteCaja(sucursalId, rango, tz);
         break;
       case "anuladas":
-        csv = await reporteAnuladas(sucursalId, rango, tz);
+        datos = await reporteAnuladas(sucursalId, rango, tz);
         break;
     }
 
-    return new NextResponse(csv, {
+    if (formato === "json") {
+      return NextResponse.json(datos, { headers: { "Cache-Control": "no-store, max-age=0" } });
+    }
+
+    return new NextResponse(generarCSV(datos.cabeceras, datos.filas), {
       status: 200,
       headers: {
         "Content-Type": "text/csv; charset=utf-8",

@@ -6,6 +6,7 @@ import {
   generarCSV,
   formatearFechaLocal,
   parseTipoReporte,
+  parseFormatoReporte,
   filasPorUsuario,
   filasProductoResumen,
   filasProductoDetalle,
@@ -328,5 +329,18 @@ describe('filasAnuladas', () => {
       'No', '', '', 90, 'ANULADO (Admin #1): error',
     ]);
     assert.equal(CABECERAS_ANULADAS.length, 13);
+  });
+});
+
+describe('parseFormatoReporte', () => {
+  it('defaults to csv when missing or unknown', () => {
+    assert.equal(parseFormatoReporte(null), 'csv');
+    assert.equal(parseFormatoReporte(undefined), 'csv');
+    assert.equal(parseFormatoReporte('xml'), 'csv');
+  });
+
+  it('accepts json and csv', () => {
+    assert.equal(parseFormatoReporte('json'), 'json');
+    assert.equal(parseFormatoReporte('csv'), 'csv');
   });
 });

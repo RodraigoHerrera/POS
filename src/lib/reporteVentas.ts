@@ -14,6 +14,13 @@ export function parseTipoReporte(valor: string | null | undefined): TipoReporte 
   return TIPOS.find((t) => t === valor) ?? null;
 }
 
+export type FormatoReporte = "csv" | "json";
+
+/** `json` devuelve cabeceras y filas para la vista previa; cualquier otro valor es CSV. */
+export function parseFormatoReporte(valor: string | null | undefined): FormatoReporte {
+  return valor === "json" ? "json" : "csv";
+}
+
 export class ReporteVentasError extends Error {
   constructor(message: string) {
     super(message);

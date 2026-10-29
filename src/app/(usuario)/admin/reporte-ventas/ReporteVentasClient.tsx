@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Calendar,
@@ -43,52 +43,157 @@ const PRESETS: { id: Preset; label: string }[] = [
   { id: "mesAnterior", label: "Mes anterior" },
 ];
 
+type Celda = string | number | null;
+interface DatosReporte {
+  cabeceras: string[];
+  filas: Celda[][];
+}
+
+const formatearCelda = (valor: Celda) =>
+  typeof valor === "number" ? valor.toLocaleString("es", { maximumFractionDigits: 2 }) : (valor ?? "");
+
 interface TarjetaProps {
   icon: LucideIcon;
   titulo: string;
   descripcion: string;
-  cargando: boolean;
-  onDescargar: () => void;
+  seleccionada: boolean;
+  onSeleccionar: () => void;
   children?: React.ReactNode;
 }
 
-function TarjetaReporte({ icon: Icon, titulo, descripcion, cargando, onDescargar, children }: TarjetaProps) {
+function TarjetaReporte({ icon: Icon, titulo, descripcion, seleccionada, onSeleccionar, children }: TarjetaProps) {
   return (
-    <div className="flex flex-col justify-between gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900/40">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
-            <Icon className="h-5 w-5" />
-          </span>
-          <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">{titulo}</h2>
-        </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{descripcion}</p>
-        {children}
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={seleccionada}
+      onClick={onSeleccionar}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSeleccionar();
+        }
+      }}
+      className={`flex cursor-pointer flex-col gap-2 rounded-2xl border bg-white p-5 shadow-theme-xs transition dark:bg-gray-900/40 ${
+        seleccionada
+          ? "border-brand-500 ring-1 ring-brand-500"
+          : "border-gray-200 hover:border-brand-300 dark:border-gray-800"
+      }`}
+    >
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+          <Icon className="h-5 w-5" />
+        </span>
+        <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">{titulo}</h2>
       </div>
-      <button
-        type="button"
-        onClick={onDescargar}
-        disabled={cargando}
-        className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {cargando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-        {cargando ? "Generando..." : "Descargar CSV"}
-      </button>
+      <p className="text-sm text-gray-500 dark:text-gray-400">{descripcion}</p>
+      {children}
     </div>
   );
 }
 
+function TablaReporte({ datos }: { datos: DatosReporte }) {
+  if (datos.filas.length === 0) {
+    return (
+      <p className="py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+        No hay datos para el periodo seleccionado.
+      </p>
+    );
+  }
+  return (
+    <div className="max-h-[60vh] overflow-auto rounded-xl border border-gray-200 dark:border-gray-800">
+      <table className="min-w-full text-sm">
+        <thead className="sticky top-0 bg-gray-50 dark:bg-gray-800">
+          <tr>
+            {datos.cabeceras.map((c) => (
+              <th
+                key={c}
+                className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300"
+              >
+                {c}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+          {datos.filas.map((fila, i) => (
+            <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+              {fila.map((celda, j) => (
+                <td
+                  key={j}
+                  className={`whitespace-nowrap px-3 py-2 text-gray-700 dark:text-gray-300 ${
+                    typeof celda === "number" ? "text-right tabular-nums" : ""
+                  }`}
+                >
+                  {formatearCelda(celda)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const TITULOS: Record<TipoReporte, string> = {
+  usuario: "Ventas por usuario",
+  caja: "Cajas",
+  "producto-resumen": "Ventas por producto (resumen)",
+  "producto-detalle": "Ventas por producto (detallado)",
+  anuladas: "Ventas anuladas",
+};
+
 export default function ReporteVentasClient() {
   const [rango, setRango] = useState(() => rangoPreset("mes"));
   const [modoProducto, setModoProducto] = useState<"resumen" | "detalle">("resumen");
-  const [descargando, setDescargando] = useState<string | null>(null);
+  const [seleccion, setSeleccion] = useState<"usuario" | "caja" | "producto" | "anuladas">("usuario");
+  const [datos, setDatos] = useState<DatosReporte | null>(null);
+  const [cargandoVista, setCargandoVista] = useState(false);
+  const [errorVista, setErrorVista] = useState<string | null>(null);
+  const [descargando, setDescargando] = useState(false);
 
-  const descargar = async (tipo: TipoReporte) => {
-    if (!rango.desde || !rango.hasta) {
+  const tipoProducto: TipoReporte = modoProducto === "resumen" ? "producto-resumen" : "producto-detalle";
+  const tipo: TipoReporte = seleccion === "producto" ? tipoProducto : seleccion;
+  const rangoValido = Boolean(rango.desde && rango.hasta);
+
+  useEffect(() => {
+    if (!rangoValido) {
+      setDatos(null);
+      setErrorVista("Selecciona las fechas desde y hasta.");
+      return;
+    }
+    const controller = new AbortController();
+    setCargandoVista(true);
+    setErrorVista(null);
+    const params = new URLSearchParams({ tipo, desde: rango.desde, hasta: rango.hasta, formato: "json" });
+    fetch(`/api/admin/reportes/ventas?${params.toString()}`, { signal: controller.signal })
+      .then(async (res) => {
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          setDatos(null);
+          setErrorVista(data?.message || data?.error || "No se pudo cargar el reporte.");
+          return;
+        }
+        setDatos(data as DatosReporte);
+      })
+      .catch((err) => {
+        if (err?.name === "AbortError") return;
+        setDatos(null);
+        setErrorVista("Error de conexión al cargar el reporte.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setCargandoVista(false);
+      });
+    return () => controller.abort();
+  }, [tipo, rango.desde, rango.hasta, rangoValido]);
+
+  const descargar = async () => {
+    if (!rangoValido) {
       toast.error("Selecciona las fechas desde y hasta.");
       return;
     }
-    setDescargando(tipo);
+    setDescargando(true);
     try {
       const params = new URLSearchParams({ tipo, desde: rango.desde, hasta: rango.hasta });
       const res = await fetch(`/api/admin/reportes/ventas?${params.toString()}`);
@@ -110,11 +215,10 @@ export default function ReporteVentasClient() {
     } catch {
       toast.error("Error de conexión al generar el reporte.");
     } finally {
-      setDescargando(null);
+      setDescargando(false);
     }
   };
 
-  const tipoProducto: TipoReporte = modoProducto === "resumen" ? "producto-resumen" : "producto-detalle";
   const claseInput =
     "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200";
 
@@ -123,7 +227,7 @@ export default function ReporteVentasClient() {
       <div>
         <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Reporte de ventas</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Descarga reportes en CSV (compatibles con Excel) para el periodo elegido.
+          Elige un reporte para ver sus datos del periodo y descárgalo en CSV (compatible con Excel).
         </p>
       </div>
 
@@ -179,15 +283,15 @@ export default function ReporteVentasClient() {
           icon={Users}
           titulo="Ventas por usuario"
           descripcion="Pedidos, unidades, venta, costo, margen y ticket promedio de cada empleado."
-          cargando={descargando === "usuario"}
-          onDescargar={() => descargar("usuario")}
+          seleccionada={seleccion === "usuario"}
+          onSeleccionar={() => setSeleccion("usuario")}
         />
         <TarjetaReporte
           icon={Wallet}
           titulo="Cajas"
           descripcion="Una fila por caja abierta en el periodo: ventas por método de pago, movimientos, efectivo esperado vs. contado y diferencias."
-          cargando={descargando === "caja"}
-          onDescargar={() => descargar("caja")}
+          seleccionada={seleccion === "caja"}
+          onSeleccionar={() => setSeleccion("caja")}
         />
         <TarjetaReporte
           icon={Package}
@@ -197,15 +301,19 @@ export default function ReporteVentasClient() {
               ? "Totales por producto: unidades, venta, costo real vs. teórico, margen y % de la venta."
               : "Una fila por línea vendida, con fecha, pedido, factura, método de pago y empleado."
           }
-          cargando={descargando === tipoProducto}
-          onDescargar={() => descargar(tipoProducto)}
+          seleccionada={seleccion === "producto"}
+          onSeleccionar={() => setSeleccion("producto")}
         >
-          <div className="mt-1 inline-flex w-fit rounded-xl border border-gray-200 p-0.5 text-xs font-medium dark:border-gray-700">
+          <div onKeyDown={(e) => e.stopPropagation()} className="mt-1 inline-flex w-fit rounded-xl border border-gray-200 p-0.5 text-xs font-medium dark:border-gray-700">
             {(["resumen", "detalle"] as const).map((modo) => (
               <button
                 key={modo}
                 type="button"
-                onClick={() => setModoProducto(modo)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setModoProducto(modo);
+                  setSeleccion("producto");
+                }}
                 aria-pressed={modoProducto === modo}
                 className={`rounded-lg px-3 py-1.5 transition ${
                   modoProducto === modo
@@ -222,9 +330,39 @@ export default function ReporteVentasClient() {
           icon={Ban}
           titulo="Ventas anuladas"
           descripcion="Pedidos anulados en el periodo: quién los tomó, si estaban cobrados, método, total y motivo."
-          cargando={descargando === "anuladas"}
-          onDescargar={() => descargar("anuladas")}
+          seleccionada={seleccion === "anuladas"}
+          onSeleccionar={() => setSeleccion("anuladas")}
         />
+      </div>
+
+      <div className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900/40 md:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">{TITULOS[tipo]}</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {rango.desde || "—"} a {rango.hasta || "—"}
+              {datos && !cargandoVista ? ` · ${datos.filas.length} fila${datos.filas.length === 1 ? "" : "s"}` : ""}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={descargar}
+            disabled={descargando || !rangoValido}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {descargando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {descargando ? "Generando..." : "Descargar CSV"}
+          </button>
+        </div>
+        {cargandoVista ? (
+          <div className="flex items-center justify-center gap-2 py-10 text-sm text-gray-500 dark:text-gray-400">
+            <Loader2 className="h-4 w-4 animate-spin" /> Cargando datos...
+          </div>
+        ) : errorVista ? (
+          <p className="py-10 text-center text-sm text-red-600 dark:text-red-400">{errorVista}</p>
+        ) : datos ? (
+          <TablaReporte datos={datos} />
+        ) : null}
       </div>
     </div>
   );
