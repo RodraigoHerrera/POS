@@ -22,6 +22,7 @@ interface KardexMovement {
   tipo: string; // "Entrada", "Salida"
   motivo: string;
   referencia: string;
+  empleado: string;
   cantidad: number;
   costo_unitario: number;
   total_movimiento: string;
@@ -273,6 +274,7 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Item</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Detalle</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Lote</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Registrado por</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Cantidad</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Costo Unit.</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Total</th>
@@ -281,10 +283,10 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                 {loading && movimientosFiltrados.length === 0 ? (
-                  Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} columns={8} />)
+                  Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} columns={9} />)
                 ) : movimientosFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
                       No se encontraron movimientos registrados.
                     </td>
                   </tr>
@@ -317,6 +319,9 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                         {mov.lote}
                         {mov.vencimiento !== 'N/A' && <div className="text-xs text-gray-400">Vence: {mov.vencimiento}</div>}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                        {mov.empleado}
                       </td>
                       <td className="px-4 py-3 text-sm text-right font-bold text-gray-700 dark:text-gray-200">
                         {mov.tipo === 'Entrada' ? '+' : '-'}{mov.cantidad} <span className="text-xs font-normal text-gray-500">{mov.unidad}</span>
