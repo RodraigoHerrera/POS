@@ -400,6 +400,7 @@ model caja {
   @@index([sucursal_id])
   @@index([empleado_id])
   @@index([fecha_apertura])
+  @@index([sucursal_id, fecha_apertura])
 }
 
 // 3. (Opcional recomendado) Detalle de entradas/salidas de efectivo
@@ -465,6 +466,7 @@ model pedido {
   factura factura?
   
   @@index([sucursal_id, estado])
+  @@index([sucursal_id, estado, creado_en])
   @@index([caja_id])
 }
 
@@ -575,6 +577,7 @@ model historialVentas {
   empleado_id     BigInt
 
   @@index([fecha_venta])
+  @@index([sucursal_id, fecha_venta])
   @@index([sucursal_id])
   @@index([sku_producto])
 }

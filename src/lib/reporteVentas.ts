@@ -21,6 +21,21 @@ export function parseFormatoReporte(valor: string | null | undefined): FormatoRe
   return valor === "json" ? "json" : "csv";
 }
 
+/** Filas maximas que devuelve la vista previa JSON; el CSV siempre va completo. */
+export const LIMITE_VISTA_PREVIA = 500;
+
+/**
+ * Recorta las filas de la vista previa. `total` permite informar el conteo real
+ * cuando la consulta ya vino limitada desde la base.
+ */
+export function recortarVistaPrevia<T>(
+  filas: readonly T[],
+  total: number = filas.length,
+  limite: number = LIMITE_VISTA_PREVIA
+): { filas: T[]; total: number; truncado: boolean } {
+  return { filas: filas.slice(0, limite), total, truncado: total > limite };
+}
+
 export class ReporteVentasError extends Error {
   constructor(message: string) {
     super(message);

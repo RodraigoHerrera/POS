@@ -7,6 +7,8 @@ import {
   formatearFechaLocal,
   parseTipoReporte,
   parseFormatoReporte,
+  recortarVistaPrevia,
+  LIMITE_VISTA_PREVIA,
   filasPorUsuario,
   filasProductoResumen,
   filasProductoDetalle,
@@ -342,5 +344,28 @@ describe('parseFormatoReporte', () => {
   it('accepts json and csv', () => {
     assert.equal(parseFormatoReporte('json'), 'json');
     assert.equal(parseFormatoReporte('csv'), 'csv');
+  });
+});
+
+describe('recortarVistaPrevia', () => {
+  const filas = Array.from({ length: 5 }, (_, i) => [i]);
+
+  it('returns every row when under the limit', () => {
+    assert.deepEqual(recortarVistaPrevia(filas, undefined, 10), { filas, total: 5, truncado: false });
+  });
+
+  it('cuts to the limit and flags truncation', () => {
+    assert.deepEqual(recortarVistaPrevia(filas, undefined, 2), { filas: [[0], [1]], total: 5, truncado: true });
+  });
+
+  it('uses the given total when rows were already limited in the DB', () => {
+    assert.deepEqual(recortarVistaPrevia(filas, 1200, 5), { filas, total: 1200, truncado: true });
+  });
+
+  it('defaults to LIMITE_VISTA_PREVIA', () => {
+    const muchas = Array.from({ length: LIMITE_VISTA_PREVIA + 1 }, () => [1]);
+    const r = recortarVistaPrevia(muchas);
+    assert.equal(r.filas.length, LIMITE_VISTA_PREVIA);
+    assert.equal(r.truncado, true);
   });
 });

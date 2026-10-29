@@ -19,6 +19,8 @@ import {
   parseFormatoReporte,
   parseRangoFechas,
   parseTipoReporte,
+  recortarVistaPrevia,
+  LIMITE_VISTA_PREVIA,
   type Celda,
   type EmpleadoInfo,
 } from "@/lib/reporteVentas";
@@ -26,7 +28,8 @@ import {
 export const dynamic = "force-dynamic";
 
 type Rango = { inicio: Date; fin: Date };
-type Reporte = { cabeceras: readonly string[]; filas: Celda[][] };
+// `total` is set only when the query was already limited in the DB (preview).
+type Reporte = { cabeceras: readonly string[]; filas: Celda[][]; total?: number };
 
 async function cargarEmpleados(ids: bigint[]): Promise<Map<string, EmpleadoInfo>> {
   if (ids.length === 0) return new Map();
@@ -69,13 +72,23 @@ async function reporteProductoResumen(sucursalId: bigint, { inicio, fin }: Rango
   return reporte(CABECERAS_PRODUCTO_RESUMEN, filasProductoResumen(ventas));
 }
 
-async function reporteProductoDetalle(sucursalId: bigint, { inicio, fin }: Rango, tz: string): Promise<Reporte> {
-  const ventas = await prisma.historialVentas.findMany({
-    where: { sucursal_id: sucursalId, fecha_venta: { gte: inicio, lt: fin } },
-    orderBy: [{ fecha_venta: "asc" }, { id: "asc" }],
-  });
+async function reporteProductoDetalle(
+  sucursalId: bigint,
+  { inicio, fin }: Rango,
+  tz: string,
+  limite?: number
+): Promise<Reporte> {
+  const where = { sucursal_id: sucursalId, fecha_venta: { gte: inicio, lt: fin } };
+  const [ventas, total] = await Promise.all([
+    prisma.historialVentas.findMany({
+      where,
+      orderBy: [{ fecha_venta: "asc" }, { id: "asc" }],
+      take: limite,
+    }),
+    limite === undefined ? undefined : prisma.historialVentas.count({ where }),
+  ]);
   const empleados = await cargarEmpleados(idsUnicos(ventas.map((v) => v.empleado_id)));
-  return reporte(CABECERAS_PRODUCTO_DETALLE, filasProductoDetalle(ventas, empleados, tz));
+  return { ...reporte(CABECERAS_PRODUCTO_DETALLE, filasProductoDetalle(ventas, empleados, tz)), total };
 }
 
 async function reporteCaja(sucursalId: bigint, { inicio, fin }: Rango, tz: string): Promise<Reporte> {
@@ -159,7 +172,7 @@ export async function GET(req: Request) {
         datos = await reporteProductoResumen(sucursalId, rango);
         break;
       case "producto-detalle":
-        datos = await reporteProductoDetalle(sucursalId, rango, tz);
+        datos = await reporteProductoDetalle(sucursalId, rango, tz, formato === "json" ? LIMITE_VISTA_PREVIA : undefined);
         break;
       case "caja":
         datos = await reporteCaja(sucursalId, rango, tz);
@@ -170,7 +183,8 @@ export async function GET(req: Request) {
     }
 
     if (formato === "json") {
-      return NextResponse.json(datos, { headers: { "Cache-Control": "no-store, max-age=0" } });
+      const vista = recortarVistaPrevia(datos.filas, datos.total);
+      return NextResponse.json({ cabeceras: datos.cabeceras, ...vista }, { headers: { "Cache-Control": "no-store, max-age=0" } });
     }
 
     return new NextResponse(generarCSV(datos.cabeceras, datos.filas), {

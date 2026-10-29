@@ -81,6 +81,8 @@ type Celda = string | number | null;
 interface DatosReporte {
   cabeceras: string[];
   filas: Celda[][];
+  total: number;
+  truncado: boolean;
 }
 
 const formatearCelda = (valor: Celda) =>
@@ -259,7 +261,7 @@ export default function ReporteVentasClient() {
   const claseInput =
     "rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200";
   const info = INFO[tipo];
-  const totalFilas = datos?.filas.length ?? 0;
+  const totalFilas = datos?.total ?? 0;
 
   return (
     <div className="space-y-6">
@@ -397,6 +399,13 @@ export default function ReporteVentasClient() {
         ) : datos ? (
           <TablaReporte datos={datos} />
         ) : null}
+
+        {datos?.truncado && !cargandoVista && (
+          <div className="border-t border-amber-200 bg-amber-50 px-5 py-2.5 text-xs font-medium text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+            Mostrando las primeras {datos.filas.length.toLocaleString("es")} de {datos.total.toLocaleString("es")} filas.
+            Descarga el CSV para ver el reporte completo.
+          </div>
+        )}
 
         <div className="border-t border-gray-100 px-5 py-2.5 text-xs text-gray-400 dark:border-gray-800">
           Rango máximo: 366 días.
