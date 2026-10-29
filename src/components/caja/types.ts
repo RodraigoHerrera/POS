@@ -6,9 +6,10 @@ export interface Item {
   nombre: string;
   precio: string;
   estado: string;
-  categoria: string;
-  descripcion: string;
-  fotoUrl?: string;
+  // Nullable en la base de datos (producto.categoria / descripcion / imagenUrl).
+  categoria: string | null;
+  descripcion: string | null;
+  imagenUrl?: string | null;
   item_inventario_id?: string;
 }
 

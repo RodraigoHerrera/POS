@@ -34,7 +34,7 @@ export default function ProductCatalogGrid({
       products
         .filter((p) => !p.estado || p.estado.toLowerCase() === "activo")
         .map((p) => p.categoria)
-        .filter(Boolean)
+        .filter((c): c is string => Boolean(c))
     );
     return [TODAS, ...Array.from(vistas)];
   }, [products]);
@@ -152,8 +152,9 @@ function ProductTile({
         className="flex w-full flex-col gap-2 p-2 text-left"
       >
         <div className="relative h-28 w-full overflow-hidden rounded-md bg-gray-100 dark:bg-gray-800">
-          {item.fotoUrl ? (
-            <img src={item.fotoUrl} alt={item.nombre} className="h-full w-full object-cover" />
+          {item.imagenUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- no hay remotePatterns para next/image
+            <img src={item.imagenUrl} alt={item.nombre} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full items-center justify-center text-gray-400">
               <span className="text-xs">Sin Foto</span>
