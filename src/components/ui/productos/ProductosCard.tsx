@@ -16,8 +16,8 @@ export interface ProductoMenu {
   nombre: string;
   precio: string;
   estado: string;
-  categoria: string;
-  descripcion: string;
+  categoria: string | null;
+  descripcion: string | null;
   imagenUrl?: string | null;
 }
 

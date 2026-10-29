@@ -13,6 +13,8 @@ const productos = [
   { nombre: "Papas Fritas", categoria: "Acompañamientos", estado: "Activo" },
   { nombre: "Coca Cola", categoria: " Bebidas ", estado: "inactivo" },
   { nombre: "Agua", categoria: "", estado: "activo" },
+  // categoria es nullable en la base de datos
+  { nombre: "Combo Sorpresa", categoria: null, estado: "activo" },
 ];
 
 describe("esProductoActivo", () => {
@@ -30,7 +32,7 @@ describe("resumenProductos", () => {
   });
 
   it("counts active and inactive products", () => {
-    assert.deepEqual(resumenProductos(productos), { total: 5, activos: 3, inactivos: 2 });
+    assert.deepEqual(resumenProductos(productos), { total: 6, activos: 4, inactivos: 2 });
   });
 });
 
@@ -44,7 +46,7 @@ describe("filtrarProductos", () => {
   const nombres = (lista: { nombre: string }[]) => lista.map((p) => p.nombre);
 
   it("returns everything with empty filters", () => {
-    assert.equal(filtrarProductos(productos, { texto: "", categoria: null, estado: "todos" }).length, 5);
+    assert.equal(filtrarProductos(productos, { texto: "", categoria: null, estado: "todos" }).length, 6);
   });
 
   it("searches by name ignoring case and accents", () => {
@@ -61,7 +63,7 @@ describe("filtrarProductos", () => {
 
   it("filters by status", () => {
     const activos = filtrarProductos(productos, { texto: "", categoria: null, estado: "activos" });
-    assert.deepEqual(nombres(activos), ["Smash Doble", "Papas Fritas", "Agua"]);
+    assert.deepEqual(nombres(activos), ["Smash Doble", "Papas Fritas", "Agua", "Combo Sorpresa"]);
     const inactivos = filtrarProductos(productos, { texto: "", categoria: "Hamburguesas", estado: "inactivos" });
     assert.deepEqual(nombres(inactivos), ["Smash Simple"]);
   });
