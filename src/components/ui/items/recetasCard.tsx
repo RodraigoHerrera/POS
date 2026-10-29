@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 // Asegúrate de que estas rutas de importación sean correctas en tu proyecto
-import { Plus } from "lucide-react";
+import { Plus, CookingPot } from "lucide-react";
 import { useModal } from "@/hooks/useModal";
 import { Modal } from "../modal";
 import Button from "../button/Button";
@@ -346,12 +346,12 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex w-full flex-col items-center gap-6 xl:flex-row">
             {/* Imagen del producto */}
-            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-500 dark:bg-gray-800/50">
                 {itemData.fotoUrl ? (
                   <Image width={80} height={80} src={itemData.fotoUrl} alt={itemData.nombre} className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full items-center justify-center text-gray-400 dark:text-gray-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" ><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+                  <div className="flex h-full items-center justify-center text-gray-400 dark:text-gray-200">
+                    <CookingPot  />
                   </div>
                 )}
             </div>
@@ -364,7 +364,7 @@ export default function InventoryItemCard({ itemData, onSaved }: InventoryItemCa
                 {itemData.tipo === "vendible" ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-400">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    Plato Vendible
+                    Producto Vendible
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-400">

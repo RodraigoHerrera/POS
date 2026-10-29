@@ -130,8 +130,7 @@ export default function VentasClient() {
       {/* Page Title & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Receipt className="h-6 w-6 text-brand-500" />
+          <h1 className="text-title-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
             Gestión de Ventas y Facturación
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -208,11 +207,11 @@ export default function VentasClient() {
             <span className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
               Margen Promedio
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-warning-50 text-brand-600 dark:bg-brand-600/15 dark:text-brand-600">
               <TrendingUp className="h-5 w-5" />
             </div>
           </div>
-          <div className="mt-2 text-2xl font-extrabold text-brand-600 dark:text-brand-400">
+          <div className="mt-2 text-2xl font-extrabold text-brand-600">
             {kpis.margenPromedioPct}%
           </div>
           <p className="mt-1 text-xs text-gray-400">Rentabilidad sobre costo FEFO</p>

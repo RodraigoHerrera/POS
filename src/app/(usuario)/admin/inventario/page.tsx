@@ -64,9 +64,6 @@ export default function Inventario() {
             Inventario
           </h1>
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="outline" startIcon={<BoxIcon />} onClick={controlStockModal.openModal}>
-              Control de Stock
-            </Button>
             <Button size="sm" variant="primary" startIcon={<PlusIcon />} onClick={entradaModal.openModal}>
               Entrada
             </Button>

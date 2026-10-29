@@ -11,6 +11,8 @@ import {
   ReceiptIndianRupee,
   FileBox,
   ListTodo,
+  BadgeDollarSign,
+  Cog
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
@@ -50,27 +52,31 @@ const navItems: NavItem[] = [
     path: "/cajero",
   },
   {
-    icon: <CalenderIcon />,
-    name: "Gestión productiva",
-    subItems: [
-      { icon: <ListOrdered />, name: "Inventario", path: "/admin/inventario", pro: false },
-      { icon: <FileBox />, name: "Producción", path: "/admin/produccion", pro: false },
-      { icon: <ListTodo />, name: "Planificación (MRP)", path: "/admin/mrp", pro: false },
-      { icon: <DocsIcon />, name: "Recetas", path: "/admin/recetas", pro: false },
-      { icon: <PageIcon />, name: "Modificar Menu", path: "/admin/menu", pro: false },
-    ],
+    name: "Ventas",
+    icon: <BadgeDollarSign/>,
+    path: "/admin/ventas",
   },
   {
-    name: "Ventas",
-    icon: <ChartNoAxesCombined />,
-    path: "/admin/ventas",
+    name: "Gastos",
+    icon: <BanknoteArrowDown />,
+    path: "/admin/gastos",
   },
   {
     icon: <UserCircleIcon />,
     name: "Usuarios",
     path: "/admin/usuarios",
   },
-
+  {
+    icon: <Cog />,
+    name: "Gestión productiva",
+    subItems: [
+      { icon: <NotebookPen />, name: "Inventario", path: "/admin/inventario", pro: false },
+      { icon: <FileBox />, name: "Producción", path: "/admin/produccion", pro: false },
+      { icon: <ListTodo />, name: "Planificación (MRP)", path: "/admin/mrp", pro: false },
+      { icon: <DocsIcon />, name: "Recetas", path: "/admin/recetas", pro: false },
+      { icon: <PageIcon />, name: "Modificar Menu", path: "/admin/menu", pro: false },
+    ],
+  },
   {
     name: "Reportes",
     icon: <DocsIcon />,

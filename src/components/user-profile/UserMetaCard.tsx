@@ -158,7 +158,7 @@ export default function UserMetaCard({ userData, onSaved }: { userData: User; on
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           <div className="flex min-w-0 flex-1 items-center gap-4">
             <div
-              className={`flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-brand-50 text-lg font-semibold text-brand-500 dark:border-gray-800 dark:bg-brand-500/15 dark:text-brand-400 ${
+              className={`flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-error-50 text-lg font-semibold text-brand-500 dark:border-gray-800 dark:bg-brand-500/15 dark:text-brand-400 ${
                 activo ? "" : "opacity-50 grayscale"
               }`}
             >
