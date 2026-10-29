@@ -113,7 +113,7 @@ function escaparCelda(celda: Celda): string {
   } else {
     texto = /^[=+\-@]/.test(celda) ? `'${celda}` : celda;
   }
-  return /[";\r\n]/.test(texto) ?`"${texto.replace(/"/g, '""')}"` : texto;
+  return /[";\r\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
 }
 
 /** CSV con BOM UTF-8, separador ";", coma decimal y CRLF: formato de Excel con configuracion regional en espanol. */
