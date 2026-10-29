@@ -89,25 +89,30 @@ describe('formatearFechaLocal', () => {
 });
 
 describe('generarCSV', () => {
-  it('BOM + CRLF + separador coma', () => {
+  it('BOM + CRLF + separador punto y coma', () => {
     const csv = generarCSV(['A', 'B'], [['x', 'y']]);
-    assert.equal(csv, '﻿A,B\r\nx,y\r\n');
+    assert.equal(csv, '﻿A;B\r\nx;y\r\n');
   });
 
-  it('escapa comas, comillas y saltos de línea', () => {
-    const csv = generarCSV(['H'], [['a,b'], ['di "hola"'], ['l1\nl2'], ['l1\r\nl2']]);
+  it('escapa punto y coma, comillas y saltos de línea; la coma ya no requiere comillas', () => {
+    const csv = generarCSV(['H'], [['a;b'], ['a,b'], ['di "hola"'], ['l1\nl2'], ['l1\r\nl2']]);
     const lineas = csv.slice(1);
-    assert.equal(lineas, 'H\r\n"a,b"\r\n"di ""hola"""\r\n"l1\nl2"\r\n"l1\r\nl2"\r\n');
+    assert.equal(lineas, 'H\r\n"a;b"\r\na,b\r\n"di ""hola"""\r\n"l1\nl2"\r\n"l1\r\nl2"\r\n');
   });
 
-  it('null/undefined vacío; números con 2 decimales', () => {
+  it('null/undefined vacío; números con 2 decimales y coma decimal', () => {
     const csv = generarCSV(['A', 'B', 'C', 'D'], [[null, undefined, 3, 2.5]]);
-    assert.equal(csv, '﻿A,B,C,D\r\n,,3.00,2.50\r\n');
+    assert.equal(csv, '﻿A;B;C;D\r\n;;3,00;2,50\r\n');
+  });
+
+  it('miles sin separador para que Excel no los confunda', () => {
+    const csv = generarCSV(['A'], [[1234567.891]]);
+    assert.equal(csv, '﻿A\r\n1234567,89\r\n');
   });
 
   it('negativos numéricos no se tocan; no finitos quedan vacíos', () => {
     const csv = generarCSV(['A', 'B'], [[-1.256, Number.NaN]]);
-    assert.equal(csv, '﻿A,B\r\n-1.26,\r\n');
+    assert.equal(csv, '﻿A;B\r\n-1,26;\r\n');
   });
 
   it('guarda contra inyección de fórmulas en strings', () => {
@@ -116,8 +121,8 @@ describe('generarCSV', () => {
   });
 
   it('el prefijo de guarda convive con el quoting', () => {
-    const csv = generarCSV(['H'], [['=a,b']]);
-    assert.equal(csv, "﻿H\r\n\"'=a,b\"\r\n");
+    const csv = generarCSV(['H'], [['=a;b']]);
+    assert.equal(csv, "﻿H\r\n\"'=a;b\"\r\n");
   });
 
   it('sin filas: solo cabeceras', () => {
