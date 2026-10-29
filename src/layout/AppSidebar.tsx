@@ -2,6 +2,16 @@
 import React, { useEffect, useRef, useState,useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { 
+  NotebookPen, 
+  ChartNoAxesCombined,
+  BanknoteArrowDown,
+  ListOrdered,
+  ShoppingCart,
+  ReceiptIndianRupee,
+  FileBox,
+  ListTodo,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import {
@@ -24,7 +34,7 @@ type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
+  subItems?: {icon?: React.ReactNode; name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
 const navItems: NavItem[] = [
@@ -35,62 +45,52 @@ const navItems: NavItem[] = [
     path: "/admin",
   },
   {
-    name: "Ventas",
-    icon: <DocsIcon />,
-    path: "/admin/ventas",
-  },
-  {
     icon: <DollarLineIcon />,
     name: "Abrir Caja",
     path: "/cajero",
   },
   {
-    icon: <ListIcon />,
-    name: "Inventario",
-    path: "/admin/inventario",
+    icon: <CalenderIcon />,
+    name: "Gestión productiva",
+    subItems: [
+      { icon: <ListOrdered />, name: "Inventario", path: "/admin/inventario", pro: false },
+      { icon: <FileBox />, name: "Producción", path: "/admin/produccion", pro: false },
+      { icon: <ListTodo />, name: "Planificación (MRP)", path: "/admin/mrp", pro: false },
+      { icon: <DocsIcon />, name: "Recetas", path: "/admin/recetas", pro: false },
+      { icon: <PageIcon />, name: "Modificar Menu", path: "/admin/menu", pro: false },
+    ],
   },
   {
-    icon: <PieChartIcon />,
-    name: "Producción",
-    path: "/admin/produccion",
-  },
-  {
-    icon: <BoxCubeIcon />,
-    name: "Planificación (MRP)",
-    path: "/admin/mrp",
+    name: "Ventas",
+    icon: <ChartNoAxesCombined />,
+    path: "/admin/ventas",
   },
   {
     icon: <UserCircleIcon />,
     name: "Usuarios",
     path: "/admin/usuarios",
   },
+
   {
-    name: "Menú",
-    icon: <PageIcon />,
-    subItems: [
-      { name: "Recetas", path: "/admin/recetas", pro: false },
-      { name: "Modificar Menu", path: "/admin/menu", pro: false },
-    ],
-  },
-  {
-    name: "Informes",
+    name: "Reportes",
     icon: <DocsIcon />,
-    subItems: [{ name: "Reporte de Ventas", path: "/admin/informes/reporte-ventas", pro: false },
-      { name: "Reporte de Gastos", path: "/admin/informes/reporte-gastos", pro: false },
-      { name: "Reporte de Inventario", path: "/admin/informes/reporte-inventario", pro: false },
-      { name: "Reporte de Clientes", path: "/admin/informes/reporte-clientes", pro: false },
-      { name: "Reporte de Proveedores", path: "/admin/informes/reporte-proveedores", pro: false },
+    subItems: [
+      { icon: <ChartNoAxesCombined />, name: "Ventas", path: "/admin/reporte-ventas", pro: false },
+      { icon: <BanknoteArrowDown />, name: "Gastos", path: "/admin/reporte-gastos", pro: false },
+      { icon: <ListOrdered />, name: "Inventario", path: "/admin/reporte-inventario", pro: false },
+      { icon: <ShoppingCart />, name: "Compras", path: "/admin/reporte-compras", pro: false },
+      { icon: <ReceiptIndianRupee />, name: "Cajas", path: "/admin/reporte-cajas", pro: false },
     ],
   },
-  {
-    name: "Contabilidad",
-    icon: <TableIcon />,
-    subItems: [{ name: "Impuestos", path: "/admin/impuestos", pro: false },
-      { name: "Gastos", path: "/admin/gastos", pro: false },
-      { name: "Balance General", path: "/admin/balance-general", pro: false },
+  // {
+  //   name: "Contabilidad",
+  //   icon: <TableIcon />,
+  //   subItems: [{ name: "Impuestos", path: "/admin/impuestos", pro: false },
+  //     { name: "Gastos", path: "/admin/gastos", pro: false },
+  //     { name: "Balance General", path: "/admin/balance-general", pro: false },
       
-    ],
-  },
+  //   ],
+  // },
   
 ];
 
@@ -221,7 +221,18 @@ const AppSidebar: React.FC = () => {
                           : "menu-dropdown-item-inactive"
                       }`}
                     >
-                      {subItem.name}
+                      {subItem.icon && (
+                        <span
+                          className={`${
+                            isActive(subItem.path)
+                              ? "menu-item-icon-active"
+                              : "menu-item-icon-inactive"
+                          }`}
+                        >
+                          {subItem.icon}
+                        </span>
+                      )}
+                      <span>{subItem.name}</span>
                       <span className="flex items-center gap-1 ml-auto">
                         {subItem.new && (
                           <span

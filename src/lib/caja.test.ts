@@ -299,6 +299,8 @@ describe('SEC-04 Invariants: Race Condition Edition & Cobro', () => {
 describe('Caja Domain Utilities (calcularResumenCaja)', () => {
   it('accurately sums decimal sales without floating-point precision leakage (0.10 + 0.20 = 0.30)', async () => {
     const originalFindMany = prisma.factura.findMany;
+    const originalMovFindMany = prisma.movimientoCaja.findMany;
+    prisma.movimientoCaja.findMany = (async () => []) as never;
     prisma.factura.findMany = (async () => [
       { importe_total: '0.10', metodo_pago: 'cash' },
       { importe_total: '0.20', metodo_pago: 'cash' },
@@ -323,6 +325,65 @@ describe('Caja Domain Utilities (calcularResumenCaja)', () => {
       assert.equal(resumen.efectivoEsperado, 10.3);
     } finally {
       prisma.factura.findMany = originalFindMany;
+      prisma.movimientoCaja.findMany = originalMovFindMany;
+    }
+  });
+});
+
+describe('calcularResumenCaja (movimientos manuales de efectivo)', () => {
+  it('adds MANUAL entradas and subtracts salidas from efectivoEsperado, filtering by origen MANUAL', async () => {
+    const originalFactura = prisma.factura.findMany;
+    const originalMov = prisma.movimientoCaja.findMany;
+    let movWhere: Record<string, unknown> = {};
+    prisma.factura.findMany = (async () => [
+      { importe_total: '50.00', metodo_pago: 'cash' },
+    ]) as never;
+    prisma.movimientoCaja.findMany = (async (args: { where: Record<string, unknown> }) => {
+      movWhere = args.where;
+      return [
+        { tipo: 'INGRESO', monto: '20.10' },
+        { tipo: 'INGRESO', monto: '0.20' },
+        { tipo: 'EGRESO', monto: '5.00' },
+      ];
+    }) as never;
+
+    try {
+      const resumen = await calcularResumenCaja({
+        id: BigInt(7),
+        saldo_inicial: '100.00',
+        fecha_apertura: new Date(),
+      });
+      assert.equal(movWhere.caja_id, BigInt(7));
+      assert.equal(movWhere.origen, 'MANUAL');
+      assert.equal(resumen.entradasEfectivo, 20.3);
+      assert.equal(resumen.salidasEfectivo, 5);
+      // 100 + 50 + 20.30 - 5
+      assert.equal(resumen.efectivoEsperado, 165.3);
+      // sales totals are untouched by manual movements
+      assert.equal(resumen.totalVentas, 50);
+    } finally {
+      prisma.factura.findMany = originalFactura;
+      prisma.movimientoCaja.findMany = originalMov;
+    }
+  });
+
+  it('returns zero entradas/salidas and unchanged efectivoEsperado when there are no manual movements', async () => {
+    const originalFactura = prisma.factura.findMany;
+    const originalMov = prisma.movimientoCaja.findMany;
+    prisma.factura.findMany = (async () => [{ importe_total: '10.00', metodo_pago: 'cash' }]) as never;
+    prisma.movimientoCaja.findMany = (async () => []) as never;
+    try {
+      const resumen = await calcularResumenCaja({
+        id: BigInt(8),
+        saldo_inicial: '5.00',
+        fecha_apertura: new Date(),
+      });
+      assert.equal(resumen.entradasEfectivo, 0);
+      assert.equal(resumen.salidasEfectivo, 0);
+      assert.equal(resumen.efectivoEsperado, 15);
+    } finally {
+      prisma.factura.findMany = originalFactura;
+      prisma.movimientoCaja.findMany = originalMov;
     }
   });
 });

@@ -17,6 +17,8 @@ const base: CierreCajaData = {
     ventas_otros: 5,
   },
   totalVentas: 375.75,
+  entradasEfectivo: 0,
+  salidasEfectivo: 0,
   efectivoEsperado: 350.5,
   totalContado: 350.5,
   diferenciaEfectivo: 0,
@@ -47,6 +49,18 @@ describe('construirTicketCierre', () => {
       t.lineasMetodo.map((l) => l.monto),
       ['Bs 250.50', 'Bs 80.00', 'Bs 30.25', 'Bs 0.00', 'Bs 10.00', 'Bs 5.00']
     );
+  });
+
+  it('formats manual cash entries and withdrawals', () => {
+    const t = construirTicketCierre({ ...base, entradasEfectivo: 20, salidasEfectivo: 5.5 });
+    assert.equal(t.entradasEfectivo, 'Bs 20.00');
+    assert.equal(t.salidasEfectivo, 'Bs 5.50');
+  });
+
+  it('formats zero entradas/salidas as Bs 0.00', () => {
+    const t = construirTicketCierre(base);
+    assert.equal(t.entradasEfectivo, 'Bs 0.00');
+    assert.equal(t.salidasEfectivo, 'Bs 0.00');
   });
 
   it('formats totals and opening cash', () => {

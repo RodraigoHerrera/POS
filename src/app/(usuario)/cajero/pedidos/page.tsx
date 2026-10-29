@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, ReceiptText, RefreshCw, Printer } from "lucide-react";
 import TopBarCajero from "@/components/caja/TopBarCajero";
+import MovimientoCajaModal from "@/components/caja/MovimientoCajaModal";
 
 interface PedidoAbierto {
   id: string;
@@ -42,6 +43,7 @@ export default function PedidosAbiertosPage() {
   const [pedidos, setPedidos] = useState<PedidoAbierto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [voidingId, setVoidingId] = useState<string | null>(null);
+  const [movimientoOpen, setMovimientoOpen] = useState(false);
 
   const fetchPedidos = useCallback(async () => {
     try {
@@ -112,8 +114,10 @@ export default function PedidosAbiertosPage() {
         titulo="Pedidos abiertos"
         empleadoNombre={sesionCaja?.empleadoNombre ?? ""}
         turnoInicio={sesionCaja?.fechaApertura}
+        onMovimientoCaja={() => setMovimientoOpen(true)}
         onCerrarCaja={() => router.push("/cajero/cierre")}
       />
+      <MovimientoCajaModal isOpen={movimientoOpen} onClose={() => setMovimientoOpen(false)} />
 
       <div className="w-full flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-3xl">

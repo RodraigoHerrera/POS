@@ -410,9 +410,18 @@ model movimientoCaja {
   tipo        String   @db.VarChar(10) // "INGRESO" o "EGRESO"
   monto       Decimal  @db.Decimal(18, 2)
   descripcion String
+  origen      OrigenMovimientoCaja
   creado_en   DateTime @default(now())
 
   @@index([caja_id])
+  @@index([caja_id, origen])
+}
+
+// Origen del movimiento: solo MANUAL cuenta como entrada/salida de efectivo
+enum OrigenMovimientoCaja {
+  VENTA
+  ANULACION
+  MANUAL
 }
 
 // ==========================================

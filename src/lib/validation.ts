@@ -1,15 +1,7 @@
 import { NextResponse } from "next/server";
+import { ValidationError } from "./validationError";
 
-export class ValidationError extends Error {
-  field?: string;
-
-  constructor(message: string, field?: string) {
-    super(message);
-    this.name = "ValidationError";
-    this.field = field;
-    Object.setPrototypeOf(this, ValidationError.prototype);
-  }
-}
+export { ValidationError };
 
 export function validationErrorResponse(error: unknown): NextResponse {
   let msg = "Error de validación";

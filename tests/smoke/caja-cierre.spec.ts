@@ -4,7 +4,9 @@ import { loginSucursal, seleccionarEmpleadoYPin, abrirCaja, cerrarCaja } from ".
 import { SMOKE, resolveSmokeDatabaseUrl } from "./smokeEnv";
 
 const APERTURA = 100;
-const CONTADO = APERTURA + SMOKE.precio;
+const ENTRADA = 20;
+const SALIDA = 5;
+const CONTADO = APERTURA + SMOKE.precio + ENTRADA - SALIDA;
 // Totales electrónicos declarados: la venta del smoke es en efectivo, así que
 // lo esperado por Tarjeta/QR es 0. Tarjeta declara 10 (sobrante), QR declara 0.
 const TARJETA_DECLARADA = 10;
@@ -34,6 +36,19 @@ test("caja: abrir -> vender -> cerrar -> ticket de cierre imprimible", async ({ 
   await page.getByRole("button", { name: "Confirmar Cobro" }).click();
   await page.waitForURL(/\/cajero\/ventas/);
 
+  // Movimientos manuales de efectivo antes de cerrar: Entrada 20 y Salida 5
+  await page.getByRole("button", { name: "Movimiento de caja", exact: true }).click();
+  const registrarMovimiento = async (tipo: "Entrada" | "Salida", monto: number, razon: string) => {
+    await page.getByRole("button", { name: tipo, exact: true }).click();
+    await page.locator("#movimiento-monto").fill(String(monto));
+    await page.locator("#movimiento-razon").fill(razon);
+    await page.getByRole("button", { name: "Registrar movimiento", exact: true }).click();
+    await expect(page.getByText(razon, { exact: true })).toBeVisible();
+  };
+  await registrarMovimiento("Entrada", ENTRADA, "Cambio adicional");
+  await registrarMovimiento("Salida", SALIDA, "Pago proveedor hielo");
+  await page.keyboard.press("Escape");
+
   await cerrarCaja(page, CONTADO, { tarjeta: TARJETA_DECLARADA, qr: QR_DECLARADO });
 
   // Ticket en pantalla
@@ -50,6 +65,8 @@ test("caja: abrir -> vender -> cerrar -> ticket de cierre imprimible", async ({ 
   }
   const fila = (etiqueta: string) => page.getByText(etiqueta, { exact: true }).locator("xpath=..");
   await expect(fila("Caja abierta con")).toContainText(bs(APERTURA));
+  await expect(fila("Entradas de efectivo")).toContainText(bs(ENTRADA));
+  await expect(fila("Salidas de efectivo")).toContainText(bs(SALIDA));
   await expect(fila("Total ventas")).toContainText(bs(SMOKE.precio));
   // El efectivo esperado/contado solo aparece en la conciliación.
   await expect(page.getByText("Efectivo esperado")).toHaveCount(0);
@@ -77,6 +94,17 @@ test("caja: abrir -> vender -> cerrar -> ticket de cierre imprimible", async ({ 
     });
     expect(Number(caja.saldo_final)).toBe(CONTADO);
     expect(Number(caja.diferencia_efectivo)).toBe(0);
+    expect(Number(caja.entradas_efectivo)).toBe(ENTRADA);
+    expect(Number(caja.salidas_efectivo)).toBe(SALIDA);
+    const movimientos = await prisma.movimientoCaja.findMany({ where: { caja_id: caja.id } });
+    const manuales = movimientos.filter((m) => m.origen === "MANUAL");
+    expect(manuales).toHaveLength(2);
+    expect(manuales.map((m) => `${m.tipo}:${Number(m.monto)}:${m.descripcion}`).sort()).toEqual([
+      `EGRESO:${SALIDA}:Pago proveedor hielo`,
+      `INGRESO:${ENTRADA}:Cambio adicional`,
+    ]);
+    // La venta en efectivo registró su propio movimiento de origen VENTA
+    expect(movimientos.filter((m) => m.origen === "VENTA")).toHaveLength(1);
     expect(Number(caja.ventas_tarjeta)).toBe(0);
     expect(Number(caja.declarado_tarjeta)).toBe(TARJETA_DECLARADA);
     expect(Number(caja.diferencia_tarjeta)).toBe(TARJETA_DECLARADA);

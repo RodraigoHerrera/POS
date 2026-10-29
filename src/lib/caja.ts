@@ -22,6 +22,10 @@ export interface ResumenCaja {
     ventas_otros: number;
   };
   totalVentas: number;
+  /** Entradas manuales de efectivo (movimientos MANUAL tipo INGRESO). */
+  entradasEfectivo: number;
+  /** Salidas manuales de efectivo (movimientos MANUAL tipo EGRESO). */
+  salidasEfectivo: number;
   efectivoEsperado: number;
 }
 
@@ -33,12 +37,16 @@ export interface ResumenCaja {
  *
  * Utiliza Prisma.Decimal para evitar acumulación de errores de punto flotante IEEE-754.
  */
-export async function calcularResumenCaja(caja: {
-  id: bigint;
-  saldo_inicial: unknown;
-  fecha_apertura: Date;
-}): Promise<ResumenCaja> {
-  const facturas = await prisma.factura.findMany({
+export async function calcularResumenCaja(
+  caja: {
+    id: bigint;
+    saldo_inicial: unknown;
+    fecha_apertura: Date;
+  },
+  // Cliente opcional (p. ej. el `tx` de una transacción) para leer dentro de ella.
+  db: Pick<typeof prisma, "factura" | "movimientoCaja"> = prisma
+): Promise<ResumenCaja> {
+  const facturas = await db.factura.findMany({
     where: {
       pedido: {
         caja_id: caja.id,
@@ -47,6 +55,20 @@ export async function calcularResumenCaja(caja: {
     },
     select: { importe_total: true, metodo_pago: true },
   });
+
+  // Solo los movimientos MANUAL cuentan: las filas VENTA/ANULACION ya están
+  // reflejadas en las facturas y contarlas duplicaría las ventas.
+  const movimientosManuales = await db.movimientoCaja.findMany({
+    where: { caja_id: caja.id, origen: "MANUAL" },
+    select: { tipo: true, monto: true },
+  });
+  let entradasDec = new Prisma.Decimal(0);
+  let salidasDec = new Prisma.Decimal(0);
+  for (const m of movimientosManuales) {
+    const monto = new Prisma.Decimal(m.monto?.toString() ?? "0");
+    if (m.tipo === "INGRESO") entradasDec = entradasDec.add(monto);
+    else if (m.tipo === "EGRESO") salidasDec = salidasDec.add(monto);
+  }
 
   const decimalesPorMetodo = {
     ventas_efectivo: new Prisma.Decimal(0),
@@ -69,7 +91,10 @@ export async function calcularResumenCaja(caja: {
     totalVentasDec = totalVentasDec.add(val);
   }
 
-  const efectivoEsperadoDec = saldoInicialDec.add(decimalesPorMetodo.ventas_efectivo);
+  const efectivoEsperadoDec = saldoInicialDec
+    .add(decimalesPorMetodo.ventas_efectivo)
+    .add(entradasDec)
+    .sub(salidasDec);
 
   const ventasPorMetodo = {
     ventas_efectivo: decimalesPorMetodo.ventas_efectivo.toDecimalPlaces(2).toNumber(),
@@ -86,6 +111,8 @@ export async function calcularResumenCaja(caja: {
     fechaApertura: caja.fecha_apertura,
     ventasPorMetodo,
     totalVentas: totalVentasDec.toDecimalPlaces(2).toNumber(),
+    entradasEfectivo: entradasDec.toDecimalPlaces(2).toNumber(),
+    salidasEfectivo: salidasDec.toDecimalPlaces(2).toNumber(),
     efectivoEsperado: efectivoEsperadoDec.toDecimalPlaces(2).toNumber(),
   };
 }

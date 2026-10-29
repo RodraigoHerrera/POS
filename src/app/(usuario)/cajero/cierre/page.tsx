@@ -30,6 +30,8 @@ interface ResumenCaja {
     ventas_otros: number;
   };
   totalVentas: number;
+  entradasEfectivo: number;
+  salidasEfectivo: number;
   efectivoEsperado: number;
 }
 
@@ -366,6 +368,14 @@ export default function CierreCajaPage() {
                           </dd>
                         </div>
                       </dl>
+                      {f.metodo === "Efectivo" &&
+                        resumen &&
+                        (resumen.entradasEfectivo > 0 || resumen.salidasEfectivo > 0) && (
+                          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                            Incluye entradas {bs(resumen.entradasEfectivo)} · salidas{" "}
+                            {bs(resumen.salidasEfectivo)}
+                          </p>
+                        )}
                     </div>
                   ))}
                 </div>

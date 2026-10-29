@@ -101,6 +101,7 @@ export async function POST(req: Request) {
              tipo: 'INGRESO',
              monto: pedido.total, // Ingresa el total de la venta
              descripcion: `Venta Pedido #${pedidoId} - Efectivo`,
+             origen: 'VENTA',
           }
         });
       }
