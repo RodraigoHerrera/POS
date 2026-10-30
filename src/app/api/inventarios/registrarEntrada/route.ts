@@ -6,6 +6,8 @@ import { runWithRetry } from "@/lib/transactionRetry";
 import { actualizarInventarioEntrada } from "@/lib/inventario";
 import { resolverCostoUnitario } from "@/lib/costoEntrada";
 import { ValidationError } from "@/lib/validation";
+import { esCodigoLoteDuplicado, resolverCodigoLote } from "@/lib/codigoLote";
+import { obtenerZonaMrp } from "@/lib/mrp/zonaHoraria";
 
 // Motivos del enum MotivoMovimiento que tienen sentido para una entrada
 // manual de inventario. Se valida ANTES de escribir: antes un motivo
@@ -22,7 +24,7 @@ export async function POST(req: Request) {
 
     const {
       item: item_id,
-      lote: codigo_lote,
+      lote: codigo_lote_recibido,
       cantidad,
       costo_unitario,
       costo_unit: costo_unit_alt,
@@ -34,6 +36,8 @@ export async function POST(req: Request) {
     } = body;
 
     const costo_unit = costo_unitario !== undefined ? costo_unitario : costo_unit_alt;
+    // Sin codigo se genera uno: codigo_lote es unico por item en todas las sucursales
+    const codigo_lote = resolverCodigoLote(codigo_lote_recibido, new Date(), undefined, obtenerZonaMrp());
 
     // Validación: costo 0 es legítimo (donaciones/promos), negativo no.
     // `== null` cubre undefined y null sin rechazar el 0.
@@ -146,6 +150,12 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (error) {
+    if (esCodigoLoteDuplicado(error)) {
+      return NextResponse.json(
+        { message: "Ya existe un lote con ese código para este item" },
+        { status: 409 }
+      );
+    }
     return errorResponse(error, "Error al registrar la entrada de inventario");
   }
 }
