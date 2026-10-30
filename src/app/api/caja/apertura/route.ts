@@ -108,8 +108,7 @@ export async function POST(request: Request) {
     });
 
     // C. ELIMINÉ el bloque que borraba la cookie (maxAge: 0) que tenías aquí por error
-
-    console.log("Token generado:", cajaToken);
+    // El token no se loguea: cualquiera con acceso a los logs podría reutilizarlo.
 
     // D. Retornamos la respuesta configurada
     return response;
