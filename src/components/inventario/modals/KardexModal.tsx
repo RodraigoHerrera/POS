@@ -13,7 +13,7 @@ import { formatCostoUnitario } from "@/lib/costo";
 import { mensajeErrorApi } from "@/lib/respuestaApi";
 import { construirCSVKardex, nombreArchivoKardex } from "@/lib/kardexCsv";
 import { descargarCSV } from "@/lib/csv";
-import { rangoDesdeSeleccion } from "@/lib/rangoFechas";
+import { rangoInmediatoDesdeSeleccion } from "@/lib/rangoFechas";
 import EditarEntradaForm from "./EditarEntradaForm";
 
 // --- Interfaces ---
@@ -111,10 +111,9 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
   // --- Handlers ---
   const handleSelectItem = (val: string) => setFiltros((p) => ({ ...p, item: val }));
   
-  // Un rango a medio elegir (una sola fecha) no filtra hasta completar el segundo clic
+  // Un solo dia elegido ya filtra ese dia; el segundo clic lo extiende a rango
   const handleRango = (fechas: Date[]) => {
-    const r = rangoDesdeSeleccion(fechas);
-    if (r) setFiltros((p) => ({ ...p, ...r }));
+    setFiltros((p) => ({ ...p, ...rangoInmediatoDesdeSeleccion(fechas) }));
   };
 
   // Exporta lo que se ve en la tabla (filtro de item y fechas incluido)
@@ -123,7 +122,9 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
       toast.error("No hay movimientos para exportar");
       return;
     }
-    descargarCSV(construirCSVKardex(movimientosFiltrados), nombreArchivoKardex(new Date()));
+    const nombre = nombreArchivoKardex(new Date());
+    descargarCSV(construirCSVKardex(movimientosFiltrados), nombre);
+    toast.success(`Kardex exportado: ${nombre}`);
   };
 
   const cancelarAnulacion = () => {
@@ -310,6 +311,9 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
                           {mov.tipo}
                         </Badge>
                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{mov.motivo}</div>
+                        {mov.referencia !== '-' && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Ref: {mov.referencia}</div>
+                        )}
                         {mov.anulado && (
                           <div className="mt-1">
                             <Badge size="sm" color="light">Anulada</Badge>
