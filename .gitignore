@@ -68,3 +68,5 @@ scratch/
 
 # stray home-directory copy (e.g. ~/.claude/skills) created inside the repo
 /~/
+testsprite_tests/tmp/
+testsprite_tests/tmp/config.json

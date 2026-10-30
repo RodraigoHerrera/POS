@@ -1,0 +1,2236 @@
+[
+  {
+    "id": "TC001",
+    "title": "Build an order and send it to kitchen",
+    "description": "A cashier can add items to a cart, enter a client name, and send the order as a comanda that opens the printable ticket view.",
+    "category": "Cash register opening, POS order taking, comanda printing, payment completion, and logout/session handoff",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Choose an active cashier employee"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the PIN field with a valid PIN"
+      },
+      {
+        "type": "action",
+        "description": "Submit the PIN form"
+      },
+      {
+        "type": "action",
+        "description": "Enter counted cash denominations"
+      },
+      {
+        "type": "action",
+        "description": "Open the cash register"
+      },
+      {
+        "type": "action",
+        "description": "Add a menu item to the cart"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the client name field with a unique name"
+      },
+      {
+        "type": "action",
+        "description": "Send the order to the kitchen"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the printable comanda view is opened"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the order appears as sent for preparation"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC002",
+    "title": "Complete branch login and route to the employee selector",
+    "description": "A valid branch login submits successfully and lands the user on the employee selection screen.",
+    "category": "Branch login, employee selection, and PIN access",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the employee selection screen is shown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify active employees for the branch are listed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC003",
+    "title": "Select an employee and enter a valid PIN to reach the cashier area",
+    "description": "After branch login, choosing a cashier employee and entering the correct PIN routes the user into the cashier workspace.",
+    "category": "Branch login, employee selection, and PIN access",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Choose an active cashier employee"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the PIN field with a valid PIN"
+      },
+      {
+        "type": "action",
+        "description": "Submit the PIN form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the cashier area is shown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user is routed to the cashier workspace"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC004",
+    "title": "Complete a new order and send it to the kitchen",
+    "description": "Verifies that a cashier can add products, personalize an item, enter the customer name, send the comanda, and proceed to payment.",
+    "category": "POS order taking and comanda sending",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /cajero/ventas"
+      },
+      {
+        "type": "action",
+        "description": "Select a product from the catalog"
+      },
+      {
+        "type": "action",
+        "description": "Add extras or notes to the selected item"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the customer name field with a new customer name"
+      },
+      {
+        "type": "action",
+        "description": "Submit the order to the kitchen"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the kitchen ticket is opened and the payment screen is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC005",
+    "title": "Log in and enter the cashier area",
+    "description": "A branch user can log in and be routed to the employee selection and cashier area successfully.",
+    "category": "Cashier flow",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Select the cashier employee"
+      },
+      {
+        "type": "action",
+        "description": "Enter the employee PIN"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the cashier area is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the employee selection flow completes successfully"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC006",
+    "title": "Open the register and start cashier operations",
+    "description": "A cashier can open the cash register from the opening screen and continue into the POS workspace.",
+    "category": "Cash register opening, POS order taking, comanda printing, payment completion, and logout/session handoff",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Choose an active cashier employee"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the PIN field with a valid PIN"
+      },
+      {
+        "type": "action",
+        "description": "Submit the PIN form"
+      },
+      {
+        "type": "action",
+        "description": "Enter counted cash denominations"
+      },
+      {
+        "type": "action",
+        "description": "Open the cash register"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the POS workspace is shown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify order taking controls are available"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC007",
+    "title": "Open the cash register and reach the POS screen",
+    "description": "Verifies that a cashier or administrator can complete the opening cash count and land on the POS screen ready to sell.",
+    "category": "Cash register opening",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /cajero"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the opening count for each denomination"
+      },
+      {
+        "type": "action",
+        "description": "Submit the cash register opening"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the POS sales screen is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC008",
+    "title": "Complete a cash payment and finish the order",
+    "description": "Verifies that a cashier can pay an order in cash, review the change due, and complete the sale successfully.",
+    "category": "Payment and billing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to continue to payment for an order"
+      },
+      {
+        "type": "action",
+        "description": "Select the cash payment method"
+      },
+      {
+        "type": "action",
+        "description": "Enter a received amount into the cash received field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the change due is displayed"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the charge"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a payment completion confirmation is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC009",
+    "title": "Complete payment for an open order",
+    "description": "A cashier can resume an order in the payment screen and finish charging it successfully.",
+    "category": "Cash register opening, POS order taking, comanda printing, payment completion, and logout/session handoff",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Choose an active cashier employee"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the PIN field with a valid PIN"
+      },
+      {
+        "type": "action",
+        "description": "Submit the PIN form"
+      },
+      {
+        "type": "action",
+        "description": "Enter counted cash denominations"
+      },
+      {
+        "type": "action",
+        "description": "Open the cash register"
+      },
+      {
+        "type": "action",
+        "description": "Open the payment screen for an active order"
+      },
+      {
+        "type": "action",
+        "description": "Select a payment method"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the payment"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the payment completes successfully"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the order is marked as paid"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC010",
+    "title": "Complete a sale with payment details",
+    "description": "A cashier can charge an open order and complete the payment flow from the methods screen.",
+    "category": "Payment completion",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Select the cashier employee"
+      },
+      {
+        "type": "action",
+        "description": "Enter the employee PIN"
+      },
+      {
+        "type": "action",
+        "description": "Open the cash register"
+      },
+      {
+        "type": "action",
+        "description": "Add a product to the cart"
+      },
+      {
+        "type": "action",
+        "description": "Proceed to the payment methods screen"
+      },
+      {
+        "type": "action",
+        "description": "Select a payment method"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the payment"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the sale is completed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the order no longer appears as pending payment"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC011",
+    "title": "Open the cash register and start a sales session",
+    "description": "A cashier can open the register from the cashier area and reach the sales screen for an active shift.",
+    "category": "Cash register opening/closing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Select the cashier employee"
+      },
+      {
+        "type": "action",
+        "description": "Enter the employee PIN"
+      },
+      {
+        "type": "action",
+        "description": "Open the cash register"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the sales screen is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the register is open"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC012",
+    "title": "Route an administrator through PIN login to the dashboard",
+    "description": "After selecting an administrator employee and entering the correct PIN, the user lands on the administrator dashboard.",
+    "category": "Branch login, employee selection, and PIN access",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Choose an active administrator employee"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the PIN field with a valid PIN"
+      },
+      {
+        "type": "action",
+        "description": "Submit the PIN form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the administrator dashboard is shown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify dashboard metrics are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC013",
+    "title": "Register a new branch and first administrator",
+    "description": "A new branch can complete onboarding by creating the branch and its first administrator account, then returning to the access screen.",
+    "category": "Branch registration and first administrator",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /signup"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch name field with a unique branch name"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the address field with a valid address"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with a unique email address"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the phone field with a valid phone number"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with a valid password"
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the administrator full name field with a unique full name"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the administrator username field with a unique username"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the administrator email field with a unique email address"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the administrator phone field with a valid phone number"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the administrator password field with a valid password"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password confirmation field with the same password"
+      },
+      {
+        "type": "action",
+        "description": "Submit the administrator form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the access screen is shown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the newly created branch can proceed to employee login"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC014",
+    "title": "Create a new branch and first administrator",
+    "description": "A new branch registrant can complete signup and create the first administrator account successfully.",
+    "category": "New branch registration",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /signup"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch name field with a unique branch name"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch address field with a valid address"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch email field with a unique email"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch phone field with a valid phone number"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch password field with a valid password"
+      },
+      {
+        "type": "action",
+        "description": "Submit the branch registration form"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the administrator name field with a valid full name"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the administrator username field with a unique username"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the administrator email field with a unique email"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the administrator phone field with a valid phone number"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the administrator password field with a valid password"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the administrator password field with the same password"
+      },
+      {
+        "type": "action",
+        "description": "Submit the administrator creation form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the branch login screen"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a branch registration success confirmation is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC015",
+    "title": "Close the cash register and end the cashier session",
+    "description": "A cashier can close the register with denomination counts and finish the shift through the closing flow.",
+    "category": "Cash register opening, POS order taking, comanda printing, payment completion, and logout/session handoff",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Choose an active cashier employee"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the PIN field with a valid PIN"
+      },
+      {
+        "type": "action",
+        "description": "Submit the PIN form"
+      },
+      {
+        "type": "action",
+        "description": "Enter counted cash denominations"
+      },
+      {
+        "type": "action",
+        "description": "Open the cash register"
+      },
+      {
+        "type": "action",
+        "description": "Complete at least one cash movement or sale"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to the closing screen"
+      },
+      {
+        "type": "action",
+        "description": "Enter the closing denomination counts"
+      },
+      {
+        "type": "action",
+        "description": "Close the register"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the closing summary is shown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the employee session is ended"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC016",
+    "title": "Close the cash register at the end of the shift",
+    "description": "A cashier can complete the end-of-shift closing flow and finish the session cleanly.",
+    "category": "Cash register opening/closing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Select the cashier employee"
+      },
+      {
+        "type": "action",
+        "description": "Enter the employee PIN"
+      },
+      {
+        "type": "action",
+        "description": "Open the cash register"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to the cash closing screen"
+      },
+      {
+        "type": "action",
+        "description": "Complete the cash count and notes"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the cash closing"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the cash closing is completed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the session handoff or logout is shown"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC017",
+    "title": "Complete a card payment with billing details",
+    "description": "Verifies that a cashier can complete payment by card after entering the required card digits and billing details.",
+    "category": "Payment and billing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to continue to payment for an order"
+      },
+      {
+        "type": "action",
+        "description": "Select the card payment method"
+      },
+      {
+        "type": "action",
+        "description": "Enter the first four card digits into the card prefix field"
+      },
+      {
+        "type": "action",
+        "description": "Enter the last four card digits into the card suffix field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the billing identification field with a valid tax ID"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the business name field with a customer name"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the charge"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a payment completion confirmation is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC018",
+    "title": "View dashboard metrics for the selected period",
+    "description": "The administrator can open the dashboard, switch the period, and see the dashboard metrics, top products, stock alerts, and chart update accordingly.",
+    "category": "Admin dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin"
+      },
+      {
+        "type": "action",
+        "description": "Switch the period selector to Semana"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard metrics are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify top products, stock alerts, and the statistics chart are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC019",
+    "title": "Continue to POS when the register is already open",
+    "description": "Verifies that an already-open register sends the user directly to the POS screen instead of showing the opening form.",
+    "category": "Cash register opening",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /cajero"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the POS sales screen is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC020",
+    "title": "Recover an open order and resume payment",
+    "description": "A cashier can review open orders, edit or void an unpaid order, and continue charging it from the payment screen.",
+    "category": "Open order recovery flow",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Select the cashier employee"
+      },
+      {
+        "type": "action",
+        "description": "Enter the employee PIN"
+      },
+      {
+        "type": "action",
+        "description": "Open the cash register"
+      },
+      {
+        "type": "action",
+        "description": "Open the open orders view"
+      },
+      {
+        "type": "action",
+        "description": "Open an unpaid order for editing"
+      },
+      {
+        "type": "action",
+        "description": "Return to the open orders view"
+      },
+      {
+        "type": "action",
+        "description": "Open the unpaid order payment screen"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify open orders are listed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the payment screen can be resumed for the selected order"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC021",
+    "title": "Resume charging an open order",
+    "description": "Verifies that a cashier can select an unpaid order and continue to the payment screen for that order.",
+    "category": "Open orders management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /cajero/pedidos"
+      },
+      {
+        "type": "action",
+        "description": "Choose an unpaid order to charge"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the payment screen is displayed for the selected order"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC022",
+    "title": "Open sales audit and inspect a sale",
+    "description": "The administrator can open the sales audit page and inspect a sale's details from the list.",
+    "category": "Sales audit and voiding",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/ventas"
+      },
+      {
+        "type": "action",
+        "description": "Open a sale detail view"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a sale detail view is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the sale information is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC023",
+    "title": "Audit sales and apply an administrative void",
+    "description": "An administrator can inspect a sale and perform an authorized void from the sales audit screen.",
+    "category": "Admin dashboard KPIs; open orders management (edit/reprint/void/charge); employee management; inventory entry/merma/kardex/stock alerts; sales audit and administrative voids.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Choose an active administrator employee"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the PIN field with a valid PIN"
+      },
+      {
+        "type": "action",
+        "description": "Submit the PIN form"
+      },
+      {
+        "type": "action",
+        "description": "Open the sales audit page"
+      },
+      {
+        "type": "action",
+        "description": "Open a sale detail view"
+      },
+      {
+        "type": "action",
+        "description": "Start the administrative void flow"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the void action"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the sale detail is shown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the sale is marked as voided"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC024",
+    "title": "Edit an open order from the recovery flow",
+    "description": "Verifies that a cashier can choose an unpaid order from the open-order list and resume editing it in the sales screen.",
+    "category": "Open orders management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /cajero/pedidos"
+      },
+      {
+        "type": "action",
+        "description": "Choose an unpaid order to edit"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the sales screen opens with the selected order loaded"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC025",
+    "title": "Void a sale with a reason",
+    "description": "The administrator can void an existing sale by providing a reason and confirming the action.",
+    "category": "Sales audit and voiding",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/ventas"
+      },
+      {
+        "type": "action",
+        "description": "Open the void sale flow for a sale"
+      },
+      {
+        "type": "action",
+        "description": "Enter a void reason"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the void action"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the sale is marked as voided"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a void confirmation is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC026",
+    "title": "Review dashboard KPIs as an administrator",
+    "description": "An administrator can access the dashboard and review business performance metrics and alerts.",
+    "category": "Admin dashboard KPIs",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Select the administrator employee"
+      },
+      {
+        "type": "action",
+        "description": "Enter the employee PIN"
+      },
+      {
+        "type": "action",
+        "description": "Verify the administrator dashboard is displayed"
+      },
+      {
+        "type": "action",
+        "description": "Switch the dashboard period selector"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify sales and stock KPI content is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a statistics chart is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC027",
+    "title": "View admin dashboard metrics and stock alerts",
+    "description": "An administrator can review the dashboard and see key operational metrics and alert widgets.",
+    "category": "Admin dashboard KPIs; open orders management (edit/reprint/void/charge); employee management; inventory entry/merma/kardex/stock alerts; sales audit and administrative voids.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Choose an active administrator employee"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the PIN field with a valid PIN"
+      },
+      {
+        "type": "action",
+        "description": "Submit the PIN form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the administrator dashboard is shown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify dashboard metrics and stock alerts are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC028",
+    "title": "View inventory management entry points",
+    "description": "The administrator can open the inventory hub and access the inventory management actions from one place.",
+    "category": "Inventory entry/merma/kardex/stock alerts",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/inventario"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify inventory management actions are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify stock alert and stock control entry points are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC029",
+    "title": "Review and manage open orders from the recovery screen",
+    "description": "A cashier can inspect open orders, print or edit one, and resume charging it from the orders workflow.",
+    "category": "Cash register opening, POS order taking, comanda printing, payment completion, and logout/session handoff",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Choose an active cashier employee"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the PIN field with a valid PIN"
+      },
+      {
+        "type": "action",
+        "description": "Submit the PIN form"
+      },
+      {
+        "type": "action",
+        "description": "Enter counted cash denominations"
+      },
+      {
+        "type": "action",
+        "description": "Open the cash register"
+      },
+      {
+        "type": "action",
+        "description": "Open the open-orders screen"
+      },
+      {
+        "type": "action",
+        "description": "Open an unpaid order"
+      },
+      {
+        "type": "action",
+        "description": "Resume charging the order"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected open order can be managed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the payment screen is reached for that order"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC030",
+    "title": "Complete a QR or transfer payment",
+    "description": "Verifies that a cashier can finish an order using a non-cash digital payment method.",
+    "category": "Payment and billing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to continue to payment for an order"
+      },
+      {
+        "type": "action",
+        "description": "Select the QR or transfer payment method"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the billing identification field with a valid tax ID"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the business name field with a customer name"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the charge"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a payment completion confirmation is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC031",
+    "title": "Review dashboard in monthly view",
+    "description": "The administrator can keep the dashboard in monthly mode and see the key operational widgets on the page.",
+    "category": "Admin dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard metrics are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify top products, stock alerts, and the statistics chart are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC032",
+    "title": "Manage employees from the administrator area",
+    "description": "An administrator can create or update employee records and change their active status from the employee management screen.",
+    "category": "Employee management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Select the administrator employee"
+      },
+      {
+        "type": "action",
+        "description": "Enter the employee PIN"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to employee management"
+      },
+      {
+        "type": "action",
+        "description": "Open the new employee form"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the employee details and credentials"
+      },
+      {
+        "type": "action",
+        "description": "Submit the new employee form"
+      },
+      {
+        "type": "action",
+        "description": "Open the newly created employee card for editing"
+      },
+      {
+        "type": "action",
+        "description": "Update the employee details"
+      },
+      {
+        "type": "action",
+        "description": "Toggle the employee active status"
+      },
+      {
+        "type": "action",
+        "description": "Save the employee changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the employee list reflects the updated record"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the employee remains available in the management list"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC033",
+    "title": "View open orders and reprint a kitchen ticket",
+    "description": "Verifies that a cashier can inspect the open-order list and print an existing order ticket again.",
+    "category": "Open orders management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /cajero/pedidos"
+      },
+      {
+        "type": "action",
+        "description": "Open the actions for one unpaid order"
+      },
+      {
+        "type": "action",
+        "description": "Print the order ticket"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the kitchen ticket page is opened"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC034",
+    "title": "Void an open order from the recovery flow",
+    "description": "Verifies that a cashier can cancel an unpaid order from the open-order list and see it removed afterward.",
+    "category": "Open orders management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /cajero/pedidos"
+      },
+      {
+        "type": "action",
+        "description": "Choose an unpaid order to void"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the void action"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the order is removed from the open-order list"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC035",
+    "title": "Create a new employee",
+    "description": "The administrator can create a new employee from the employee management page and see it added to the list.",
+    "category": "Employee management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/usuarios"
+      },
+      {
+        "type": "action",
+        "description": "Open the new employee form"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the employee name field with a unique name"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid role for the employee"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the PIN field with a valid PIN"
+      },
+      {
+        "type": "action",
+        "description": "Save the employee"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new employee appears in the employee list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a success confirmation is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC036",
+    "title": "Review and adjust inventory from the administrator area",
+    "description": "An administrator can access inventory tools to record entries, inspect movement history, and manage stock-related controls.",
+    "category": "Inventory management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Select the administrator employee"
+      },
+      {
+        "type": "action",
+        "description": "Enter the employee PIN"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to inventory management"
+      },
+      {
+        "type": "action",
+        "description": "Open the inventory entry form"
+      },
+      {
+        "type": "action",
+        "description": "Fill in valid inventory entry details"
+      },
+      {
+        "type": "action",
+        "description": "Save the inventory entry"
+      },
+      {
+        "type": "action",
+        "description": "Open the kardex view"
+      },
+      {
+        "type": "action",
+        "description": "Review the stock movement history"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify inventory movement records are visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify stock control tools are available"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC037",
+    "title": "Void an unpaid order from payment",
+    "description": "Verifies that a cashier can cancel an order from the payment screen and see the order removed from the active flow.",
+    "category": "Payment and billing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to continue to payment for an order"
+      },
+      {
+        "type": "action",
+        "description": "Choose to void the order"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the void in the dialog"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an order cancelled confirmation is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC038",
+    "title": "Register an inventory movement",
+    "description": "The administrator can create an inventory entry and see the movement reflected in the inventory hub.",
+    "category": "Inventory entry/merma/kardex/stock alerts",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/inventario"
+      },
+      {
+        "type": "action",
+        "description": "Open the inventory entry form"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a valid item quantity"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a valid note for the movement"
+      },
+      {
+        "type": "action",
+        "description": "Save the inventory entry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the inventory movement is recorded"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a success confirmation is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC039",
+    "title": "Browse employee management",
+    "description": "The administrator can open employee management and see the active employee list with management controls.",
+    "category": "Employee management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/usuarios"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the employee list is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify employee management controls are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC040",
+    "title": "Clear an in-progress order from the cart",
+    "description": "Verifies that a cashier can remove items from the cart and cancel an unfinished order so the cart is cleared.",
+    "category": "POS order taking and comanda sending",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /cajero/ventas"
+      },
+      {
+        "type": "action",
+        "description": "Select two products from the catalog"
+      },
+      {
+        "type": "action",
+        "description": "Remove one item from the cart"
+      },
+      {
+        "type": "action",
+        "description": "Cancel the order"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the cart is empty"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC041",
+    "title": "Record a stock loss",
+    "description": "The administrator can register a merma from the inventory hub and see the stock adjustment recorded.",
+    "category": "Inventory entry/merma/kardex/stock alerts",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/inventario"
+      },
+      {
+        "type": "action",
+        "description": "Open the stock loss form"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a valid item quantity"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a valid reason for the loss"
+      },
+      {
+        "type": "action",
+        "description": "Save the stock loss"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the stock loss is recorded"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a success confirmation is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC042",
+    "title": "Inspect sales and export the report as CSV",
+    "description": "An administrator can review sales records and export the sales report in CSV format for analysis.",
+    "category": "Sales audit and administrative voids",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Select the administrator employee"
+      },
+      {
+        "type": "action",
+        "description": "Enter the employee PIN"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to sales audit"
+      },
+      {
+        "type": "action",
+        "description": "Open a sales record detail view"
+      },
+      {
+        "type": "action",
+        "description": "Return to the sales list"
+      },
+      {
+        "type": "action",
+        "description": "Export the sales report as CSV"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify sales records are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the CSV export action is available"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC043",
+    "title": "Deactivate and reactivate an employee",
+    "description": "The administrator can change an employee's active state from the employee list and see the status update.",
+    "category": "Employee management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/usuarios"
+      },
+      {
+        "type": "action",
+        "description": "Toggle an employee to inactive"
+      },
+      {
+        "type": "action",
+        "description": "Toggle the same employee back to active"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the employee remains visible in the list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the employee status reflects the active state"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC044",
+    "title": "Record inventory movement and inspect stock controls",
+    "description": "An administrator can open inventory tools, register a movement, and view stock control information.",
+    "category": "Admin dashboard KPIs; open orders management (edit/reprint/void/charge); employee management; inventory entry/merma/kardex/stock alerts; sales audit and administrative voids.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Choose an active administrator employee"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the PIN field with a valid PIN"
+      },
+      {
+        "type": "action",
+        "description": "Submit the PIN form"
+      },
+      {
+        "type": "action",
+        "description": "Open the inventory hub"
+      },
+      {
+        "type": "action",
+        "description": "Open the inventory entry tool"
+      },
+      {
+        "type": "action",
+        "description": "Enter a valid inventory movement"
+      },
+      {
+        "type": "action",
+        "description": "Save the inventory movement"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the inventory controls are shown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the stock information updates are visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC045",
+    "title": "Download sales report CSV",
+    "description": "The administrator can choose a date range and report type and download a sales CSV report.",
+    "category": "Sales report CSV export",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/reporte-ventas"
+      },
+      {
+        "type": "action",
+        "description": "Choose a valid date range"
+      },
+      {
+        "type": "action",
+        "description": "Choose a report type"
+      },
+      {
+        "type": "action",
+        "description": "Download the report CSV"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a CSV download is initiated"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected report output is available"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC046",
+    "title": "Run MRP planning and review replenishment results",
+    "description": "An administrator can execute MRP planning and review the generated replenishment recommendations and history.",
+    "category": "Sales CSV export; production batches; MRP planning; recipes/extras editor; menu editor; cash movement entry during shift.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Choose an active administrator employee"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the PIN field with a valid PIN"
+      },
+      {
+        "type": "action",
+        "description": "Submit the PIN form"
+      },
+      {
+        "type": "action",
+        "description": "Open the MRP page"
+      },
+      {
+        "type": "action",
+        "description": "Run the planning calculation"
+      },
+      {
+        "type": "action",
+        "description": "Review the replenishment recommendations"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the MRP planning panel is shown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify replenishment results or history are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC047",
+    "title": "Run a production batch from available ingredients",
+    "description": "An administrator can start a production batch and see the resulting batch history in the production area.",
+    "category": "Sales CSV export; production batches; MRP planning; recipes/extras editor; menu editor; cash movement entry during shift.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the branch password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Choose an active administrator employee"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the PIN field with a valid PIN"
+      },
+      {
+        "type": "action",
+        "description": "Submit the PIN form"
+      },
+      {
+        "type": "action",
+        "description": "Open the production page"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid preparation"
+      },
+      {
+        "type": "action",
+        "description": "Enter a valid production quantity"
+      },
+      {
+        "type": "action",
+        "description": "Execute the production batch"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the production batch form is shown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the recent production record appears"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC048",
+    "title": "Show validation when cash received is insufficient",
+    "description": "Verifies that the cash payment flow blocks completion until the received amount covers the order total.",
+    "category": "Payment and billing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to continue to payment for an order"
+      },
+      {
+        "type": "action",
+        "description": "Select the cash payment method"
+      },
+      {
+        "type": "action",
+        "description": "Enter an amount lower than the total into the cash received field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a cash validation message is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC049",
+    "title": "Run a production batch",
+    "description": "The administrator can select a preparation, enter a quantity, and execute a production batch successfully.",
+    "category": "Production batches",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/produccion"
+      },
+      {
+        "type": "action",
+        "description": "Select a preparation for production"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a valid production quantity"
+      },
+      {
+        "type": "action",
+        "description": "Run the production batch"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the production batch appears in recent history"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a success confirmation is visible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC050",
+    "title": "Plan production and validate replenishment decisions",
+    "description": "An administrator can run a production batch and review MRP recommendations to support replenishment planning.",
+    "category": "Operational planning flow",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Select the administrator employee"
+      },
+      {
+        "type": "action",
+        "description": "Enter the employee PIN"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to production batches"
+      },
+      {
+        "type": "action",
+        "description": "Select a preparation"
+      },
+      {
+        "type": "action",
+        "description": "Enter a production quantity"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the production batch"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to MRP planning"
+      },
+      {
+        "type": "action",
+        "description": "Review replenishment recommendations"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new production batch appears in recent productions"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify MRP planning results are displayed"
+      }
+    ],
+    "priority": "Medium"
+  }
+]

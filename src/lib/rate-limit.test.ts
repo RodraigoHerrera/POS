@@ -6,6 +6,11 @@ import {
   rateLimitResponse,
   DUMMY_HASH,
   clavePinEmpleado,
+  limitesRelajados,
+  checkRateLimit,
+  isLocked,
+  recordFailure,
+  reset,
 } from "./rate-limit";
 
 test("MemoryRateLimiter - sliding window checkRateLimit", () => {
@@ -199,4 +204,74 @@ test("clavePinEmpleado - failures from another branch do not lock the employee o
 
   assert.equal(limiter.isLocked(desdeOtraSucursal, 5, 15 * 60 * 1000).locked, true);
   assert.equal(limiter.isLocked(clavePinEmpleado("2", "42"), 5, 15 * 60 * 1000).locked, false);
+});
+
+const URL_TEST = "mysql://u:p@localhost:3306/smash_test";
+
+test("limitesRelajados - solo con la bandera Y una BD _test", () => {
+  assert.equal(limitesRelajados({ RATE_LIMIT_RELAXED: "true", DATABASE_URL: URL_TEST }), true);
+  assert.equal(
+    limitesRelajados({ RATE_LIMIT_RELAXED: "true", DATABASE_URL: "mysql://u:p@localhost:3306/smash_test?connect_timeout=30" }),
+    true
+  );
+});
+
+test("limitesRelajados - la bandera sin BD _test no relaja (produccion/dev)", () => {
+  assert.equal(limitesRelajados({ RATE_LIMIT_RELAXED: "true", DATABASE_URL: "mysql://u:p@localhost:3306/smash" }), false);
+  assert.equal(limitesRelajados({ RATE_LIMIT_RELAXED: "true", DATABASE_URL: "mysql://u:p@localhost:3306/_test" }), false);
+});
+
+test("limitesRelajados - una BD _test sin la bandera exacta no relaja", () => {
+  assert.equal(limitesRelajados({ DATABASE_URL: URL_TEST }), false);
+  assert.equal(limitesRelajados({ RATE_LIMIT_RELAXED: "1", DATABASE_URL: URL_TEST }), false);
+  assert.equal(limitesRelajados({ RATE_LIMIT_RELAXED: "false", DATABASE_URL: URL_TEST }), false);
+});
+
+test("limitesRelajados - URL ausente o malformada no relaja y no lanza", () => {
+  assert.equal(limitesRelajados({ RATE_LIMIT_RELAXED: "true" }), false);
+  assert.equal(limitesRelajados({ RATE_LIMIT_RELAXED: "true", DATABASE_URL: "no es una url" }), false);
+  assert.equal(limitesRelajados({ RATE_LIMIT_RELAXED: "true", DATABASE_URL: "" }), false);
+});
+
+function conEntorno(valores: Record<string, string | undefined>, fn: () => void) {
+  const previo = { RATE_LIMIT_RELAXED: process.env.RATE_LIMIT_RELAXED, DATABASE_URL: process.env.DATABASE_URL };
+  try {
+    for (const [k, v] of Object.entries(valores)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    fn();
+  } finally {
+    for (const [k, v] of Object.entries(previo)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  }
+}
+
+test("helpers - con limites relajados una clave supera el limite base", () => {
+  conEntorno({ RATE_LIMIT_RELAXED: "true", DATABASE_URL: URL_TEST }, () => {
+    const clave = "relajado:ip:1";
+    for (let i = 0; i < 50; i++) assert.equal(checkRateLimit(clave, 15, 60_000).allowed, true);
+    reset(clave);
+
+    const email = "relajado:email:1";
+    for (let i = 0; i < 20; i++) recordFailure(email, 60_000, 5);
+    assert.equal(isLocked(email, 5, 60_000).locked, false);
+    reset(email);
+  });
+});
+
+test("helpers - sin relajar el limite base sigue bloqueando", () => {
+  conEntorno({ RATE_LIMIT_RELAXED: undefined, DATABASE_URL: URL_TEST }, () => {
+    const clave = "base:ip:1";
+    for (let i = 0; i < 15; i++) assert.equal(checkRateLimit(clave, 15, 60_000).allowed, true);
+    assert.equal(checkRateLimit(clave, 15, 60_000).allowed, false);
+    reset(clave);
+
+    const email = "base:email:1";
+    for (let i = 0; i < 5; i++) recordFailure(email, 60_000, 5);
+    assert.equal(isLocked(email, 5, 60_000).locked, true);
+    reset(email);
+  });
 });

@@ -232,16 +232,45 @@ export function getClientIp(
   return "127.0.0.1";
 }
 
+/** Factor que multiplica los límites cuando están relajados para pruebas. */
+const FACTOR_LIMITES_RELAJADOS = 100;
+
+/** Nombre de la BD de una URL de conexión; "" si falta o es inválida. */
+function nombreBaseDeDatos(url: string | undefined): string {
+  if (!url) return "";
+  try {
+    return decodeURIComponent(new URL(url).pathname.replace(/^\/+/, ""));
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Las suites automatizadas (TestSprite, Playwright) llegan desde una sola IP y
+ * agotan el límite de login/PIN. Solo se relaja con RATE_LIMIT_RELAXED="true"
+ * Y una BD cuyo nombre termina en `_test`: contra la BD real (o sin bandera)
+ * los límites quedan intactos, así que no puede activarse por accidente.
+ */
+export function limitesRelajados(env: Record<string, string | undefined> = process.env): boolean {
+  if (env.RATE_LIMIT_RELAXED !== "true") return false;
+  const nombre = nombreBaseDeDatos(env.DATABASE_URL);
+  return nombre.endsWith("_test") && nombre !== "_test";
+}
+
+function limiteEfectivo(limit: number): number {
+  return limitesRelajados() ? limit * FACTOR_LIMITES_RELAJADOS : limit;
+}
+
 export function checkRateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
-  return rateLimiter.checkRateLimit(key, limit, windowMs);
+  return rateLimiter.checkRateLimit(key, limiteEfectivo(limit), windowMs);
 }
 
 export function isLocked(key: string, limit: number, lockoutMs: number): LockoutResult {
-  return rateLimiter.isLocked(key, limit, lockoutMs);
+  return rateLimiter.isLocked(key, limiteEfectivo(limit), lockoutMs);
 }
 
 export function recordFailure(key: string, windowMs: number, limit: number = 5): RateLimitResult {
-  return rateLimiter.recordFailure(key, windowMs, limit);
+  return rateLimiter.recordFailure(key, windowMs, limiteEfectivo(limit));
 }
 
 export function clearRateLimit(key: string): void {

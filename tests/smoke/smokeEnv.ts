@@ -12,6 +12,14 @@ export const SMOKE = {
   precio: 50,
 } as const;
 
+/** Casos TestSprite: una sucursal aislada por caso (tc001@smash.test, admin_tc001, ...). */
+export const TESTSPRITE = { count: 30 } as const;
+
+/** Id de caso en minúsculas con 3 dígitos: 1 -> "tc001". */
+export function testSpriteId(n: number): string {
+  return `tc${String(n).padStart(3, '0')}`;
+}
+
 /**
  * URL efectiva de la BD smoke. `SMOKE_DATABASE_URL` tiene prioridad (útil para
  * apuntar a otra BD de pruebas); si no, se deriva de `DATABASE_URL` cambiando
