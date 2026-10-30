@@ -12,6 +12,7 @@ import Badge from "@/components/ui/badge/Badge";
 import { formatCostoUnitario } from "@/lib/costo";
 import { mensajeErrorApi } from "@/lib/respuestaApi";
 import { construirCSVKardex, nombreArchivoKardex } from "@/lib/kardexCsv";
+import { descargarCSV } from "@/lib/csv";
 import { rangoDesdeSeleccion } from "@/lib/rangoFechas";
 import EditarEntradaForm from "./EditarEntradaForm";
 
@@ -122,16 +123,7 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
       toast.error("No hay movimientos para exportar");
       return;
     }
-    const csv = construirCSVKardex(movimientosFiltrados);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = nombreArchivoKardex(new Date());
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
+    descargarCSV(construirCSVKardex(movimientosFiltrados), nombreArchivoKardex(new Date()));
   };
 
   const cancelarAnulacion = () => {

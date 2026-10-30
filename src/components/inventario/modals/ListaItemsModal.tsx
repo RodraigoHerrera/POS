@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
+import { descargarCSV } from "@/lib/csv";
+import { construirCSVItems, nombreArchivoItems } from "@/lib/itemsCsv";
 import { Modal } from "@/components/ui/modal";
 import Input from "@/components/form/input/InputField";
 import Select from "@/components/form/Select";
@@ -79,9 +82,13 @@ export default function ListaItemsModal({ isOpen, onClose, categoriasOptions }: 
   const handleSelectCategoria = (val: string) =>
     setFiltros((p) => ({ ...p, categoria: val }));
 
+  // Exporta lo que se ve en la tabla (busqueda y filtro de tipo incluidos)
   const exportar = () => {
-    console.log("Exportando...", filteredItems);
-    alert("Función de exportar pendiente");
+    if (filteredItems.length === 0) {
+      toast.error("No hay items para exportar");
+      return;
+    }
+    descargarCSV(construirCSVItems(filteredItems), nombreArchivoItems(new Date()));
   };
 
   const guardarCostoEstandar = async (itemId: string, valor: string) => {
