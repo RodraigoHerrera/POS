@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Modal } from "@/components/ui/modal";
 import Label from "@/components/form/Label";
-import Input from "@/components/form/input/InputField";
+import DatePicker from "@/components/form/date-picker";
 import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import TableRowSkeleton from "@/components/ui/skeleton/TableRowSkeleton";
 import { formatCostoUnitario } from "@/lib/costo";
 import { mensajeErrorApi } from "@/lib/respuestaApi";
 import { construirCSVKardex, nombreArchivoKardex } from "@/lib/kardexCsv";
+import { rangoDesdeSeleccion } from "@/lib/rangoFechas";
 import EditarEntradaForm from "./EditarEntradaForm";
 
 // --- Interfaces ---
@@ -99,16 +100,20 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
   const movimientosFiltrados = movimientos.filter((mov) => {
     if (!filtros.desde && !filtros.hasta) return true;
     const fechaMov = new Date(mov.fecha).getTime();
-    const desde = filtros.desde ? new Date(filtros.desde).getTime() : 0;
-    const hasta = filtros.hasta ? new Date(filtros.hasta).getTime() + 86400000 : Infinity; // +1 día para incluir el final
+    // "T00:00:00" fuerza medianoche local: "YYYY-MM-DD" a secas se interpreta como UTC
+    const desde = filtros.desde ? new Date(`${filtros.desde}T00:00:00`).getTime() : 0;
+    const hasta = filtros.hasta ? new Date(`${filtros.hasta}T00:00:00`).getTime() + 86400000 : Infinity; // +1 día para incluir el final
     return fechaMov >= desde && fechaMov <= hasta;
   });
 
   // --- Handlers ---
   const handleSelectItem = (val: string) => setFiltros((p) => ({ ...p, item: val }));
   
-  const handleChange = (key: keyof typeof filtros) => (e: React.ChangeEvent<HTMLInputElement>) =>
-      setFiltros((p) => ({ ...p, [key]: e.target.value }));
+  // Un rango a medio elegir (una sola fecha) no filtra hasta completar el segundo clic
+  const handleRango = (fechas: Date[]) => {
+    const r = rangoDesdeSeleccion(fechas);
+    if (r) setFiltros((p) => ({ ...p, ...r }));
+  };
 
   // Exporta lo que se ve en la tabla (filtro de item y fechas incluido)
   const exportar = () => {
@@ -239,26 +244,16 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
               className="dark:bg-gray-800 w-full"
             />
           </div>
-          <div>
+          <div className="lg:col-span-2">
             <Label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Desde
+              Periodo
             </Label>
-            <Input 
-              type="date" 
-              value={filtros.desde}
-              onChange={handleChange("desde")} 
-              className="dark:bg-gray-800"
-            />
-          </div>
-          <div>
-            <Label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Hasta
-            </Label>
-            <Input 
-              type="date" 
-              value={filtros.hasta}
-              onChange={handleChange("hasta")} 
-              className="dark:bg-gray-800"
+            <DatePicker
+              id="kardex-periodo"
+              mode="range"
+              placeholder="Todas las fechas"
+              value={[filtros.desde, filtros.hasta]}
+              onChange={handleRango}
             />
           </div>
           <div className="flex gap-2">
