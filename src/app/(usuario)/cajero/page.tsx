@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import DenominacionesForm, { DetalleDenominacion } from "@/components/caja/DenominacionesForm";
 import TopBarCajero from "@/components/caja/TopBarCajero";
+import { destinoTrasApertura } from "@/lib/aperturaCaja";
 
 export default function ArqueoCajaPage() {
   const [isCheckingCaja, setIsCheckingCaja] = useState(true);
@@ -69,7 +70,7 @@ export default function ArqueoCajaPage() {
 
       const data = await response.json();
 
-      if (!response.ok) {
+      if (destinoTrasApertura(response.status) === "error") {
         throw new Error(data.error || "Error al guardar");
       }
 

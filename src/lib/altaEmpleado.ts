@@ -44,10 +44,41 @@ export async function altaEmpleadoAtomica(db: Pick<PrismaClient, "$transaction">
       return { nuevoAdmin: null, error: { message: "Ya existe un administrador con ese correo", status: 409 } };
     }
 
-    const nuevoAdmin = await tx.empleados.create({
+    // usuario es único en todas las sucursales: sin este chequeo el índice
+    // único reventaba el create y la API respondía 500
+    const usuarioTomado = await tx.empleados.findUnique({ where: { usuario: p.datos.usuario } });
+    if (usuarioTomado) {
+      return { nuevoAdmin: null, error: ERROR_USUARIO_DUPLICADO };
+    }
+
+    let nuevoAdmin;
+    try {
+      nuevoAdmin = await crearEmpleado(tx, p, decision.rol);
+    } catch (error) {
+      // Otra sucursal pudo tomar el mismo usuario/correo entre el chequeo y el
+      // create (el FOR UPDATE solo serializa dentro de esta sucursal)
+      if (esViolacionUnica(error)) {
+        return { nuevoAdmin: null, error: ERROR_USUARIO_DUPLICADO };
+      }
+      throw error;
+    }
+    return { nuevoAdmin, error: null };
+  });
+}
+
+const ERROR_USUARIO_DUPLICADO = { message: "Ya existe un empleado con ese usuario o correo", status: 409 };
+
+function esViolacionUnica(error: unknown): boolean {
+  return typeof error === "object" && error !== null && (error as { code?: unknown }).code === "P2002";
+}
+
+type Tx = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
+
+function crearEmpleado(tx: Tx, p: ParametrosAlta, rol: string) {
+  return tx.empleados.create({
       data: {
         sucursal_id: p.sucursalId,
-        rol: decision.rol,
+        rol,
         nombre: p.datos.nombre,
         correo: p.datos.correo,
         celular: p.datos.celular,
@@ -68,6 +99,4 @@ export async function altaEmpleadoAtomica(db: Pick<PrismaClient, "$transaction">
         estado: true,
       },
     });
-    return { nuevoAdmin, error: null };
-  });
 }
