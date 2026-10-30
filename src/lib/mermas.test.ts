@@ -335,6 +335,7 @@ describe("SEC-13: Atomic Waste Locking & Concurrency Protection (mermas)", () =>
       ];
 
       await ejecutarRegistroMermaTx(mockTx, {
+        empleadoId: BigInt(5),
         sucursalId: BigInt(1),
         itemId: BigInt(5),
         cantidadMerma: 6,
@@ -368,6 +369,7 @@ describe("SEC-13: Atomic Waste Locking & Concurrency Protection (mermas)", () =>
       };
 
       await ejecutarRegistroMermaTx(mockTx, {
+        empleadoId: BigInt(5),
         sucursalId: BigInt(1),
         itemId: BigInt(5),
         cantidadMerma: 4,
@@ -413,6 +415,7 @@ describe("SEC-13: Atomic Waste Locking & Concurrency Protection (mermas)", () =>
       await assert.rejects(
         async () => {
           await ejecutarRegistroMermaTx(mockTx, {
+            empleadoId: BigInt(5),
             sucursalId: BigInt(1),
             itemId: BigInt(5),
             cantidadMerma: 3,
@@ -453,6 +456,7 @@ describe("SEC-13: Atomic Waste Locking & Concurrency Protection (mermas)", () =>
       };
 
       await ejecutarRegistroMermaTx(mockTx, {
+        empleadoId: BigInt(5),
         sucursalId: BigInt(2),
         itemId: BigInt(77),
         cantidadMerma: 8.5,
@@ -490,6 +494,7 @@ describe("SEC-13: Atomic Waste Locking & Concurrency Protection (mermas)", () =>
       await assert.rejects(
         async () => {
           await ejecutarRegistroMermaTx(mockTx, {
+            empleadoId: BigInt(5),
             sucursalId: BigInt(1),
             itemId: BigInt(10),
             cantidadMerma: 5,
@@ -524,6 +529,7 @@ describe("SEC-13: Atomic Waste Locking & Concurrency Protection (mermas)", () =>
       };
 
       const res = await ejecutarRegistroMermaTx(mockTx, {
+        empleadoId: BigInt(5),
         sucursalId: BigInt(3),
         itemId: BigInt(44),
         cantidadMerma: 10,
@@ -543,6 +549,7 @@ describe("SEC-13: Atomic Waste Locking & Concurrency Protection (mermas)", () =>
         sucursal_id: BigInt(3),
         item_id: BigInt(44),
         lote_id: BigInt(101),
+        empleado_id: BigInt(5),
         tipo: "Salida",
         motivo: "Merma",
         cantidad: 6,
@@ -553,6 +560,7 @@ describe("SEC-13: Atomic Waste Locking & Concurrency Protection (mermas)", () =>
         sucursal_id: BigInt(3),
         item_id: BigInt(44),
         lote_id: BigInt(102),
+        empleado_id: BigInt(5),
         tipo: "Salida",
         motivo: "Merma",
         cantidad: 4,

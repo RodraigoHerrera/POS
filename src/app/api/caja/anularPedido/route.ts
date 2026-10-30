@@ -96,6 +96,7 @@ export async function POST(req: Request) {
             sucursal_id: sucursalBigInt,
             item_id: mov.item_id,
             lote_id: mov.lote_id,
+            empleado_id: BigInt(sesion.empleadoId),
             tipo: "Entrada" as const,
             motivo: "Ajuste" as const,
             cantidad: mov.cantidad,

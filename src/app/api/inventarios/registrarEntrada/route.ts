@@ -123,6 +123,7 @@ export async function POST(req: Request) {
             sucursal_id: BigInt(sucursalIdStr),
             item_id: BigInt(item_id),
             lote_id: lote.id,
+            empleado_id: BigInt(sesion.empleadoId),
             tipo: "Entrada",
             motivo: motivoEntrada as "Compra" | "Ajuste" | "Traslado" | "Produccion",
             cantidad: qtyEntrada,

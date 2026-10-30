@@ -44,6 +44,11 @@ export async function GET(req: Request) {
             codigo_lote: true,
             fecha_caducidad: true
           }
+        },
+        empleado: {
+          select: {
+            nombre: true
+          }
         }
       }
     });
@@ -81,7 +86,9 @@ export async function GET(req: Request) {
       tipo: mov.tipo,
       motivo: mov.motivo, // Compra, Ajuste, etc.
       referencia: mov.referencia || '-',
-      
+      // Movimientos previos a la auditoria no tienen empleado registrado
+      empleado: mov.empleado?.nombre || '-',
+
       // Datos Cuantitativos
       cantidad: parseFloat(mov.cantidad.toString()),
       costo_unitario: mov.costo_unit ? parseFloat(mov.costo_unit.toString()) : 0,

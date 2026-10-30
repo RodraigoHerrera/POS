@@ -140,7 +140,8 @@ export async function POST(req: Request) {
         tx,
         sucursalBigInt,
         consumos,
-        `Reversa Edición Pedido #${pedidoBigInt}`
+        `Reversa Edición Pedido #${pedidoBigInt}`,
+        BigInt(empleadoId)
       );
 
       // 3. DELETE OLD ITEMS
@@ -231,7 +232,8 @@ export async function POST(req: Request) {
         sucursalBigInt,
         simulation.lotDecrements,
         simulation.inventarioDecrements,
-        `Pedido #${pedidoBigInt}`
+        `Pedido #${pedidoBigInt}`,
+        BigInt(empleadoId)
       );
 
       return { pedidoId: pedidoBigInt.toString(), total: nuevoTotal, droppedItems, isCorrection };

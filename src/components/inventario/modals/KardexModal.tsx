@@ -4,12 +4,15 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Modal } from "@/components/ui/modal";
 import Label from "@/components/form/Label";
-import Input from "@/components/form/input/InputField";
+import DatePicker from "@/components/form/date-picker";
 import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import TableRowSkeleton from "@/components/ui/skeleton/TableRowSkeleton";
+import Badge from "@/components/ui/badge/Badge";
 import { formatCostoUnitario } from "@/lib/costo";
 import { mensajeErrorApi } from "@/lib/respuestaApi";
+import { construirCSVKardex, nombreArchivoKardex } from "@/lib/kardexCsv";
+import { rangoDesdeSeleccion } from "@/lib/rangoFechas";
 import EditarEntradaForm from "./EditarEntradaForm";
 
 // --- Interfaces ---
@@ -22,6 +25,7 @@ interface KardexMovement {
   tipo: string; // "Entrada", "Salida"
   motivo: string;
   referencia: string;
+  empleado: string;
   cantidad: number;
   costo_unitario: number;
   total_movimiento: string;
@@ -97,20 +101,37 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
   const movimientosFiltrados = movimientos.filter((mov) => {
     if (!filtros.desde && !filtros.hasta) return true;
     const fechaMov = new Date(mov.fecha).getTime();
-    const desde = filtros.desde ? new Date(filtros.desde).getTime() : 0;
-    const hasta = filtros.hasta ? new Date(filtros.hasta).getTime() + 86400000 : Infinity; // +1 día para incluir el final
+    // "T00:00:00" fuerza medianoche local: "YYYY-MM-DD" a secas se interpreta como UTC
+    const desde = filtros.desde ? new Date(`${filtros.desde}T00:00:00`).getTime() : 0;
+    const hasta = filtros.hasta ? new Date(`${filtros.hasta}T00:00:00`).getTime() + 86400000 : Infinity; // +1 día para incluir el final
     return fechaMov >= desde && fechaMov <= hasta;
   });
 
   // --- Handlers ---
   const handleSelectItem = (val: string) => setFiltros((p) => ({ ...p, item: val }));
   
-  const handleChange = (key: keyof typeof filtros) => (e: React.ChangeEvent<HTMLInputElement>) =>
-      setFiltros((p) => ({ ...p, [key]: e.target.value }));
+  // Un rango a medio elegir (una sola fecha) no filtra hasta completar el segundo clic
+  const handleRango = (fechas: Date[]) => {
+    const r = rangoDesdeSeleccion(fechas);
+    if (r) setFiltros((p) => ({ ...p, ...r }));
+  };
 
+  // Exporta lo que se ve en la tabla (filtro de item y fechas incluido)
   const exportar = () => {
-    console.log("Exportando:", movimientosFiltrados);
-    alert("Generando reporte PDF...");
+    if (movimientosFiltrados.length === 0) {
+      toast.error("No hay movimientos para exportar");
+      return;
+    }
+    const csv = construirCSVKardex(movimientosFiltrados);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nombreArchivoKardex(new Date());
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
   };
 
   const cancelarAnulacion = () => {
@@ -221,29 +242,19 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
               options={itemsOptions}
               placeholder="Todos los items"
               onChange={handleSelectItem}
-              className="dark:bg-gray-800 w-full"
+              className="w-full"
             />
           </div>
-          <div>
+          <div className="lg:col-span-2">
             <Label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Desde
+              Periodo
             </Label>
-            <Input 
-              type="date" 
-              value={filtros.desde}
-              onChange={handleChange("desde")} 
-              className="dark:bg-gray-800"
-            />
-          </div>
-          <div>
-            <Label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Hasta
-            </Label>
-            <Input 
-              type="date" 
-              value={filtros.hasta}
-              onChange={handleChange("hasta")} 
-              className="dark:bg-gray-800"
+            <DatePicker
+              id="kardex-periodo"
+              mode="range"
+              placeholder="Todas las fechas"
+              value={[filtros.desde, filtros.hasta]}
+              onChange={handleRango}
             />
           </div>
           <div className="flex gap-2">
@@ -257,22 +268,23 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
         </div>
 
         {/* Tabla */}
-        <div className="border border-gray-200 rounded-lg dark:border-gray-700 overflow-hidden">
-          <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <div className="border border-gray-200 rounded-lg dark:border-gray-800 overflow-hidden">
+          <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
             <h5 className="font-semibold text-gray-800 dark:text-white">
               Movimientos Recientes ({movimientosFiltrados.length})
             </h5>
-            {loading && <span className="text-xs text-blue-500 animate-pulse">Actualizando...</span>}
+            {loading && <span className="text-xs text-gray-500 dark:text-gray-400 animate-pulse">Actualizando...</span>}
           </div>
           
           <div className="overflow-x-auto max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-600">
             <table className="w-full relative">
               <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10 shadow-sm">
-                <tr className="border-b border-gray-200 dark:border-gray-700">
+                <tr className="border-b border-gray-200 dark:border-gray-800">
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Fecha</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Item</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Detalle</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Lote</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Registrado por</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Cantidad</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Costo Unit.</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Total</th>
@@ -281,10 +293,10 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                 {loading && movimientosFiltrados.length === 0 ? (
-                  Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} columns={8} />)
+                  Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} columns={9} />)
                 ) : movimientosFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={9} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                       No se encontraron movimientos registrados.
                     </td>
                   </tr>
@@ -292,7 +304,7 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
                   movimientosFiltrados.map((mov) => (
                     <tr
                       key={mov.id}
-                      className={`hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${mov.anulado ? "line-through text-gray-400 dark:text-gray-500" : ""}`}
+                      className={`hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${mov.anulado ? "line-through" : ""}`}
                     >
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
                         {new Date(mov.fecha).toLocaleDateString()} <span className="text-xs text-gray-400">{new Date(mov.fecha).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
@@ -302,24 +314,25 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
                         <div className="text-xs text-gray-400 font-normal">{mov.sku}</div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          mov.tipo === 'Entrada' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800'
-                        }`}>
+                        <Badge size="sm" color={mov.tipo === 'Entrada' ? 'success' : 'error'}>
                           {mov.tipo}
-                        </span>
-                        <div className="text-xs text-gray-500 mt-0.5">{mov.motivo}</div>
+                        </Badge>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{mov.motivo}</div>
                         {mov.anulado && (
-                          <span className="mt-1 inline-flex items-center rounded bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700 no-underline dark:bg-gray-700 dark:text-gray-200">
-                            Anulada
-                          </span>
+                          <div className="mt-1">
+                            <Badge size="sm" color="light">Anulada</Badge>
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                         {mov.lote}
                         {mov.vencimiento !== 'N/A' && <div className="text-xs text-gray-400">Vence: {mov.vencimiento}</div>}
                       </td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                        {mov.empleado}
+                      </td>
                       <td className="px-4 py-3 text-sm text-right font-bold text-gray-700 dark:text-gray-200">
-                        {mov.tipo === 'Entrada' ? '+' : '-'}{mov.cantidad} <span className="text-xs font-normal text-gray-500">{mov.unidad}</span>
+                        {mov.tipo === 'Entrada' ? '+' : '-'}{mov.cantidad} <span className="text-xs font-normal text-gray-500 dark:text-gray-400">{mov.unidad}</span>
                       </td>
                       <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-300">
                         {formatCostoUnitario(mov.costo_unitario)}

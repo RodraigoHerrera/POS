@@ -17,6 +17,7 @@ export interface EntradaProduccion {
 
 export interface ParametrosProduccionTx extends EntradaProduccion {
   sucursalId: bigint;
+  empleadoId: bigint;
 }
 
 /**
@@ -190,7 +191,7 @@ export function ordenarLotesFEFO<T extends LoteOrdenable>(lotes: T[]): T[] {
  */
 export async function ejecutarProduccionTx(
   tx: Prisma.TransactionClient | any,
-  { sucursalId, recetaId, cantidad: batchQty }: ParametrosProduccionTx
+  { sucursalId, empleadoId, recetaId, cantidad: batchQty }: ParametrosProduccionTx
 ) {
   // 1. Fetch recipe and ingredients
   const recipe = await tx.receta.findUnique({
@@ -291,6 +292,7 @@ export async function ejecutarProduccionTx(
           sucursal_id: sucursalId,
           item_id: ingredient.item_insumo_id,
           lote_id: deduction.lotId as bigint,
+          empleado_id: empleadoId,
           tipo: 'Salida',
           motivo: 'Produccion',
           cantidad: decDeducted,
@@ -369,6 +371,7 @@ export async function ejecutarProduccionTx(
       sucursal_id: sucursalId,
       item_id: recipe.item_vendible_id,
       lote_id: createdLot.id,
+      empleado_id: empleadoId,
       tipo: 'Entrada',
       motivo: 'Produccion',
       cantidad: batchQty,
@@ -424,7 +427,11 @@ export async function ejecutarProduccion(
 
   try {
     const newLotObj = await runWithRetry(
-      (tx) => ejecutarProduccionTx(tx, { ...entrada, sucursalId: BigInt(sesion.sucursalId) }),
+      (tx) => ejecutarProduccionTx(tx, {
+        ...entrada,
+        sucursalId: BigInt(sesion.sucursalId),
+        empleadoId: BigInt(sesion.empleadoId),
+      }),
       { timeoutMs: 15000 }
     );
 
