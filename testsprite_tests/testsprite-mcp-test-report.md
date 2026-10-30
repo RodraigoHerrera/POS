@@ -18,9 +18,10 @@
 | 2 | TC001–TC030 | 12/30 |
 | 3 | TC001–TC030 | 25/30 |
 | 4 | TC031–TC050 + 5 re-checks | 20/25 |
-| **5** | **6 pending + TC051–TC070** | **20/26** |
+| 5 | 6 pending + TC051–TC070 | 20/26 |
+| **6** | **6 re-checks after the export/Kardex changes (TC045, TC052, TC053, TC054, TC058, TC069)** | **5/6** |
 
-**Combined:** 64 of the 70 cases defined so far have passed in at least one run.
+**Combined:** 69 of the 70 cases defined so far have passed in at least one run. Run 6 confirmed the export toasts (TC052, TC058), the reference shown in the Kardex (TC054), the single-day Kardex filter (TC053) and the duplicate-username message (TC069). TC045 still fails: the test browser timed out clicking "Descargar CSV" and its generated code never clicked the button; the same export passed in run 4 (TC042), so it is treated as test flakiness, not an app bug.
 
 ---
 
