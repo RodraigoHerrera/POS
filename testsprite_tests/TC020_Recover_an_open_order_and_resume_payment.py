@@ -40,33 +40,109 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Sign in to Smash POS with the provided branch email and password.
+        # -> Enter the tc029 branch email and password on the sign-in screen.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke@smash.test")
+        await elem.fill("tc029@smash.test")
         
-        # -> Sign in to Smash POS with the provided branch email and password.
+        # -> Enter the tc029 branch email and password on the sign-in screen.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Sign in to Smash POS with the provided branch email and password.
+        # -> Enter the tc029 branch email and password on the sign-in screen.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
+        # -> Select the “cajero_tc029” cashier employee to continue to PIN entry.
+        # CT cajero_tc029 Cajero button
+        elem = page.get_by_role("button", name="cajero_tc029 Cajero")
+        await elem.click(timeout=10000)
+        
+        # -> Enter the cashier PIN to continue to the cashier area.
+        # PIN password field
+        elem = page.get_by_role("textbox", name="PIN")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("1234")
+        
+        # -> Submit the entered PIN using “Ingresar” and verify that the cashier area opens.
+        # Ingresar button
+        elem = page.get_by_role("button", name="Ingresar")
+        await elem.click(timeout=10000)
+        
+        # -> Confirm the cash register opening with the currently displayed zero cash counts.
+        # Confirmar Apertura button
+        elem = page.get_by_role("button", name="Confirmar Apertura")
+        await elem.click(timeout=10000)
+        
+        # -> Open “Pedidos abiertos” and verify whether the cashier can review any unpaid orders.
+        # Pedidos abiertos button
+        elem = page.get_by_role("button", name="Pedidos abiertos")
+        await elem.click(timeout=10000)
+        
+        # -> Start a new sale from the cashier screen so an unpaid order can be created for the open-order workflow.
+        # Nueva venta button
+        elem = page.get_by_role("button", name="Nueva venta")
+        await elem.click(timeout=10000)
+        
+        # -> Add “Hamburguesa Smoke” to the current order so it can be saved as an unpaid order.
+        # Sin Foto Hamburguesa Smoke Bs 50.00 button
+        elem = page.get_by_role("button", name="Agregar Hamburguesa Smoke, Bs")
+        await elem.click(timeout=10000)
+        
+        # -> Submit the current order with “Comandar” so it can be reviewed as an unpaid order.
+        # Comandar button
+        elem = page.get_by_role("button", name="Comandar")
+        await elem.click(timeout=10000)
+        
+        # -> Close the preparation ticket and return to the cashier screen to open the unpaid-orders recovery view.
+        # Cerrar button
+        elem = page.get_by_role("button", name="Cerrar")
+        await elem.click(timeout=10000)
+        
+        # -> Return from order #8’s payment screen to the cashier order view, then open the unpaid-orders list to review the order.
+        # Volver al pedido button
+        elem = page.get_by_role("button", name="Volver al pedido")
+        await elem.click(timeout=10000)
+        
+        # -> Open “Pedidos abiertos” and verify that unpaid order #8 is listed for review.
+        # Pedidos abiertos button
+        elem = page.get_by_role("button", name="Pedidos abiertos")
+        await elem.click(timeout=10000)
+        
+        # -> Open unpaid order #8 with “Editar” and verify the order can be edited.
+        # Editar button
+        elem = page.get_by_role("button", name="Editar")
+        await elem.click(timeout=10000)
+        
+        # -> Add another Hamburguesa Smoke to order #8 and save the change with “Actualizar Pedido”.
+        # Sin Foto Hamburguesa Smoke Bs 50.00 button
+        elem = page.get_by_role("button", name="Agregar Hamburguesa Smoke, Bs")
+        await elem.click(timeout=10000)
+        
+        # -> Save the edited order using “Actualizar Pedido” and check the page response.
+        # Actualizar Pedido button
+        elem = page.get_by_role("button", name="Actualizar Pedido")
+        await elem.click(timeout=10000)
+        
+        # -> Return to the open-orders list and open order #8’s payment screen using its charge action.
+        # Switch to tab 4CDD
+        page = context.pages[-1]  # switch to most recently active tab
+        
+        # -> Select “Cobrar” for order #8 and verify that its payment screen opens.
+        # Cobrar button
+        elem = page.get_by_role("button", name="Cobrar")
+        await elem.click(timeout=10000)
+        
         # --> Assertions to verify final state
         
-        # --> Open orders should be available for the cashier to review.
+        # --> The payment screen can be resumed for order #8.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected the login form to be gone so the cashier can reach open orders.
-        await expect(page.locator("xpath=/html/body/div[2]/div/div[2]/div/div/div/div[2]/form/div/div[1]/div/input").nth(0)).not_to_be_visible(timeout=15000), "Expected the login form to be gone so the cashier can reach open orders."
-        
-        # --> Test blocked by environment/access constraints during agent run
-        # Reason: TEST BLOCKED The cashier workflow could not be tested because the branch login remained blocked by an IP attempt cooldown. The page still displayed “Demasiados intentos desde esta IP. Intenta de nuevo en 48 segundos.” Observations: - The login page retained the provided branch email. - The page continued to show a 48-second cooldown after multiple waits. - The cashier selection and open-orders ...
-        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The cashier workflow could not be tested because the branch login remained blocked by an IP attempt cooldown. The page still displayed \u201cDemasiados intentos desde esta IP. Intenta de nuevo en 48 segundos.\u201d Observations: - The login page retained the provided branch email. - The page continued to show a 48-second cooldown after multiple waits. - The cashier selection and open-orders ..." + " — the exported script cannot reproduce a PASS in this environment.")
+        # Assert: The resumed payment screen is for order #8.
+        await expect(page).to_have_url(re.compile("/cajero/metodos\\-pago\\?id=8"), timeout=15000), "The resumed payment screen is for order #8."
         await asyncio.sleep(5)
 
     finally:

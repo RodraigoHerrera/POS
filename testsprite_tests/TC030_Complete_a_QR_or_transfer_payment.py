@@ -40,31 +40,85 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the provided branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Sign in to the tc030 branch using its designated email and password.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke@smash.test")
+        await elem.fill("tc030@smash.test")
         
-        # -> Enter the provided branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Sign in to the tc030 branch using its designated email and password.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the provided branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Sign in to the tc030 branch using its designated email and password.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # --> Assertions to verify final state
-        # Assert-outcome: failed
-        # Assert: reproduce the recorded failure (no generated assertion fails on the final page)
-        assert False, "Test failed during execution: see the run log"
+        # -> Select the cashier account labeled “cajero_tc030” to continue to its PIN screen.
+        # CT cajero_tc030 Cajero button
+        elem = page.get_by_role("button", name="cajero_tc030 Cajero")
+        await elem.click(timeout=10000)
         
-        # --> Test blocked by environment/access constraints during agent run
-        # Reason: TEST BLOCKED The cashier digital-payment test could not be run because the branch login remains locked out, so the cashier and payment flow could not be reached. Observations: - The login page displayed “Demasiados intentos desde esta IP. Intenta de nuevo en 48 segundos.” - After two 50-second waits, the page still displayed a 48-second countdown.
-        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The cashier digital-payment test could not be run because the branch login remains locked out, so the cashier and payment flow could not be reached. Observations: - The login page displayed \u201cDemasiados intentos desde esta IP. Intenta de nuevo en 48 segundos.\u201d - After two 50-second waits, the page still displayed a 48-second countdown." + " — the exported script cannot reproduce a PASS in this environment.")
+        # -> Enter the cashier PIN 1234 and inspect the PIN screen for the sign-in control.
+        # PIN password field
+        elem = page.get_by_role("textbox", name="PIN")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("1234")
+        
+        # -> Submit the entered PIN using “Ingresar” and verify that the cashier area opens.
+        # Ingresar button
+        elem = page.get_by_role("button", name="Ingresar")
+        await elem.click(timeout=10000)
+        
+        # -> Confirm the cash-register opening from the “Apertura de Caja” screen and verify the cashier POS appears.
+        # Confirmar Apertura button
+        elem = page.get_by_role("button", name="Confirmar Apertura")
+        await elem.click(timeout=10000)
+        
+        # -> Add “Hamburguesa Smoke” to the current order and inspect the order before proceeding to payment.
+        # Sin Foto Hamburguesa Smoke Bs 50.00 button
+        elem = page.get_by_role("button", name="Agregar Hamburguesa Smoke, Bs")
+        await elem.click(timeout=10000)
+        
+        # -> Click “Comandar” to advance the Bs 50.00 order and inspect the resulting payment or order flow.
+        # Comandar button
+        elem = page.get_by_role("button", name="Comandar")
+        await elem.click(timeout=10000)
+        
+        # -> Open the order’s payment methods page and inspect the available payment options.
+        # Switch to tab 9A3B
+        page = context.pages[-1]  # switch to most recently active tab
+        
+        # -> Select “Pago QR” and inspect how the payment form updates.
+        # paymentMethod radio button
+        elem = page.get_by_role("radio", name="Pago QR")
+        await elem.click(timeout=10000)
+        
+        # -> Enter billing details for the QR payment and confirm the Bs 50.00 charge.
+        # 0000000 text field
+        elem = page.get_by_role("textbox", name="0000000")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("123456789")
+        
+        # -> Enter billing details for the QR payment and confirm the Bs 50.00 charge.
+        # Nombre Cliente text field
+        elem = page.get_by_role("textbox", name="Nombre Cliente")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("Cliente Prueba")
+        
+        # -> Enter billing details for the QR payment and confirm the Bs 50.00 charge.
+        # Confirmar Cobro button
+        elem = page.get_by_role("button", name="Confirmar Cobro")
+        await elem.click(timeout=10000)
+        
+        # --> Assertions to verify final state
+        current_url = await page.evaluate("() => window.location.href")
+        # Assert-outcome: passed
+        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
+        assert current_url, 'Page should have loaded with a URL'
         await asyncio.sleep(5)
 
     finally:

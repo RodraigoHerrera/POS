@@ -40,59 +40,56 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Sign in to the branch using the provided email and password.
+        # -> Enter the tc007 branch email and provided password in the login form, then select “Iniciar Sesión.”
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke@smash.test")
+        await elem.fill("tc007@smash.test")
         
-        # -> Sign in to the branch using the provided email and password.
+        # -> Enter the tc007 branch email and provided password in the login form, then select “Iniciar Sesión.”
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Sign in to the branch using the provided email and password.
+        # -> Enter the tc007 branch email and provided password in the login form, then select “Iniciar Sesión.”
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Choose the “cajero_smoke” cashier profile to proceed to PIN entry.
-        # CS cajero_smoke Cajero button
-        elem = page.get_by_role("button", name="cajero_smoke Cajero")
+        # -> Select the “cajero_tc007” cashier employee to continue to PIN entry.
+        # CT cajero_tc007 Cajero button
+        elem = page.get_by_role("button", name="cajero_tc007 Cajero")
         await elem.click(timeout=10000)
         
-        # -> Enter the provided PIN in the cashier PIN field and inspect the form state.
+        # -> Enter the assigned cashier PIN in the PIN field.
         # PIN password field
         elem = page.get_by_role("textbox", name="PIN")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1234")
         
-        # -> Submit the cashier PIN using the “Ingresar” button and inspect the next screen.
+        # -> Submit the cashier PIN using “Ingresar” and check that the cash-register opening screen appears.
         # Ingresar button
         elem = page.get_by_role("button", name="Ingresar")
         await elem.click(timeout=10000)
         
-        # -> Record one Bs. 100 bill and confirm that the counted-cash total updates.
-        # Agregar uno de Bs button
-        elem = page.get_by_role("button", name="Agregar uno de Bs. 100")
-        await elem.click(timeout=10000)
+        # -> Enter one Bs. 200 bill in the cash count and verify the total updates.
+        # Cantidad Bs text field
+        elem = page.get_by_role("textbox", name="Cantidad Bs. 200")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("1")
         
-        # -> Confirm the cash-register opening and inspect the page that follows for POS order-taking controls.
+        # -> Confirm the cash-register opening and verify that the POS workspace and order-taking controls appear.
         # Confirmar Apertura button
         elem = page.get_by_role("button", name="Confirmar Apertura")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The cashier should reach the POS workspace after opening the register.
+        # --> The register-opening screen should be replaced by the POS workspace after the register is opened.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected the register-opening screen to close so the POS workspace can be shown.
-        await expect(page.locator("xpath=/html/body/div[2]/div/div/div/form/div[3]/button").nth(0)).not_to_be_visible(timeout=15000), "Expected the register-opening screen to close so the POS workspace can be shown."
-        
-        # --> Test blocked by environment/access constraints during agent run
-        # Reason: TEST BLOCKED The POS workspace could not be reached because the opening screen reported that a cash register was already open. The cashier flow therefore could not verify that opening the register continues into POS. Observations: - The opening screen showed a counted total of Bs. 100.00. - Confirmar Apertura triggered repeated “Ya tienes una caja abierta en esta sucursal” alerts. - The page re...
-        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The POS workspace could not be reached because the opening screen reported that a cash register was already open. The cashier flow therefore could not verify that opening the register continues into POS. Observations: - The opening screen showed a counted total of Bs. 100.00. - Confirmar Apertura triggered repeated \u201cYa tienes una caja abierta en esta sucursal\u201d alerts. - The page re..." + " — the exported script cannot reproduce a PASS in this environment.")
+        # Assert: Expected the register-opening form to disappear after opening the register.
+        await expect(page.locator("xpath=/html/body/div[2]/div/div/div/form/div[3]/button").nth(0)).not_to_be_visible(timeout=15000), "Expected the register-opening form to disappear after opening the register."
         await asyncio.sleep(5)
 
     finally:

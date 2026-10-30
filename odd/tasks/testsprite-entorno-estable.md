@@ -29,7 +29,7 @@ First run (2026-10-30, report `testsprite_tests/testsprite-mcp-test-report.md`):
 ## Tasks
 - [x] T1 Rate limit relaxation gated by env flag + `_test` database (tests RED→GREEN).
 - [x] T2 Seed one isolated branch per TestSprite case (TC001..TC030).
-- [ ] T3 Re-run TestSprite (production build on :3100 against `smash_test`, 127.0.0.1 + connect_timeout) with per-test credentials; update report.
+- [x] T3 Re-run TestSprite (production build on :3100 against `smash_test`, 127.0.0.1 + connect_timeout) with per-test credentials; update report.
 
 ## Acceptance criteria
 - Unit tests prove: relaxed only with flag AND `_test` DB; default limits unchanged otherwise.
@@ -42,5 +42,8 @@ First run (2026-10-30, report `testsprite_tests/testsprite-mcp-test-report.md`):
 - T2 done: `tests/smoke/seed-test.ts` refactored (crearCatalogo/crearSucursal), new `seedTestSpriteBranches`, CLI `tests/smoke/seed-testsprite.ts`, `TESTSPRITE`/`testSpriteId` in smokeEnv. Ran against `smash_test`: 31 sucursales, 62 empleados, 62 inventarioSucursal, 62 stockLoteSucursal, 1 producto.
 - Checks: full `src/**/*.test.ts` 600/600 pass, `tsc --noEmit` clean, eslint clean on touched files.
 
+- T3 done: run 2 = 12/30 (0 DB-connect errors, 0 rate-limit blocks; tests could not map "TCNNN" to a branch). Run 3 with an explicit title -> credentials table = 25/30. Remaining: register opening loop (TC006/007/015, app bug), TC009 test data, TC021 test-agent identity. Report: `testsprite_tests/testsprite-mcp-test-report.md`.
+- App findings (not fixed, out of scope): apertura 409 loop; `console.log("Token generado", jwt)` in `api/caja/apertura`; registerAdmin returns 500 on duplicate username (P2002).
+
 ## Next step
-T3: rebuild/launch prod build on :3100 against smash_test with RATE_LIMIT_RELAXED=true, 127.0.0.1 and connect_timeout; re-run TestSprite with per-test credentials (tcNNN@smash.test / SmokeTest2026!, admin_tcNNN / cajero_tcNNN, PIN 1234).
+Done. Follow-up candidates: fix the three app findings above.

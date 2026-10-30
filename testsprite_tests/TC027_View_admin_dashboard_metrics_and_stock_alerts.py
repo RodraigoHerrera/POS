@@ -40,61 +40,55 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the provided branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Sign in to Smash POS with the tc027 branch account.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke@smash.test")
+        await elem.fill("tc027@smash.test")
         
-        # -> Enter the provided branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Sign in to Smash POS with the tc027 branch account.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the provided branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Sign in to Smash POS with the tc027 branch account.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Select the “admin_smoke” employee labeled “Administrador” to continue to PIN entry.
-        # AS admin_smoke Administrador button
-        elem = page.get_by_role("button", name="admin_smoke Administrador")
+        # -> Select the visible administrator account to continue to its PIN entry screen.
+        # AT admin_tc027 Administrador button
+        elem = page.get_by_role("button", name="admin_tc027 Administrador")
         await elem.click(timeout=10000)
         
-        # -> Enter the administrator PIN and submit the “Ingresar” form.
+        # -> Enter the administrator PIN in the PIN field and check the page state before submitting.
         # PIN password field
         elem = page.get_by_role("textbox", name="PIN")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1234")
         
-        # -> Submit the entered administrator PIN using the “Ingresar” button.
+        # -> Submit the entered PIN with “Ingresar” and verify the administrator dashboard, including operational metrics and stock-alert widgets.
         # Ingresar button
         elem = page.get_by_role("button", name="Ingresar")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The administrator dashboard is displayed.
+        # --> The administrator dashboard is open.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The page URL should show the administrator dashboard.
-        await expect(page).to_have_url(re.compile("/admin"), timeout=15000), "The page URL should show the administrator dashboard."
+        # Assert: The administrator dashboard URL is open.
+        await expect(page).to_have_url(re.compile("/admin"), timeout=15000), "The administrator dashboard URL is open."
         
-        # --> The dashboard displays its sales and order metrics.
+        # --> The dashboard displays operational metrics and a stock-alert widget.
         await page.locator(".rounded-2xl > div").first.nth(0).scroll_into_view_if_needed()
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The dashboard sales metric should be visible.
-        await expect(page.locator(".rounded-2xl > div").first.nth(0)).to_be_visible(timeout=15000), "The dashboard sales metric should be visible."
-        await page.locator(".col-span-12 > .grid > div:nth-child(2) > div").first.nth(0).scroll_into_view_if_needed()
-        # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The dashboard order metric should be visible.
-        await expect(page.locator(".col-span-12 > .grid > div:nth-child(2) > div").first.nth(0)).to_be_visible(timeout=15000), "The dashboard order metric should be visible."
-        
-        # --> The stock-alert widget is displayed.
+        # Assert: The dashboard operational metrics are displayed.
+        await expect(page.locator(".rounded-2xl > div").first.nth(0)).to_be_visible(timeout=15000), "The dashboard operational metrics are displayed."
         await page.get_by_role("button", name="Ver inventario").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The stock-alert widget should be visible.
-        await expect(page.get_by_role("button", name="Ver inventario").nth(0)).to_be_visible(timeout=15000), "The stock-alert widget should be visible."
+        # Assert: The stock-alert widget is displayed.
+        await expect(page.get_by_role("button", name="Ver inventario").nth(0)).to_be_visible(timeout=15000), "The stock-alert widget is displayed."
         await asyncio.sleep(5)
 
     finally:

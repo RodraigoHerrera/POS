@@ -40,33 +40,90 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the supplied branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Sign in to the tc021 branch using its email and password.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke@smash.test")
+        await elem.fill("tc021@smash.test")
         
-        # -> Enter the supplied branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Sign in to the tc021 branch using its email and password.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the supplied branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Sign in to the tc021 branch using its email and password.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
+        # -> Select the “cajero_tc021” cashier account to open its PIN entry screen.
+        # CT cajero_tc021 Cajero button
+        elem = page.get_by_role("button", name="cajero_tc021 Cajero")
+        await elem.click(timeout=10000)
+        
+        # -> Enter the cashier PIN and continue to the cashier area.
+        # PIN password field
+        elem = page.get_by_role("textbox", name="PIN")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("1234")
+        
+        # -> Submit the cashier PIN using the “Ingresar” button and verify that the cashier area opens.
+        # Ingresar button
+        elem = page.get_by_role("button", name="Ingresar")
+        await elem.click(timeout=10000)
+        
+        # -> Confirm the displayed zero cash count to open the register and proceed to the cashier sales screen.
+        # Confirmar Apertura button
+        elem = page.get_by_role("button", name="Confirmar Apertura")
+        await elem.click(timeout=10000)
+        
+        # -> Open “Pedidos abiertos” and inspect whether an order is available to resume.
+        # Pedidos abiertos button
+        elem = page.get_by_role("button", name="Pedidos abiertos")
+        await elem.click(timeout=10000)
+        
+        # -> Start a new sale from the “Nueva venta” control so an order can be created for the open-order payment flow.
+        # Nueva venta button
+        elem = page.get_by_role("button", name="Nueva venta")
+        await elem.click(timeout=10000)
+        
+        # -> Add Hamburguesa Smoke to the new sale and inspect the available order actions.
+        # Sin Foto Hamburguesa Smoke Bs 50.00 button
+        elem = page.get_by_role("button", name="Agregar Hamburguesa Smoke, Bs")
+        await elem.click(timeout=10000)
+        
+        # -> Submit the current order with “Comandar” and inspect the resulting order state.
+        # Comandar button
+        elem = page.get_by_role("button", name="Comandar")
+        await elem.click(timeout=10000)
+        
+        # -> Close the preparation ticket and continue to the payment page for order #7.
+        # Cerrar button
+        elem = page.get_by_role("button", name="Cerrar")
+        await elem.click(timeout=10000)
+        
+        # -> Enter Bs 50.00 as the amount received and confirm the cash payment for order #7.
+        # 0.00 number field
+        elem = page.get_by_placeholder("0.00")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("50")
+        
+        # -> Enter Bs 50.00 as the amount received and confirm the cash payment for order #7.
+        # Confirmar Cobro button
+        elem = page.get_by_role("button", name="Confirmar Cobro")
+        await elem.click(timeout=10000)
+        
         # --> Assertions to verify final state
         
-        # --> The cashier should be able to complete the payment successfully.
+        # --> The payment should complete successfully.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected the sign-in screen to be gone so the cashier could complete the payment.
-        await expect(page.locator("xpath=/html/body/div[2]/div/div[2]/div/div/div/div[2]/form/div/div[3]/button").nth(0)).not_to_be_visible(timeout=15000), "Expected the sign-in screen to be gone so the cashier could complete the payment."
+        # Assert: Expected the payment confirmation to appear.
+        await expect(page.get_by_label("Notifications alt+T").nth(0)).to_contain_text("Cobro registrado", timeout=15000), "Expected the payment confirmation to appear."
         
         # --> Test blocked by environment/access constraints during agent run
-        # Reason: TEST BLOCKED The cashier payment test could not be run because the sign-in page remained restricted after the displayed wait period. The payment workflow was not reached. Observations: - The login page showed “Demasiados intentos desde esta IP. Intenta de nuevo en 45 segundos.” - After two 45-second waits, the same restriction remained visible.
-        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The cashier payment test could not be run because the sign-in page remained restricted after the displayed wait period. The payment workflow was not reached. Observations: - The login page showed \u201cDemasiados intentos desde esta IP. Intenta de nuevo en 45 segundos.\u201d - After two 45-second waits, the same restriction remained visible." + " — the exported script cannot reproduce a PASS in this environment.")
+        # Reason: TEST BLOCKED The resume flow could not be verified because the open-orders list was empty. A newly created order was charged successfully, but it was not resumed from the open-orders list and no paid-status marker was visible afterward. Observations: - “Pedidos abiertos” showed no available orders. - The payment screen reported “Cobro registrado! Factura #4.” - The cashier POS returned with an ...
+        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The resume flow could not be verified because the open-orders list was empty. A newly created order was charged successfully, but it was not resumed from the open-orders list and no paid-status marker was visible afterward. Observations: - \u201cPedidos abiertos\u201d showed no available orders. - The payment screen reported \u201cCobro registrado! Factura #4.\u201d - The cashier POS returned with an ..." + " — the exported script cannot reproduce a PASS in this environment.")
         await asyncio.sleep(5)
 
     finally:

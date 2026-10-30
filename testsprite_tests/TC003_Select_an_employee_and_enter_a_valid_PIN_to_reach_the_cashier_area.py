@@ -40,33 +40,49 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Sign in to the branch using tc003@smash.test and the provided branch password.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke@smash.test")
+        await elem.fill("tc003@smash.test")
         
-        # -> Enter the branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Sign in to the branch using tc003@smash.test and the provided branch password.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Sign in to the branch using tc003@smash.test and the provided branch password.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
+        # -> Select the “cajero_tc003” cashier account from the employee list.
+        # CT cajero_tc003 Cajero button
+        elem = page.get_by_role("button", name="cajero_tc003 Cajero")
+        await elem.click(timeout=10000)
+        
+        # -> Enter the provided PIN for cajero_tc003 and inspect whether the sign-in control becomes available.
+        # PIN password field
+        elem = page.get_by_role("textbox", name="PIN")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("1234")
+        
+        # -> Submit the cashier PIN using “Ingresar” and verify that the cashier workspace appears.
+        # Ingresar button
+        elem = page.get_by_role("button", name="Ingresar")
+        await elem.click(timeout=10000)
+        
         # --> Assertions to verify final state
         
-        # --> The user should be routed to the cashier workspace.
+        # --> The user is routed to the cashier workspace, where the “Apertura de Caja” interface is shown.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected the URL to contain /cajero for the cashier workspace.
-        await expect(page).to_have_url(re.compile("/cajero"), timeout=15000), "Expected the URL to contain /cajero for the cashier workspace."
-        
-        # --> Test blocked by environment/access constraints during agent run
-        # Reason: TEST BLOCKED The cashier sign-in flow could not be tested because the branch login page continued to block sign-in after two waits. The cashier employee selection and PIN screen were not reached. Observations: - The page displayed “Demasiados intentos desde esta IP. Intenta de nuevo en 47 segundos.” - The retry message remained after two 50-second waits.
-        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The cashier sign-in flow could not be tested because the branch login page continued to block sign-in after two waits. The cashier employee selection and PIN screen were not reached. Observations: - The page displayed \u201cDemasiados intentos desde esta IP. Intenta de nuevo en 47 segundos.\u201d - The retry message remained after two 50-second waits." + " — the exported script cannot reproduce a PASS in this environment.")
+        # Assert: The user is routed to the cashier workspace.
+        await expect(page).to_have_url(re.compile("/cajero"), timeout=15000), "The user is routed to the cashier workspace."
+        await page.get_by_role("button", name="Confirmar Apertura").nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: not verified — the export-time check could not be evaluated
+        # Assert: The cashier opening interface is shown.
+        await expect(page.get_by_role("button", name="Confirmar Apertura").nth(0)).to_be_visible(timeout=15000), "The cashier opening interface is shown."
         await asyncio.sleep(5)
 
     finally:

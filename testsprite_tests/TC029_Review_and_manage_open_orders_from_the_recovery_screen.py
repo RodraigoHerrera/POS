@@ -40,33 +40,99 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the provided branch email and password, then submit “Iniciar Sesión.”
+        # -> Enter the tc021 branch email and password, then submit the “Iniciar Sesión” form.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke@smash.test")
+        await elem.fill("tc021@smash.test")
         
-        # -> Enter the provided branch email and password, then submit “Iniciar Sesión.”
+        # -> Enter the tc021 branch email and password, then submit the “Iniciar Sesión” form.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the provided branch email and password, then submit “Iniciar Sesión.”
+        # -> Enter the tc021 branch email and password, then submit the “Iniciar Sesión” form.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
+        # -> Select the cashier employee to continue to PIN entry.
+        # CT cajero_tc021 Cajero button
+        elem = page.get_by_role("button", name="cajero_tc021 Cajero")
+        await elem.click(timeout=10000)
+        
+        # -> Enter the cashier PIN and submit the “Ingresar” form.
+        # PIN password field
+        elem = page.get_by_role("textbox", name="PIN")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("1234")
+        
+        # -> Submit the cashier PIN using the visible “Ingresar” button.
+        # Ingresar button
+        elem = page.get_by_role("button", name="Ingresar")
+        await elem.click(timeout=10000)
+        
+        # -> Open “Pedidos abiertos” and inspect the available orders and management options.
+        # Pedidos abiertos button
+        elem = page.get_by_role("button", name="Pedidos abiertos")
+        await elem.click(timeout=10000)
+        
+        # -> Start a new sale so an unpaid order can be created for the open-orders workflow.
+        # Nueva venta button
+        elem = page.get_by_role("button", name="Nueva venta")
+        await elem.click(timeout=10000)
+        
+        # -> Add Hamburguesa Smoke to the current sale so it can be saved as an order for the open-orders workflow.
+        # Sin Foto Hamburguesa Smoke Bs 50.00 button
+        elem = page.get_by_role("button", name="Agregar Hamburguesa Smoke, Bs")
+        await elem.click(timeout=10000)
+        
+        # -> Submit the current Hamburguesa Smoke order using “Comandar” and inspect the resulting order state.
+        # Comandar button
+        elem = page.get_by_role("button", name="Comandar")
+        await elem.click(timeout=10000)
+        
+        # -> Close the preparation ticket and return to the cashier flow to inspect the open order and its recovery options.
+        # Cerrar button
+        elem = page.get_by_role("button", name="Cerrar")
+        await elem.click(timeout=10000)
+        
+        # -> Return from payment methods to order #9 and locate the cashier’s open-orders workflow to inspect its management options.
+        # Volver al pedido button
+        elem = page.get_by_role("button", name="Volver al pedido")
+        await elem.click(timeout=10000)
+        
+        # -> Open “Pedidos abiertos” and inspect the available order and its management options.
+        # Pedidos abiertos button
+        elem = page.get_by_role("button", name="Pedidos abiertos")
+        await elem.click(timeout=10000)
+        
+        # -> Open order #9 with “Editar” and verify that the order can be managed.
+        # Editar button
+        elem = page.get_by_role("button", name="Editar")
+        await elem.click(timeout=10000)
+        
+        # -> Save the open order from the edit screen and verify that the update returns to the order workflow.
+        # Actualizar Pedido button
+        elem = page.get_by_role("button", name="Actualizar Pedido")
+        await elem.click(timeout=10000)
+        
+        # -> Return to the open-orders screen and select “Cobrar” for order #9 to resume charging.
+        # Switch to tab 3EA0
+        page = context.pages[-1]  # switch to most recently active tab
+        
+        # -> Select “Cobrar” for order #9 and verify that its payment screen opens.
+        # Cobrar button
+        elem = page.get_by_role("button", name="Cobrar")
+        await elem.click(timeout=10000)
+        
         # --> Assertions to verify final state
         
-        # --> The selected open order should be reachable in the cashier workflow for management and resumed payment.
+        # --> The cashier reached the payment screen for the open order.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected the cashier workflow to be reached for the selected open order.
-        await expect(page).to_have_url(re.compile("/cajero"), timeout=15000), "Expected the cashier workflow to be reached for the selected open order."
-        
-        # --> Test blocked by environment/access constraints during agent run
-        # Reason: TEST BLOCKED The cashier order-management workflow could not be reached because the login page continued to show “Error interno del servidor” after a brief wait. No cashier employee selection, PIN entry, or open-orders behavior could be verified. Observations: - The login page displayed “Error interno del servidor” after the provided credentials were submitted. - The error remained visible afte...
-        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The cashier order-management workflow could not be reached because the login page continued to show \u201cError interno del servidor\u201d after a brief wait. No cashier employee selection, PIN entry, or open-orders behavior could be verified. Observations: - The login page displayed \u201cError interno del servidor\u201d after the provided credentials were submitted. - The error remained visible afte..." + " — the exported script cannot reproduce a PASS in this environment.")
+        # Assert: The cashier is on the payment screen.
+        await expect(page).to_have_url(re.compile("/cajero/metodos\\-pago"), timeout=15000), "The cashier is on the payment screen."
         await asyncio.sleep(5)
 
     finally:

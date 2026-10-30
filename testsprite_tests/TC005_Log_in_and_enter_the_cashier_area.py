@@ -40,29 +40,50 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the provided branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Enter the tc002 branch credentials and submit the “Iniciar Sesión” form to verify routing to employee selection.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke@smash.test")
+        await elem.fill("tc002@smash.test")
         
-        # -> Enter the provided branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Enter the tc002 branch credentials and submit the “Iniciar Sesión” form to verify routing to employee selection.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the provided branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Enter the tc002 branch credentials and submit the “Iniciar Sesión” form to verify routing to employee selection.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
+        # -> Select the “cajero_tc002” cashier employee from the employee selection screen.
+        # CT cajero_tc002 Cajero button
+        elem = page.get_by_role("button", name="cajero_tc002 Cajero")
+        await elem.click(timeout=10000)
+        
+        # -> Enter the cashier PIN and submit it to verify that the cashier area opens.
+        # PIN password field
+        elem = page.get_by_role("textbox", name="PIN")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("1234")
+        
+        # -> Click “Ingresar” and verify that the cashier area opens.
+        # Ingresar button
+        elem = page.get_by_role("button", name="Ingresar")
+        await elem.click(timeout=10000)
+        
+        # -> Confirm the cash-register opening with the displayed zero counts and verify that the cashier area appears.
+        # Confirmar Apertura button
+        elem = page.get_by_role("button", name="Confirmar Apertura")
+        await elem.click(timeout=10000)
+        
         # --> Assertions to verify final state
         
-        # --> The cashier employee-selection flow should complete and open the cashier area.
+        # --> The cashier employee-selection flow completed and reached the cashier POS area.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected the completed cashier employee-selection flow to open the cashier area.
-        await expect(page).to_have_url(re.compile("/cajero"), timeout=15000), "Expected the completed cashier employee-selection flow to open the cashier area."
+        # Assert: The cashier POS area is open.
+        await expect(page).to_have_url(re.compile("/cajero/ventas"), timeout=15000), "The cashier POS area is open."
         await asyncio.sleep(5)
 
     finally:

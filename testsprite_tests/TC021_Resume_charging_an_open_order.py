@@ -40,33 +40,16 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the branch email and password, then submit the “Iniciar Sesión” form.
-        # email field
-        elem = page.locator("input[type=\"email\"]")
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke@smash.test")
-        
-        # -> Enter the branch email and password, then submit the “Iniciar Sesión” form.
-        # password field
-        elem = page.locator("input[type=\"password\"]")
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("SmokeTest2026!")
-        
-        # -> Enter the branch email and password, then submit the “Iniciar Sesión” form.
-        # Iniciar Sesión button
-        elem = page.get_by_role("button", name="Iniciar Sesión")
-        await elem.click(timeout=10000)
-        
         # --> Assertions to verify final state
         
-        # --> The payment screen for the selected unpaid order is not displayed; the cashier order flow was not reached.
+        # --> The payment screen for the selected order should be displayed.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected the selected order’s payment screen to be displayed in the cashier order flow.
-        await expect(page).to_have_url(re.compile("/cajero/pedidos"), timeout=15000), "Expected the selected order\u2019s payment screen to be displayed in the cashier order flow."
+        # Assert: Expected the selected order's payment screen to be displayed in the cashier flow.
+        await expect(page).to_have_url(re.compile("/cajero"), timeout=15000), "Expected the selected order's payment screen to be displayed in the cashier flow."
         
         # --> Test blocked by environment/access constraints during agent run
-        # Reason: TEST BLOCKED The cashier order-payment flow could not be reached because sign-in returned an internal server error. Observations: - The login page remained displayed after submitting the supplied branch credentials. - The page showed “Error interno del servidor”.
-        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The cashier order-payment flow could not be reached because sign-in returned an internal server error. Observations: - The login page remained displayed after submitting the supplied branch credentials. - The page showed \u201cError interno del servidor\u201d." + " — the exported script cannot reproduce a PASS in this environment.")
+        # Reason: TEST BLOCKED The cashier payment flow could not be tested because the test-specific branch credentials are not identifiable. The provided branch table has no entry matching this test's exact title, and it instructs using only the assigned branch account. Observations: - The browser is on the SMASH POS login page. - The login form requires a branch email and password.
+        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The cashier payment flow could not be tested because the test-specific branch credentials are not identifiable. The provided branch table has no entry matching this test's exact title, and it instructs using only the assigned branch account. Observations: - The browser is on the SMASH POS login page. - The login form requires a branch email and password." + " — the exported script cannot reproduce a PASS in this environment.")
         await asyncio.sleep(5)
 
     finally:

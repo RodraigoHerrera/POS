@@ -40,99 +40,110 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Open the new-branch registration form by selecting “Regístrate”.
+        # -> Open the branch registration form using the visible “Regístrate” link.
         # Regístrate link
         elem = page.get_by_role("link", name="Regístrate")
         await elem.click(timeout=10000)
         
-        # -> Fill out the visible branch details and submit the “Registrarse” form.
+        # -> Complete the visible branch registration form with unique details and submit it.
         # Nombre de la sucursal text field
         elem = page.get_by_role("textbox", name="Nombre de la sucursal")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("Smoke QA Branch 20261030")
+        await elem.fill("Sucursal Smoke 20261030 1542")
         
-        # -> Fill out the visible branch details and submit the “Registrarse” form.
+        # -> Complete the visible branch registration form with unique details and submit it.
         # Dirección de la sucursal text field
         elem = page.get_by_role("textbox", name="Dirección de la sucursal")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("123 Test Street, Test City")
+        await elem.fill("123 Calle Nueva, Ciudad de M\u00e9xico")
         
-        # -> Fill out the visible branch details and submit the “Registrarse” form.
+        # -> Complete the visible branch registration form with unique details and submit it.
         # ejemplo text field
         elem = page.get_by_role("textbox", name="ejemplo")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke.qa.20261030")
+        await elem.fill("signup_20261030_1542")
         
-        # -> Fill out the visible branch details and submit the “Registrarse” form.
+        # -> Complete the visible branch registration form with unique details and submit it.
         # Teléfono de la sucursal text field
         elem = page.get_by_role("textbox", name="Teléfono de la sucursal")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("5551234567")
+        await elem.fill("+525555010542")
         
-        # -> Fill out the visible branch details and submit the “Registrarse” form.
+        # -> Complete the visible branch registration form with unique details and submit it.
         # Ingresa tu contraseña password field
         elem = page.get_by_role("textbox", name="Ingresa tu contraseña")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("SmokeQA2026!")
+        await elem.fill("SmokeSignup2026!")
         
-        # -> Submit the populated branch registration form using “Registrarse” and inspect the page response.
+        # -> Submit the filled branch registration form and check what page or feedback appears.
         # Registrarse button
         elem = page.get_by_role("button", name="Registrarse")
         await elem.click(timeout=10000)
         
-        # -> Fill in the visible administrator details and submit the “Registrarse” form.
+        # -> Correct the branch phone number to digits only and submit the registration form again.
+        # Teléfono de la sucursal text field
+        elem = page.get_by_role("textbox", name="Teléfono de la sucursal")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("525555010542")
+        
+        # -> Correct the branch phone number to digits only and submit the registration form again.
+        # Registrarse button
+        elem = page.get_by_role("button", name="Registrarse")
+        await elem.click(timeout=10000)
+        
+        # -> Complete and submit the visible “Registrar Administrador” form using unique administrator details.
         # Nombre completo text field
         elem = page.get_by_role("textbox", name="Nombre completo")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("Smoke QA Admin")
+        await elem.fill("Smoke Administrator")
         
-        # -> Fill in the visible administrator details and submit the “Registrarse” form.
+        # -> Complete and submit the visible “Registrar Administrador” form using unique administrator details.
         # Nombre de usuario text field
         elem = page.get_by_role("textbox", name="Nombre de usuario")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smokeqaadmin20261030")
+        await elem.fill("admin_20261030_1542")
         
-        # -> Fill in the visible administrator details and submit the “Registrarse” form.
+        # -> Complete and submit the visible “Registrar Administrador” form using unique administrator details.
         # ejemplo text field
         elem = page.get_by_role("textbox", name="ejemplo")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke.qa.admin.20261030")
+        await elem.fill("admin_20261030_1542")
         
-        # -> Fill in the visible administrator details and submit the “Registrarse” form.
+        # -> Complete and submit the visible “Registrar Administrador” form using unique administrator details.
         # Número de celular text field
         elem = page.get_by_role("textbox", name="Número de celular")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("5559876543")
+        await elem.fill("525555010543")
         
-        # -> Fill in the visible administrator details and submit the “Registrarse” form.
+        # -> Complete and submit the visible “Registrar Administrador” form using unique administrator details.
         # Ingresa tu contraseña password field
         elem = page.get_by_role("textbox", name="Ingresa tu contraseña")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("SmokeQAAdmin2026!")
+        await elem.fill("SmokeSignup2026!")
         
-        # -> Enter the matching password in “Confirmar Contraseña” and verify the administrator form is ready to submit.
+        # -> Confirm the administrator password and submit the “Registrar Administrador” form, then check for the branch login screen and success confirmation.
         # Confirma tu contraseña password field
         elem = page.get_by_role("textbox", name="Confirma tu contraseña")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("SmokeQAAdmin2026!")
+        await elem.fill("SmokeSignup2026!")
         
-        # -> Submit the completed administrator registration form and verify the resulting page and confirmation.
+        # -> Confirm the administrator password and submit the “Registrar Administrador” form, then check for the branch login screen and success confirmation.
         # Registrarse button
         elem = page.get_by_role("button", name="Registrarse")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The app returned to the branch login screen, where “Iniciar Sesión” is visible.
+        # --> The branch registration flow returns to the branch login screen.
         await page.get_by_role("button", name="Iniciar Sesión").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The branch login screen’s “Iniciar Sesión” button is visible.
-        await expect(page.get_by_role("button", name="Iniciar Sesión").nth(0)).to_be_visible(timeout=15000), "The branch login screen\u2019s \u201cIniciar Sesi\u00f3n\u201d button is visible."
+        # Assert: The branch login screen is visible.
+        await expect(page.get_by_role("button", name="Iniciar Sesión").nth(0)).to_be_visible(timeout=15000), "The branch login screen is visible."
         
-        # --> A branch registration success confirmation is visible.
+        # --> A branch registration success confirmation is displayed.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The branch registration success confirmation is visible.
-        await expect(page.locator("xpath=/html/body/section/ol/li").nth(0)).to_contain_text("Operaci\u00f3n exitosa", timeout=15000), "The branch registration success confirmation is visible."
+        # Assert: The branch registration success confirmation is displayed.
+        await expect(page.locator("xpath=/html/body/section/ol/li").nth(0)).to_have_text("Operaci\u00f3n exitosa", timeout=15000), "The branch registration success confirmation is displayed."
         await asyncio.sleep(5)
 
     finally:

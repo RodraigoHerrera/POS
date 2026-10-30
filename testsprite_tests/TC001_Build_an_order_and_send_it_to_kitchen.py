@@ -40,33 +40,71 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the provided branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Enter the designated branch credentials and submit “Iniciar Sesión.”
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke@smash.test")
+        await elem.fill("tc001@smash.test")
         
-        # -> Enter the provided branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Enter the designated branch credentials and submit “Iniciar Sesión.”
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the provided branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Enter the designated branch credentials and submit “Iniciar Sesión.”
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
+        # -> Select the cashier employee named “cajero_tc001” to proceed to PIN entry.
+        # CT cajero_tc001 Cajero button
+        elem = page.get_by_role("button", name="cajero_tc001 Cajero")
+        await elem.click(timeout=10000)
+        
+        # -> Enter the cashier PIN and submit the PIN form to reach the cashier area.
+        # PIN password field
+        elem = page.get_by_role("textbox", name="PIN")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("1234")
+        
+        # -> Submit the cashier PIN by selecting “Ingresar” and verify that the cashier area opens.
+        # Ingresar button
+        elem = page.get_by_role("button", name="Ingresar")
+        await elem.click(timeout=10000)
+        
+        # -> Confirm the cash opening with the displayed cash counts and verify that the POS screen opens.
+        # Confirmar Apertura button
+        elem = page.get_by_role("button", name="Confirmar Apertura")
+        await elem.click(timeout=10000)
+        
+        # -> Add “Hamburguesa Smoke” to the current order and verify it appears in the cart.
+        # Sin Foto Hamburguesa Smoke Bs 50.00 button
+        elem = page.get_by_role("button", name="Agregar Hamburguesa Smoke, Bs")
+        await elem.click(timeout=10000)
+        
+        # -> Enter a unique client name in the “Cliente” field and check the order form state.
+        # Nombre del cliente para este pedido text field
+        elem = page.get_by_role("textbox", name="Nombre del cliente para este")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("QA Comanda TC001")
+        
+        # -> Send the current order with “Comandar” and verify that the printable comanda view opens and the order is marked as sent.
+        # Comandar button
+        elem = page.get_by_role("button", name="Comandar")
+        await elem.click(timeout=10000)
+        
         # --> Assertions to verify final state
         
-        # --> The printable comanda view should open after sign-in succeeds.
+        # --> The printable comanda view is open.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected the login error to be absent so the printable comanda view can open.
-        await expect(page.locator("xpath=/html/body/div[2]/div/div[2]/div/div/div/div[2]/form/div/div[2]/div/span").nth(0)).not_to_be_visible(timeout=15000), "Expected the login error to be absent so the printable comanda view can open."
+        # Assert: The printable comanda view is open.
+        await expect(page).to_have_url(re.compile("/cajero/comanda/"), timeout=15000), "The printable comanda view is open."
         
-        # --> Test blocked by environment/access constraints during agent run
-        # Reason: TEST BLOCKED The cashier order flow could not be reached because branch sign-in returned a server error. Observations: - The login page displayed “Error interno del servidor” after the credentials were submitted. - The employee-selection page did not appear.
-        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The cashier order flow could not be reached because branch sign-in returned a server error. Observations: - The login page displayed \u201cError interno del servidor\u201d after the credentials were submitted. - The employee-selection page did not appear." + " — the exported script cannot reproduce a PASS in this environment.")
+        # --> The order appears on the preparation ticket with the added item.
+        # Assert-outcome: not verified — the export-time check could not be evaluated
+        # Assert: The preparation ticket includes the ordered item.
+        await expect(page.locator("tbody").nth(0)).to_contain_text("Hamburguesa Smoke", timeout=15000), "The preparation ticket includes the ordered item."
         await asyncio.sleep(5)
 
     finally:

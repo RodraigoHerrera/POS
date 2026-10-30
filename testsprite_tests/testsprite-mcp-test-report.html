@@ -1238,12 +1238,11 @@ body {
             <li><span class="coverage-highlight">Key gaps / risks:</span>
             
               <ol>
-<li><strong>Login rate limit blocks automated runs.</strong> All tests come from one IP, so the per-IP limit locks out most of the suite. For test runs it needs to be configurable (higher limit, or disabled when pointed at a <code>_test</code> database).</li>
-<li><strong>MySQL refuses connections under concurrent load.</strong> 7 logins failed with <code>PrismaClientInitializationError</code>. Check the local MySQL <code>max_connections</code> and the Prisma pool size (<code>connection_limit</code> in <code>DATABASE_URL</code>). This could also show up in production at peak hours.</li>
-<li><strong>No isolation between tests.</strong> Every case uses the same branch and cashier, so a register opened by one test breaks the others. Each test needs its own branch, or a reset between cases.</li>
-<li><strong>Register apertura UX (real bug):</strong> when a register is already open, &quot;Confirmar Apertura&quot; repeats the alert and stays on the screen instead of redirecting to <code>/cajero/ventas</code>.</li>
-<li><strong>Not covered in this run:</strong> 20 planned cases were not executed (production cap of 30), and the blocked flows (cash/QR payment, register close, sale void, order to kitchen) have no real evidence yet.</li>
-<li><strong>Known limitations from the code summary</strong> (not exercised by the tests): sidebar links to <code>/admin/gastos</code> and 4 Reportes pages return 404; every order is saved as &quot;Mesa 1&quot;.</li>
+<li><strong>Register opening loop (app bug, intermittent):</strong> after a successful opening the cashier can end up on &quot;Apertura de Caja&quot;, and every retry shows &quot;Ya tienes una caja abierta&quot;. A 409 from <code>/api/caja/apertura</code> should send the user to <code>/cajero/ventas</code> instead of alerting. Affects TC006, TC007, TC015.</li>
+<li><strong>JWT written to production logs (security):</strong> <code>src/app/api/caja/apertura/route.ts</code> runs <code>console.log(&quot;Token generado:&quot;, cajaToken)</code>. Anyone with log access can reuse a register session token.</li>
+<li><strong>Signup returns 500 on a duplicate admin username:</strong> <code>POST /api/auth/registerAdmin</code> should return a 409 with a clear message on <code>P2002</code>.</li>
+<li><strong>Not covered:</strong> 20 planned cases were not executed (production cap of 30). TC009 and TC021 still lack evidence.</li>
+<li><strong>Known limitations from the code summary</strong> (not exercised): sidebar links to <code>/admin/gastos</code> and 4 Reportes pages return 404; every order is saved as &quot;Mesa 1&quot;.</li>
 </ol>
 
             </li>

@@ -40,111 +40,127 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Open the branch signup page using the visible “Regístrate” link.
+        # -> Open the branch registration page using the visible “Regístrate” link.
         # Regístrate link
         elem = page.get_by_role("link", name="Regístrate")
         await elem.click(timeout=10000)
         
-        # -> Complete the visible branch registration form and submit it to see whether administrator account setup follows.
+        # -> Enter unique branch details and submit the “Registrarse” form.
         # Nombre de la sucursal text field
         elem = page.get_by_role("textbox", name="Nombre de la sucursal")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("QA Branch Oct 30 2026")
+        await elem.fill("Sucursal QA 20261030 1437")
         
-        # -> Complete the visible branch registration form and submit it to see whether administrator account setup follows.
+        # -> Enter unique branch details and submit the “Registrarse” form.
         # Dirección de la sucursal text field
         elem = page.get_by_role("textbox", name="Dirección de la sucursal")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("100 Test Street, San Francisco, CA")
+        await elem.fill("123 Calle de Prueba, Ciudad de M\u00e9xico")
         
-        # -> Complete the visible branch registration form and submit it to see whether administrator account setup follows.
+        # -> Enter unique branch details and submit the “Registrarse” form.
         # ejemplo text field
         elem = page.get_by_role("textbox", name="ejemplo")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("qa.branch.20261030")
+        await elem.fill("signup_20261030_1437")
         
-        # -> Complete the visible branch registration form and submit it to see whether administrator account setup follows.
+        # -> Enter unique branch details and submit the “Registrarse” form.
         # Teléfono de la sucursal text field
         elem = page.get_by_role("textbox", name="Teléfono de la sucursal")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("4155550130")
+        await elem.fill("+525512345678")
         
-        # -> Complete the visible branch registration form and submit it to see whether administrator account setup follows.
+        # -> Enter unique branch details and submit the “Registrarse” form.
         # Ingresa tu contraseña password field
         elem = page.get_by_role("textbox", name="Ingresa tu contraseña")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Submit the branch registration using the visible “Registrarse” button and review the next onboarding screen.
+        # -> Submit the populated “Registrarse” form to create the new branch and continue onboarding.
         # Registrarse button
         elem = page.get_by_role("button", name="Registrarse")
         await elem.click(timeout=10000)
         
-        # -> Fill out and submit the administrator registration form using unique account details.
+        # -> Replace the phone number with digits only and resubmit the branch registration form.
+        # Teléfono de la sucursal text field
+        elem = page.get_by_role("textbox", name="Teléfono de la sucursal")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("525512345678")
+        
+        # -> Replace the phone number with digits only and resubmit the branch registration form.
+        # Registrarse button
+        elem = page.get_by_role("button", name="Registrarse")
+        await elem.click(timeout=10000)
+        
+        # -> Fill the first-administrator form with unique account details and the provided branch password.
         # Nombre completo text field
         elem = page.get_by_role("textbox", name="Nombre completo")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("QA Administrator Oct 30 2026")
+        await elem.fill("QA Administrator 20261030")
         
-        # -> Fill out and submit the administrator registration form using unique account details.
+        # -> Fill the first-administrator form with unique account details and the provided branch password.
         # Nombre de usuario text field
         elem = page.get_by_role("textbox", name="Nombre de usuario")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("qa.admin.20261030")
+        await elem.fill("admin_20261030_1440")
         
-        # -> Fill out and submit the administrator registration form using unique account details.
+        # -> Fill the first-administrator form with unique account details and the provided branch password.
         # ejemplo text field
         elem = page.get_by_role("textbox", name="ejemplo")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("qa.admin.20261030")
+        await elem.fill("admin_20261030_1440")
         
-        # -> Fill out and submit the administrator registration form using unique account details.
+        # -> Fill the first-administrator form with unique account details and the provided branch password.
         # Número de celular text field
         elem = page.get_by_role("textbox", name="Número de celular")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("4155550199")
+        await elem.fill("525512345679")
         
-        # -> Fill out and submit the administrator registration form using unique account details.
+        # -> Fill the first-administrator form with unique account details and the provided branch password.
         # Ingresa tu contraseña password field
         elem = page.get_by_role("textbox", name="Ingresa tu contraseña")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the matching password in “Confirmar Contraseña” and submit the administrator registration form.
+        # -> Confirm the administrator password and submit the “Registrarse” form.
         # Confirma tu contraseña password field
         elem = page.get_by_role("textbox", name="Confirma tu contraseña")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the matching password in “Confirmar Contraseña” and submit the administrator registration form.
+        # -> Confirm the administrator password and submit the “Registrarse” form.
         # Registrarse button
         elem = page.get_by_role("button", name="Registrarse")
         await elem.click(timeout=10000)
         
-        # -> Sign in from the Smash POS access screen using the newly registered branch email and password to verify that the branch proceeds to employee selection.
+        # -> Sign in with the newly created branch account and verify that the employee selection screen opens.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("qa.branch.20261030@gmail.com")
+        await elem.fill("signup_20261030_1437@gmail.com")
         
-        # -> Sign in from the Smash POS access screen using the newly registered branch email and password to verify that the branch proceeds to employee selection.
+        # -> Sign in with the newly created branch account and verify that the employee selection screen opens.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Sign in from the Smash POS access screen using the newly registered branch email and password to verify that the branch proceeds to employee selection.
+        # -> Sign in with the newly created branch account and verify that the employee selection screen opens.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
+        # -> Select the displayed administrator account and verify that the employee PIN screen opens.
+        # A2 admin_20261030_1440 Administrador button
+        elem = page.get_by_role("button", name="admin_20261030_1440")
+        await elem.click(timeout=10000)
+        
         # --> Assertions to verify final state
         
-        # --> The newly registered branch proceeds to employee selection with its administrator available to log in.
-        await page.get_by_role("button", name="qa.admin.20261030").nth(0).scroll_into_view_if_needed()
+        # --> The newly created branch can proceed to the administrator PIN login step.
+        await page.get_by_role("textbox", name="PIN").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The new branch's administrator is available on the employee-selection screen.
-        await expect(page.get_by_role("button", name="qa.admin.20261030").nth(0)).to_be_visible(timeout=15000), "The new branch's administrator is available on the employee-selection screen."
+        # Assert: The administrator PIN entry field is visible.
+        await expect(page.get_by_role("textbox", name="PIN").nth(0)).to_be_visible(timeout=15000), "The administrator PIN entry field is visible."
         await asyncio.sleep(5)
 
     finally:

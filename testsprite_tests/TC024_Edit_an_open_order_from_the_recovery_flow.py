@@ -40,66 +40,81 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Sign in with the provided branch email and password to reach the employee-selection screen.
+        # -> Sign in to the tc024 branch using its provided branch email and password.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke@smash.test")
+        await elem.fill("tc024@smash.test")
         
-        # -> Sign in with the provided branch email and password to reach the employee-selection screen.
+        # -> Sign in to the tc024 branch using its provided branch email and password.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Sign in with the provided branch email and password to reach the employee-selection screen.
+        # -> Sign in to the tc024 branch using its provided branch email and password.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Select the “cajero_smoke” cashier profile to continue to PIN authentication.
-        # CS cajero_smoke Cajero button
-        elem = page.get_by_role("button", name="cajero_smoke Cajero")
+        # -> Select the cashier employee named “cajero_tc024” to continue to PIN entry.
+        # CT cajero_tc024 Cajero button
+        elem = page.get_by_role("button", name="cajero_tc024 Cajero")
         await elem.click(timeout=10000)
         
-        # -> Enter PIN 1234 in the cashier PIN field.
+        # -> Enter the cashier PIN and continue to the cashier area.
         # PIN password field
         elem = page.get_by_role("textbox", name="PIN")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1234")
         
-        # -> Submit the entered cashier PIN using “Ingresar” and verify the page reached after authentication.
+        # -> Click “Ingresar” to finish cashier PIN authentication and open the cashier area.
         # Ingresar button
         elem = page.get_by_role("button", name="Ingresar")
         await elem.click(timeout=10000)
         
-        # -> Confirm the cash-register opening and check whether the cashier order list becomes available.
+        # -> Confirm the cash-register opening from the visible “Apertura de Caja” screen.
         # Confirmar Apertura button
         elem = page.get_by_role("button", name="Confirmar Apertura")
         await elem.click(timeout=10000)
         
-        # -> Open the cashier open-orders page and check whether unpaid orders are available.
-        await page.goto("http://localhost:3100/cajero/pedidos")
-        try:
-            await page.wait_for_load_state("domcontentloaded", timeout=5000)
-        except Exception:
-            pass
+        # -> Add “Hamburguesa Smoke” to the current order so an open order can be created for the recovery check.
+        # Sin Foto Hamburguesa Smoke Bs 50.00 button
+        elem = page.get_by_role("button", name="Agregar Hamburguesa Smoke, Bs")
+        await elem.click(timeout=10000)
         
-        # -> Choose the visible open order with “Editar” and verify its details appear in the sales screen.
+        # -> Submit the current Hamburguesa Smoke order with “Comandar” so it can appear in the open-order list.
+        # Comandar button
+        elem = page.get_by_role("button", name="Comandar")
+        await elem.click(timeout=10000)
+        
+        # -> Close the preparation ticket and return to the cashier sales screen to access open orders.
+        # Cerrar button
+        elem = page.get_by_role("button", name="Cerrar")
+        await elem.click(timeout=10000)
+        
+        # -> Return from Pedido #1’s payment screen to the order interface and look for the open-order recovery option.
+        # Volver al pedido button
+        elem = page.get_by_role("button", name="Volver al pedido")
+        await elem.click(timeout=10000)
+        
+        # -> Open “Pedidos abiertos” and select the unpaid order to resume editing it.
+        # Pedidos abiertos button
+        elem = page.get_by_role("button", name="Pedidos abiertos")
+        await elem.click(timeout=10000)
+        
+        # -> Select “Editar” on Pedido #1 and verify the sales screen opens with its Hamburguesa Smoke item loaded.
         # Editar button
         elem = page.get_by_role("button", name="Editar")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The selected order opened in the sales screen with an item loaded for editing.
-        # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The sales screen is open in order-edit mode.
-        await expect(page).to_have_url(re.compile("editId="), timeout=15000), "The sales screen is open in order-edit mode."
+        # --> Pedido #1 reopened in the sales screen with Hamburguesa Smoke loaded.
         await page.get_by_role("button", name="Quitar Hamburguesa Smoke del").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The loaded order contains an item.
-        await expect(page.get_by_role("button", name="Quitar Hamburguesa Smoke del").nth(0)).to_be_visible(timeout=15000), "The loaded order contains an item."
+        # Assert: The recovered order's Hamburguesa Smoke item is loaded in the sales screen.
+        await expect(page.get_by_role("button", name="Quitar Hamburguesa Smoke del").nth(0)).to_be_visible(timeout=15000), "The recovered order's Hamburguesa Smoke item is loaded in the sales screen."
         await asyncio.sleep(5)
 
     finally:

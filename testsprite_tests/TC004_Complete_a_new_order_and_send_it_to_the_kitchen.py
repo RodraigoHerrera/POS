@@ -40,33 +40,93 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the provided branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Enter the tc001 branch email and password, then submit the login form.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke@smash.test")
+        await elem.fill("tc001@smash.test")
         
-        # -> Enter the provided branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Enter the tc001 branch email and password, then submit the login form.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the provided branch email and password, then submit the “Iniciar Sesión” form.
+        # -> Enter the tc001 branch email and password, then submit the login form.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
+        # -> Select the cashier employee named cajero_tc001 to open the PIN entry screen.
+        # CT cajero_tc001 Cajero button
+        elem = page.get_by_role("button", name="cajero_tc001 Cajero")
+        await elem.click(timeout=10000)
+        
+        # -> Enter the cashier PIN on the employee PIN screen to reach the cashier area.
+        # PIN password field
+        elem = page.get_by_role("textbox", name="PIN")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("1234")
+        
+        # -> Submit the entered PIN by clicking “Ingresar” to open the cashier area.
+        # Ingresar button
+        elem = page.get_by_role("button", name="Ingresar")
+        await elem.click(timeout=10000)
+        
+        # -> Confirm the cash-register opening using the displayed zero count to enter the cashier sales screen.
+        # Confirmar Apertura button
+        elem = page.get_by_role("button", name="Confirmar Apertura")
+        await elem.click(timeout=10000)
+        
+        # -> Open the cashier sales page at /cajero/ventas and check whether the product catalog is available.
+        await page.goto("http://localhost:3100/cajero/ventas")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
+        
+        # -> Add “Hamburguesa Smoke” to the current order and inspect the available item-personalization controls.
+        # Sin Foto Hamburguesa Smoke Bs 50.00 button
+        elem = page.get_by_role("button", name="Agregar Hamburguesa Smoke, Bs")
+        await elem.click(timeout=10000)
+        
+        # -> Open the “Personalizar Hamburguesa Smoke” controls to inspect item options.
+        # Personalizar Hamburguesa Smoke button
+        elem = page.get_by_role("button", name="Personalizar Hamburguesa Smoke")
+        await elem.click(timeout=10000)
+        
+        # -> Enter a customer name and kitchen note, then add the personalized burger to the current order.
+        # Nombre del cliente para este pedido text field
+        elem = page.get_by_role("textbox", name="Nombre del cliente para este")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("Cliente QA Smoke")
+        
+        # -> Enter a customer name and kitchen note, then add the personalized burger to the current order.
+        # Ej: Sin cebolla, carne bien cocida... text area
+        elem = page.get_by_role("textbox", name="Ej: Sin cebolla, carne bien")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("Sin cebolla, bien cocida")
+        
+        # -> Enter a customer name and kitchen note, then add the personalized burger to the current order.
+        # + Agregar button
+        elem = page.get_by_role("button", name="+ Agregar")
+        await elem.click(timeout=10000)
+        
+        # -> Submit the current order with “Comandar” and verify that the kitchen ticket and payment screen appear.
+        # Comandar button
+        elem = page.get_by_role("button", name="Comandar")
+        await elem.click(timeout=10000)
+        
+        # -> Switch to the payment-methods page and verify that the payment screen is displayed for this order.
+        # Switch to tab 5BAE
+        page = context.pages[-1]  # switch to most recently active tab
+        
         # --> Assertions to verify final state
         
-        # --> The kitchen ticket should open and the payment screen should be displayed.
+        # --> The submitted order reached the payment screen.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected the sign-in form to be gone after the kitchen ticket opened and the payment screen appeared.
-        await expect(page.locator("xpath=/html/body/div[2]/div/div[2]/div/div/div/div[2]/form/div/div[3]/button").nth(0)).not_to_be_visible(timeout=15000), "Expected the sign-in form to be gone after the kitchen ticket opened and the payment screen appeared."
-        
-        # --> Test blocked by environment/access constraints during agent run
-        # Reason: TEST BLOCKED The cashier flow could not be reached because sign-in is blocked by a rate limit. Observations: - The login page displays “Demasiados intentos desde esta IP. Intenta de nuevo en 47 segundos.” - The displayed cooldown remained after two waits. - Product selection, personalization, comanda submission, and payment could not be verified.
-        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The cashier flow could not be reached because sign-in is blocked by a rate limit. Observations: - The login page displays \u201cDemasiados intentos desde esta IP. Intenta de nuevo en 47 segundos.\u201d - The displayed cooldown remained after two waits. - Product selection, personalization, comanda submission, and payment could not be verified." + " — the exported script cannot reproduce a PASS in this environment.")
+        # Assert: The submitted order should open the payment screen.
+        await expect(page).to_have_url(re.compile("/cajero/metodos\\-pago"), timeout=15000), "The submitted order should open the payment screen."
         await asyncio.sleep(5)
 
     finally:

@@ -40,40 +40,67 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the provided branch credentials and submit the sign-in form.
+        # -> Enter the test branch email and password, then submit the Spanish login form.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke@smash.test")
+        await elem.fill("tc018@smash.test")
         
-        # -> Enter the provided branch credentials and submit the sign-in form.
+        # -> Enter the test branch email and password, then submit the Spanish login form.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the provided branch credentials and submit the sign-in form.
+        # -> Enter the test branch email and password, then submit the Spanish login form.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Open the administrator dashboard route and check whether it is accessible while sign-in is rate-limited.
-        await page.goto("http://localhost:3100/admin")
-        try:
-            await page.wait_for_load_state("domcontentloaded", timeout=5000)
-        except Exception:
-            pass
+        # -> Select the “admin_tc018” administrator account to open its PIN entry screen.
+        # AT admin_tc018 Administrador button
+        elem = page.get_by_role("button", name="admin_tc018 Administrador")
+        await elem.click(timeout=10000)
+        
+        # -> Enter the administrator PIN and submit it to open the admin area.
+        # PIN password field
+        elem = page.get_by_role("textbox", name="PIN")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("1234")
+        
+        # -> Submit the entered administrator PIN using the “Ingresar” button to open the admin area.
+        # Ingresar button
+        elem = page.get_by_role("button", name="Ingresar")
+        await elem.click(timeout=10000)
+        
+        # -> Select the “Semana” period on the dashboard and verify the displayed metrics and dashboard sections update.
+        # Semana button
+        elem = page.get_by_role("button", name="Semana")
+        await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The administrator dashboard is reached so its metrics and content can be verified.
+        # --> The weekly sales and order metrics are displayed.
+        await page.locator(".rounded-2xl > div").first.nth(0).scroll_into_view_if_needed()
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected the browser to remain on /admin so the dashboard metrics and content are available.
-        await expect(page).to_have_url(re.compile("/admin"), timeout=15000), "Expected the browser to remain on /admin so the dashboard metrics and content are available."
+        # Assert: The weekly sales metric is displayed.
+        await expect(page.locator(".rounded-2xl > div").first.nth(0)).to_be_visible(timeout=15000), "The weekly sales metric is displayed."
+        await page.locator(".col-span-12 > .grid > div:nth-child(2) > div").first.nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: not verified — the export-time check could not be evaluated
+        # Assert: The weekly order metric is displayed.
+        await expect(page.locator(".col-span-12 > .grid > div:nth-child(2) > div").first.nth(0)).to_be_visible(timeout=15000), "The weekly order metric is displayed."
         
-        # --> Test blocked by environment/access constraints during agent run
-        # Reason: TEST BLOCKED The administrator dashboard could not be reached, so the period selector and dashboard content could not be verified. Observations: - The sign-in flow showed a rate-limit notice after the provided branch credentials were submitted. - Waiting twice did not clear the notice. - Opening /admin returned to the sign-in page.
-        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The administrator dashboard could not be reached, so the period selector and dashboard content could not be verified. Observations: - The sign-in flow showed a rate-limit notice after the provided branch credentials were submitted. - Waiting twice did not clear the notice. - Opening /admin returned to the sign-in page." + " — the exported script cannot reproduce a PASS in this environment.")
+        # --> The stock-alert section is displayed for the selected week.
+        await page.get_by_role("button", name="Ver inventario").nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: not verified — the export-time check could not be evaluated
+        # Assert: The stock-alert section is displayed.
+        await expect(page.get_by_role("button", name="Ver inventario").nth(0)).to_be_visible(timeout=15000), "The stock-alert section is displayed."
+        
+        # --> The statistics chart is displayed.
+        await page.locator("div").filter(has_text=re.compile(r"^Ventas Reales$")).nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: not verified — the export-time check could not be evaluated
+        # Assert: The statistics chart and its legend are displayed.
+        await expect(page.locator("div").filter(has_text=re.compile(r"^Ventas Reales$")).nth(0)).to_be_visible(timeout=15000), "The statistics chart and its legend are displayed."
         await asyncio.sleep(5)
 
     finally:

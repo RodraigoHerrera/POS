@@ -40,70 +40,50 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the provided branch email and password, then submit the login form.
+        # -> Sign in to the tc019 branch using its listed email and password.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke@smash.test")
+        await elem.fill("tc019@smash.test")
         
-        # -> Enter the provided branch email and password, then submit the login form.
+        # -> Sign in to the tc019 branch using its listed email and password.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the provided branch email and password, then submit the login form.
+        # -> Sign in to the tc019 branch using its listed email and password.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Open the cashier page and verify whether the POS sales screen appears or an opening form is shown.
-        await page.goto("http://localhost:3100/cajero")
-        try:
-            await page.wait_for_load_state("domcontentloaded", timeout=5000)
-        except Exception:
-            pass
-        
-        # -> Enter the provided branch email and password in the login form and submit them once to continue to the cashier flow.
-        # email field
-        elem = page.locator("input[type=\"email\"]")
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke@smash.test")
-        
-        # -> Enter the provided branch email and password in the login form and submit them once to continue to the cashier flow.
-        # password field
-        elem = page.locator("input[type=\"password\"]")
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("SmokeTest2026!")
-        
-        # -> Submit the currently filled branch login form once and check whether the employee selection page opens.
-        # Iniciar Sesión button
-        elem = page.get_by_role("button", name="Iniciar Sesión")
+        # -> Select the cashier account cajero_tc019 and continue to PIN entry.
+        # CT cajero_tc019 Cajero button
+        elem = page.get_by_role("button", name="cajero_tc019 Cajero")
         await elem.click(timeout=10000)
         
-        # -> Choose the “cajero_smoke” employee to continue to cashier PIN entry.
-        # CS cajero_smoke Cajero button
-        elem = page.get_by_role("button", name="cajero_smoke Cajero")
-        await elem.click(timeout=10000)
-        
-        # -> Enter the provided cashier PIN in the “PIN” field and check whether the “Ingresar” button becomes available.
+        # -> Enter the cashier PIN and continue to the cashier area.
         # PIN password field
         elem = page.get_by_role("textbox", name="PIN")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1234")
         
-        # -> Submit the entered PIN using “Ingresar” and verify whether the POS sales screen appears directly.
+        # -> Submit the entered cashier PIN and inspect the next screen.
         # Ingresar button
         elem = page.get_by_role("button", name="Ingresar")
         await elem.click(timeout=10000)
         
+        # -> Confirm the register opening using the displayed zero-count cash tally, then verify whether the cashier area shows the POS sales screen.
+        # Confirmar Apertura button
+        elem = page.get_by_role("button", name="Confirmar Apertura")
+        await elem.click(timeout=10000)
+        
         # --> Assertions to verify final state
         
-        # --> The cashier POS sales screen is displayed directly after PIN entry.
-        await page.get_by_role("button", name="Agregar Hamburguesa Smoke, Bs").nth(0).scroll_into_view_if_needed()
+        # --> The POS sales screen is displayed.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The POS product catalog is visible.
-        await expect(page.get_by_role("button", name="Agregar Hamburguesa Smoke, Bs").nth(0)).to_be_visible(timeout=15000), "The POS product catalog is visible."
+        # Assert: The cashier is on the POS sales screen.
+        await expect(page).to_have_url(re.compile("/cajero/ventas"), timeout=15000), "The cashier is on the POS sales screen."
         await asyncio.sleep(5)
 
     finally:

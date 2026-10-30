@@ -40,29 +40,40 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the branch email and password, then submit the form using “Iniciar Sesión”.
+        # -> Enter the test branch email and password, then submit the “Iniciar Sesión” form.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("smoke@smash.test")
+        await elem.fill("tc002@smash.test")
         
-        # -> Enter the branch email and password, then submit the form using “Iniciar Sesión”.
+        # -> Enter the test branch email and password, then submit the “Iniciar Sesión” form.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the branch email and password, then submit the form using “Iniciar Sesión”.
+        # -> Enter the test branch email and password, then submit the “Iniciar Sesión” form.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The employee selection screen was expected after branch login.
+        # --> The employee selection screen is displayed.
+        await page.get_by_role("button", name="admin_tc002 Administrador").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected a successful branch login to navigate to the employee-selection screen at /usuarios.
-        await expect(page).to_have_url(re.compile("/usuarios"), timeout=15000), "Expected a successful branch login to navigate to the employee-selection screen at /usuarios."
+        # Assert: The employee selection screen is visible.
+        await expect(page.get_by_role("button", name="admin_tc002 Administrador").nth(0)).to_be_visible(timeout=15000), "The employee selection screen is visible."
+        
+        # --> Active employees for the branch are listed.
+        await page.get_by_role("button", name="admin_tc002 Administrador").nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: not verified — the export-time check could not be evaluated
+        # Assert: An active branch employee is listed.
+        await expect(page.get_by_role("button", name="admin_tc002 Administrador").nth(0)).to_be_visible(timeout=15000), "An active branch employee is listed."
+        await page.get_by_role("button", name="cajero_tc002 Cajero").nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: not verified — the export-time check could not be evaluated
+        # Assert: Another active branch employee is listed.
+        await expect(page.get_by_role("button", name="cajero_tc002 Cajero").nth(0)).to_be_visible(timeout=15000), "Another active branch employee is listed."
         await asyncio.sleep(5)
 
     finally:
