@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatearDiaLocal, rangoDesdeSeleccion } from './rangoFechas';
+import { formatearDiaLocal, rangoDesdeSeleccion, rangoInmediatoDesdeSeleccion } from './rangoFechas';
 
 describe('formatearDiaLocal', () => {
   it('formats the local calendar day as YYYY-MM-DD with padding', () => {
@@ -29,5 +29,25 @@ describe('rangoDesdeSeleccion', () => {
       desde: '2026-10-01',
       hasta: '2026-10-29',
     });
+  });
+});
+
+describe('rangoInmediatoDesdeSeleccion', () => {
+  it('treats a single picked day as a one-day range', () => {
+    assert.deepEqual(rangoInmediatoDesdeSeleccion([new Date(2026, 9, 30)]), {
+      desde: '2026-10-30',
+      hasta: '2026-10-30',
+    });
+  });
+
+  it('returns the complete range once the second day is picked', () => {
+    assert.deepEqual(rangoInmediatoDesdeSeleccion([new Date(2026, 9, 29), new Date(2026, 9, 1)]), {
+      desde: '2026-10-01',
+      hasta: '2026-10-29',
+    });
+  });
+
+  it('returns an empty range when the selection is cleared', () => {
+    assert.deepEqual(rangoInmediatoDesdeSeleccion([]), { desde: '', hasta: '' });
   });
 });

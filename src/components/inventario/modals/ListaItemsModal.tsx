@@ -88,7 +88,9 @@ export default function ListaItemsModal({ isOpen, onClose, categoriasOptions }: 
       toast.error("No hay items para exportar");
       return;
     }
-    descargarCSV(construirCSVItems(filteredItems), nombreArchivoItems(new Date()));
+    const nombre = nombreArchivoItems(new Date());
+    descargarCSV(construirCSVItems(filteredItems), nombre);
+    toast.success(`Lista exportada: ${nombre}`);
   };
 
   const guardarCostoEstandar = async (itemId: string, valor: string) => {

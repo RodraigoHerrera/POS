@@ -18,3 +18,16 @@ export function rangoDesdeSeleccion(fechas: readonly Date[]): { desde: string; h
   const [a, b] = [formatearDiaLocal(fechas[0]), formatearDiaLocal(fechas[1])].sort();
   return { desde: a, hasta: b };
 }
+
+/**
+ * Como `rangoDesdeSeleccion`, pero un solo dia elegido ya filtra ese dia. Para
+ * filtros locales (sin pedir al servidor): con `null` el filtro anterior seguia
+ * activo mientras el calendario ya marcaba el dia nuevo, y parecia no filtrar.
+ */
+export function rangoInmediatoDesdeSeleccion(fechas: readonly Date[]): { desde: string; hasta: string } {
+  if (fechas.length === 1) {
+    const dia = formatearDiaLocal(fechas[0]);
+    return { desde: dia, hasta: dia };
+  }
+  return rangoDesdeSeleccion(fechas) ?? { desde: "", hasta: "" };
+}
