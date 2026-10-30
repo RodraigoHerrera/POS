@@ -47,5 +47,8 @@ Today the Kardex records what moved but not who moved it. Stock receipts, sales,
 - Independent verification: no blocking problems; fixed lowercase `movimientoinventario` in the migration's ALTER (would fail on case-sensitive MySQL); local checksum updated, `migrate status` up to date.
 - Gap: no route-level tests for anular / anularPedido / registrarEntrada (e2e policy).
 
+- Follow-ups shipped in the same PR: "Registrado por" column, CSV export, range DatePicker, dark mode contrast fixes in KardexModal.
+- PR #26 merged into main (merge commit 2bb4cf5). FK kept as ON DELETE SET NULL.
+
 ## Next step
-Commit, push, PR.
+Done. Deploys need `npx prisma migrate deploy`.
