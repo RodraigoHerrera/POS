@@ -40,128 +40,132 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Sign in to the branch account using the provided tc044 email and password.
+        # -> Enter the tc052 branch email and password, then submit the login form.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("tc044@smash.test")
+        await elem.fill("tc052@smash.test")
         
-        # -> Sign in to the branch account using the provided tc044 email and password.
+        # -> Enter the tc052 branch email and password, then submit the login form.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Sign in to the branch account using the provided tc044 email and password.
+        # -> Enter the tc052 branch email and password, then submit the login form.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Select the “admin_tc044” administrator account to continue to PIN verification.
-        # AT admin_tc044 Administrador button
-        elem = page.get_by_role("button", name="admin_tc044 Administrador")
+        # -> Select the administrator account to continue to its PIN entry screen.
+        # AT admin_tc052 Administrador button
+        elem = page.get_by_role("button", name="admin_tc052 Administrador")
         await elem.click(timeout=10000)
         
-        # -> Enter the administrator PIN on the PIN verification page.
+        # -> Enter PIN 1234 and submit it using “Ingresar” to access the administrator area.
         # PIN password field
         elem = page.get_by_role("textbox", name="PIN")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1234")
         
-        # -> Submit the administrator PIN using the “Ingresar” button and verify that the administrator area opens.
+        # -> Submit the entered administrator PIN with “Ingresar” to open the admin area.
         # Ingresar button
         elem = page.get_by_role("button", name="Ingresar")
         await elem.click(timeout=10000)
         
-        # -> Open the “Inventario” section under “Gestión productiva” to inspect inventory tools.
+        # -> Open “Inventario” from the “Gestión productiva” navigation to locate Kardex.
         # Inventario link
         elem = page.get_by_role("link", name="Inventario").first
         await elem.click(timeout=10000)
         
-        # -> Open the “Inventario” section under “Gestión productiva” and inspect its inventory tools.
+        # -> Open the “Inventario” page from the “Gestión productiva” section.
         # Inventario link
         elem = page.get_by_role("link", name="Inventario").first
         await elem.click(timeout=10000)
         
-        # -> Open “Inventario” from the “Gestión productiva” menu and inspect the available inventory tools.
+        # -> Open “Inventario” under “Gestión productiva” to reach the inventory page.
         # Inventario link
         elem = page.get_by_role("link", name="Inventario").first
         await elem.click(timeout=10000)
         
-        # -> Open the inventory tools using the dashboard’s “Ver inventario” action.
-        # Ver inventario button
-        elem = page.get_by_role("button", name="Ver inventario")
+        # -> Open the “Inventario” page from the “Gestión productiva” menu.
+        # Inventario link
+        elem = page.get_by_role("link", name="Inventario").first
         await elem.click(timeout=10000)
         
-        # -> Open the “Entrada” tool to inspect the inventory movement form.
+        # -> Open the inventory page at /admin/inventario and inspect its visible inventory and Kardex controls.
+        await page.goto("http://localhost:3100/admin/inventario")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
+        
+        # -> Open the “Entrada” form and inspect the visible inventory-entry fields.
         # Entrada button
         elem = page.get_by_role("button", name="Entrada")
         await elem.click(timeout=10000)
         
-        # -> Choose an inventory item in the “Item” field and review the form state that follows.
-        # Seleccionar Item Carne Smoke Pan Smoke dropdown
-        elem = page.locator("div").filter(has_text=re.compile(r"^ItemSeleccionar ItemCarne SmokePan Smoke$")).get_by_role("combobox")
-        await elem.click(timeout=10000)
-        
-        # -> Select Carne Smoke in the Item field and inspect the resulting inventory-entry form state.
-        # Seleccionar Item Carne Smoke Pan Smoke dropdown
+        # -> Choose an available inventory item in the entry form, then inspect any updated fields before continuing.
+        # Seleccionar Item Aceite Smoke Carne Smoke Pan... dropdown
         elem = page.locator("xpath=/html/body/div[2]/div/div/div[2]/div[2]/div/div/form/div/div/div/div/select").nth(0)
         await elem.wait_for(state="visible", timeout=10000)
         await elem.select_option("")
         
-        # -> Choose “Compra” as the inventory-entry motive and review the form state.
+        # -> Set the entry reason to “Compra” and inspect the form state before entering the amount and cost.
         # Seleccionar motivo Compra Ajuste positivo... dropdown
         elem = page.locator("xpath=/html/body/div[2]/div/div/div[2]/div[2]/div/div/form/div/div/div/div[2]/select").nth(0)
         await elem.wait_for(state="visible", timeout=10000)
         await elem.select_option("")
         
-        # -> Enter valid inventory-entry details for Carne Smoke and register the purchase movement.
-        # Número de lote text field
-        elem = page.get_by_role("textbox", name="Número de lote")
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("LOT-TC044-01")
-        
-        # -> Enter valid inventory-entry details for Carne Smoke and register the purchase movement.
+        # -> Complete the Carne Smoke purchase entry by entering a quantity and total cost and selecting Proveedor Smoke.
         # Ingrese cantidad number field
         elem = page.get_by_placeholder("Ingrese cantidad")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("5")
+        await elem.fill("10")
         
-        # -> Enter valid inventory-entry details for Carne Smoke and register the purchase movement.
+        # -> Complete the Carne Smoke purchase entry by entering a quantity and total cost and selecting Proveedor Smoke.
         # Ingrese el costo number field
         elem = page.get_by_placeholder("Ingrese el costo")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("100")
         
-        # -> Enter valid inventory-entry details for Carne Smoke and register the purchase movement.
-        # Factura #123, Recibo #456... text field
-        elem = page.get_by_role("textbox", name="Factura #123, Recibo #")
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("Compra inventario TC044")
+        # -> Complete the Carne Smoke purchase entry by entering a quantity and total cost and selecting Proveedor Smoke.
+        # Seleccionar proveedor Proveedor Smoke dropdown
+        elem = page.locator("div").filter(has_text=re.compile(r"^ProveedorSeleccionar proveedorProveedor Smoke$")).get_by_role("combobox")
+        await elem.click(timeout=10000)
         
-        # -> Submit the completed inventory entry using “Registrar Entrada” and verify the resulting movement and stock-control information.
+        # -> Select “Proveedor Smoke” in the inventory-entry form, then verify the form is ready to register.
+        # Seleccionar proveedor Proveedor Smoke dropdown
+        elem = page.locator("xpath=/html/body/div[2]/div/div/div[2]/div[2]/div/div/form/div/div/div/div[7]/select").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.select_option("")
+        
+        # -> Register the completed Carne Smoke inventory entry using “Registrar Entrada”.
         # Registrar Entrada button
         elem = page.get_by_role("button", name="Registrar Entrada")
         await elem.click(timeout=10000)
         
-        # -> Open “Control de Stock” and verify the inventory stock information shown after the saved movement.
-        # Control de Stock button
-        elem = page.get_by_role("button", name="Control de Stock")
+        # -> Open the “Kardex” view to access the registered inventory movement and its export control.
+        # Kardex button
+        elem = page.get_by_role("button", name="Kardex")
         await elem.click(timeout=10000)
+        
+        # -> Final action — this is where the agent failed
+        # Error observed by agent: Failed to click element 2686: Event handler browser_use.browser.watchdog_base.DefaultActionWatchdog.on_ClickElementEvent#5248(?▶ ClickElementEvent#ffdb 🏃) timed out after 15.0s
+        # Download: Exportar button
+        elem = page.get_by_role("button", name="Exportar")
+        async with page.expect_download(timeout=30000) as dl_info:
+            await elem.click(timeout=10000)
+        download = await dl_info.value
+        assert download.suggested_filename  # verify file was downloaded
+        await download.save_as(f"./downloads/{download.suggested_filename}")
         
         # --> Assertions to verify final state
         
-        # --> Inventory stock controls are available.
-        await page.get_by_role("button", name="Guardar").first.nth(0).scroll_into_view_if_needed()
+        # --> The Kardex table includes a “Registrado por” column.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The stock control’s Guardar action is visible.
-        await expect(page.get_by_role("button", name="Guardar").first.nth(0)).to_be_visible(timeout=15000), "The stock control\u2019s Guardar action is visible."
-        
-        # --> Carne Smoke stock information is visible after the inventory entry was registered.
-        await page.get_by_role("row", name="INS-CARNE-SMOKE Carne Smoke").nth(0).scroll_into_view_if_needed()
-        # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Carne Smoke’s stock information is visible in the control table.
-        await expect(page.get_by_role("row", name="INS-CARNE-SMOKE Carne Smoke").nth(0)).to_be_visible(timeout=15000), "Carne Smoke\u2019s stock information is visible in the control table."
+        # Assert: Expected the Kardex table header to include “Registrado por”.
+        await expect(page.locator("thead").nth(0)).to_contain_text("Registrado por", timeout=15000), "Expected the Kardex table header to include \u201cRegistrado por\u201d."
         await asyncio.sleep(5)
 
     finally:

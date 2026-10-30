@@ -40,119 +40,103 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Sign in to the administrator branch using the tc050 account credentials.
+        # -> Sign in to the branch using tc050@smash.test and the provided branch password.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("tc050@smash.test")
         
-        # -> Sign in to the administrator branch using the tc050 account credentials.
+        # -> Sign in to the branch using tc050@smash.test and the provided branch password.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Sign in to the administrator branch using the tc050 account credentials.
+        # -> Sign in to the branch using tc050@smash.test and the provided branch password.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Select the administrator employee named admin_tc050.
+        # -> Select the “admin_tc050” administrator employee card to open the PIN entry screen.
         # AT admin_tc050 Administrador button
         elem = page.get_by_role("button", name="admin_tc050 Administrador")
         await elem.click(timeout=10000)
         
-        # -> Enter PIN 1234 for admin_tc050 and submit it to continue into the administrator interface.
+        # -> Enter the administrator PIN and submit it to open the admin area.
         # PIN password field
         elem = page.get_by_role("textbox", name="PIN")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1234")
         
-        # -> Submit the entered PIN with the “Ingresar” button to open the administrator interface.
-        # Ingresar button
-        elem = page.get_by_role("button", name="Ingresar")
-        await elem.click(timeout=10000)
-        
-        # -> Open “Producción” from the Gestión productiva menu to start a production batch.
+        # -> Open “Producción” from the Gestión productiva menu to view available preparations and production options.
         # Producción link
         elem = page.get_by_role("link", name="Producción")
         await elem.click(timeout=10000)
         
-        # -> Open “Producción” from the “Gestión productiva” menu.
+        # -> Open “Producción” from the Gestión productiva menu and inspect the production options.
         # Producción link
         elem = page.get_by_role("link", name="Producción")
         await elem.click(timeout=10000)
         
-        # -> Open “Producción” from the “Gestión productiva” menu.
+        # -> Open the “Producción” page from the productive management menu and inspect its available batch controls.
         # Producción link
         elem = page.get_by_role("link", name="Producción")
         await elem.click(timeout=10000)
         
-        # -> Open the “Producción” page from the “Gestión productiva” menu.
+        # -> Open the “Producción” page from the productive management menu to inspect available preparations and batch controls.
         # Producción link
         elem = page.get_by_role("link", name="Producción")
         await elem.click(timeout=10000)
         
-        # -> Expand the “Gestión productiva” menu to reveal its production and MRP options.
+        # -> Expand the “Gestión productiva” sidebar section to reveal its navigation options.
         # Gestión productiva button
         elem = page.get_by_role("button", name="Gestión productiva")
         await elem.click(timeout=10000)
         
-        # -> Open the “Producción” page from the expanded “Gestión productiva” menu.
+        # -> Open “Producción” from the expanded productive management menu to inspect the batch workflow.
         # Producción link
         elem = page.get_by_role("link", name="Producción")
         await elem.click(timeout=10000)
         
-        # -> Open “Recetas” using the production page’s “Ir a recetas” link to check whether a recipe can be configured through the UI.
-        # Ir a recetas link
-        elem = page.get_by_role("link", name="Ir a recetas")
+        # -> Select “Salsa Smoke” as the preparation and inspect the production form that appears.
+        # Seleccione una preparación Salsa Smoke dropdown
+        elem = page.get_by_role("combobox")
         await elem.click(timeout=10000)
         
-        # -> Open “Planificación (MRP)” from the expanded “Gestión productiva” menu to review replenishment planning.
+        # -> Choose “Salsa Smoke” in the preparation field to reveal its production inputs.
+        # Seleccione una preparación Salsa Smoke dropdown
+        elem = page.locator("xpath=/html/body/div[2]/div/div/div/div[2]/div/form/div[2]/div/select").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.select_option("")
+        
+        # -> Enter a production quantity of 1 L in the “Cantidad (L)” field and check whether the production action becomes available.
+        # Ej. 10 number field
+        elem = page.get_by_role("spinbutton", name="Cantidad (L)")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("1")
+        
+        # -> Click “Ejecutar producción” to submit the 1 L Salsa Smoke batch and verify its appearance under recent productions.
+        # Ejecutar producción button
+        elem = page.get_by_role("button", name="Ejecutar producción")
+        await elem.click(timeout=10000)
+        
+        # -> Open “Planificación (MRP)” and review the replenishment recommendations displayed there.
         # Planificación (MRP) link
         elem = page.get_by_role("link", name="Planificación (MRP)")
         await elem.click(timeout=10000)
         
-        # -> Run MRP using the current 7-day horizon and review the replenishment planning results displayed on the page.
+        # -> Run MRP using the displayed planning controls and review the replenishment recommendations.
         # Ejecutar MRP button
         elem = page.get_by_role("button", name="Ejecutar MRP")
         await elem.click(timeout=10000)
         
-        # -> Open “Recetas” and inspect whether the administrator can configure a base preparation through the page.
-        # Recetas link
-        elem = page.get_by_role("link", name="Recetas")
-        await elem.click(timeout=10000)
-        
-        # -> Open the “Editar Receta” controls for Hamburguesa Smoke and check whether a production preparation can be configured.
-        # Editar Receta button
-        elem = page.get_by_role("button", name="Editar Receta")
-        await elem.click(timeout=10000)
-        
-        # -> Close the unchanged recipe editor and inspect whether the recipe page offers a way to configure a base preparation.
-        # Cancelar button
-        elem = page.get_by_role("button", name="Cancelar")
-        await elem.click(timeout=10000)
-        
-        # -> Open the “Producción” page and verify whether a production batch can be started with the available recipe.
-        # Producción link
-        elem = page.get_by_role("link", name="Producción")
-        await elem.click(timeout=10000)
-        
-        # -> Open the Recipes page and inspect its visible controls for creating a preparation with a recipe.
-        # Recetas link
-        elem = page.get_by_role("link", name="Recetas", exact=True)
-        await elem.click(timeout=10000)
-        
         # --> Assertions to verify final state
         
-        # --> MRP planning results are displayed.
+        # --> MRP displayed replenishment recommendations for the planning run.
+        await page.get_by_role("row", name="Requiere compra Carne Smoke").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected the MRP planning page to be open for displaying results.
-        await expect(page).to_have_url(re.compile("/admin/mrp"), timeout=15000), "Expected the MRP planning page to be open for displaying results."
-        
-        # --> Test blocked by environment/access constraints during agent run
-        # Reason: TEST BLOCKED The production batch could not be started because the available production screen reported that no preparations with recipes exist. Recipe management showed one vendible recipe, Hamburguesa Smoke, but zero base preparations and no visible control for creating one. MRP was run at the 7-day horizon, but no run history or replenishment recommendations appeared after the page settled. ...
-        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The production batch could not be started because the available production screen reported that no preparations with recipes exist. Recipe management showed one vendible recipe, Hamburguesa Smoke, but zero base preparations and no visible control for creating one. MRP was run at the 7-day horizon, but no run history or replenishment recommendations appeared after the page settled. ..." + " — the exported script cannot reproduce a PASS in this environment.")
+        # Assert: MRP replenishment recommendations are displayed.
+        await expect(page.get_by_role("row", name="Requiere compra Carne Smoke").nth(0)).to_be_visible(timeout=15000), "MRP replenishment recommendations are displayed."
         await asyncio.sleep(5)
 
     finally:

@@ -40,56 +40,29 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the tc007 branch email and password, then submit the login form.
+        # -> Enter the test branch email and incorrect password, then submit with “Iniciar Sesión” to verify the visible response.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("tc007@smash.test")
+        await elem.fill("tc065@smash.test")
         
-        # -> Enter the tc007 branch email and password, then submit the login form.
+        # -> Enter the test branch email and incorrect password, then submit with “Iniciar Sesión” to verify the visible response.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("SmokeTest2026!")
+        await elem.fill("Incorrecta123!")
         
-        # -> Enter the tc007 branch email and password, then submit the login form.
+        # -> Enter the test branch email and incorrect password, then submit with “Iniciar Sesión” to verify the visible response.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Select the “cajero_tc007” cashier profile to continue to PIN entry.
-        # CT cajero_tc007 Cajero button
-        elem = page.get_by_role("button", name="cajero_tc007 Cajero")
-        await elem.click(timeout=10000)
-        
-        # -> Enter PIN 1234 and submit it to reach the cashier area.
-        # PIN password field
-        elem = page.get_by_role("textbox", name="PIN")
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("1234")
-        
-        # -> Submit the entered PIN with “Ingresar” to reach the cashier area.
-        # Ingresar button
-        elem = page.get_by_role("button", name="Ingresar")
-        await elem.click(timeout=10000)
-        
-        # -> Confirm the opening cash count and verify that the cashier reaches the sales screen with an active register.
-        # Confirmar Apertura button
-        elem = page.get_by_role("button", name="Confirmar Apertura")
-        await elem.click(timeout=10000)
-        
         # --> Assertions to verify final state
         
-        # --> The cashier sales screen is displayed.
+        # --> The failed sign-in remained on the login page rather than opening employee selection.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The cashier sales screen URL is displayed.
-        await expect(page).to_have_url(re.compile("/cajero/ventas"), timeout=15000), "The cashier sales screen URL is displayed."
-        
-        # --> The register is open for the cashier.
-        await page.get_by_role("button", name="Cerrar Caja").nth(0).scroll_into_view_if_needed()
-        # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The active register control is visible.
-        await expect(page.get_by_role("button", name="Cerrar Caja").nth(0)).to_be_visible(timeout=15000), "The active register control is visible."
+        # Assert: The page should remain at the login URL.
+        await expect(page).to_have_url(re.compile("^http://localhost:3100/?$"), timeout=15000), "The page should remain at the login URL."
         await asyncio.sleep(5)
 
     finally:
