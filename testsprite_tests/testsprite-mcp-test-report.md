@@ -21,7 +21,7 @@
 | 5 | 6 pending + TC051–TC070 | 20/26 |
 | **6** | **6 re-checks after the export/Kardex changes (TC045, TC052, TC053, TC054, TC058, TC069)** | **5/6** |
 
-**Combined:** 69 of the 70 cases defined so far have passed in at least one run. Run 6 confirmed the export toasts (TC052, TC058), the reference shown in the Kardex (TC054), the single-day Kardex filter (TC053) and the duplicate-username message (TC069). TC045 still fails: the test browser timed out clicking "Descargar CSV" and its generated code never clicked the button; the same export passed in run 4 (TC042), so it is treated as test flakiness, not an app bug.
+**Combined:** 69 of the 70 cases defined so far have passed in at least one run. Run 6 confirmed the export toasts (TC052, TC058), the reference shown in the Kardex (TC054), the single-day Kardex filter (TC053) and the duplicate-username message (TC069). TC045 still fails: the test browser timed out clicking "Descargar CSV" and its generated code never clicked the button; the same export passed in run 4 (TC042), so it is treated as test flakiness, not an app bug. **Local check (playwright-cli, 2026-10-30):** as admin_tc045, "Por producto" + "7 días" + "Descargar CSV" downloaded `reporte_producto-resumen_2026-10-24_2026-10-30.csv` in 193 ms with the "Reporte descargado." toast; the CSV has the expected header and 126 units of Hamburguesa Smoke. The app works; the failure is the TestSprite browser.
 
 ---
 

@@ -70,3 +70,6 @@ scratch/
 /~/
 testsprite_tests/tmp/
 testsprite_tests/tmp/config.json
+
+# playwright-cli session snapshots and logs
+.playwright-cli/
