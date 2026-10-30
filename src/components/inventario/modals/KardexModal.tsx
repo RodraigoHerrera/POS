@@ -10,6 +10,7 @@ import Button from "@/components/ui/button/Button";
 import TableRowSkeleton from "@/components/ui/skeleton/TableRowSkeleton";
 import { formatCostoUnitario } from "@/lib/costo";
 import { mensajeErrorApi } from "@/lib/respuestaApi";
+import { construirCSVKardex, nombreArchivoKardex } from "@/lib/kardexCsv";
 import EditarEntradaForm from "./EditarEntradaForm";
 
 // --- Interfaces ---
@@ -109,9 +110,22 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
   const handleChange = (key: keyof typeof filtros) => (e: React.ChangeEvent<HTMLInputElement>) =>
       setFiltros((p) => ({ ...p, [key]: e.target.value }));
 
+  // Exporta lo que se ve en la tabla (filtro de item y fechas incluido)
   const exportar = () => {
-    console.log("Exportando:", movimientosFiltrados);
-    alert("Generando reporte PDF...");
+    if (movimientosFiltrados.length === 0) {
+      toast.error("No hay movimientos para exportar");
+      return;
+    }
+    const csv = construirCSVKardex(movimientosFiltrados);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nombreArchivoKardex(new Date());
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
   };
 
   const cancelarAnulacion = () => {
