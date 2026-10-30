@@ -40,74 +40,56 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Sign in to the tc007 branch using its branch email and password.
+        # -> Enter the tc007 branch email and password, then sign in.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("tc007@smash.test")
         
-        # -> Sign in to the tc007 branch using its branch email and password.
+        # -> Enter the tc007 branch email and password, then sign in.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Sign in to the tc007 branch using its branch email and password.
+        # -> Enter the tc007 branch email and password, then sign in.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Select the “cajero_tc007” cashier account to continue to its PIN entry screen.
+        # -> Select the cashier employee cajero_tc007 to open the PIN entry screen.
         # CT cajero_tc007 Cajero button
         elem = page.get_by_role("button", name="cajero_tc007 Cajero")
         await elem.click(timeout=10000)
         
-        # -> Enter PIN 1234 in the cashier PIN field, then check whether the sign-in button becomes available.
+        # -> Enter the cashier PIN and continue to the cash-register opening workflow.
         # PIN password field
         elem = page.get_by_role("textbox", name="PIN")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1234")
         
-        # -> Submit the cashier PIN using the “Ingresar” button and check which cashier screen appears.
+        # -> Submit the cashier PIN with “Ingresar” and verify that the cash-opening workflow appears.
         # Ingresar button
         elem = page.get_by_role("button", name="Ingresar")
         await elem.click(timeout=10000)
         
-        # -> Enter the bill counts on the “Apertura de Caja” form, including one Bs. 200 bill and zero for the other bill denominations.
+        # -> Enter a count of one Bs. 200 bill and verify the cash total updates.
         # Cantidad Bs text field
         elem = page.get_by_role("textbox", name="Cantidad Bs. 200")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1")
         
-        # -> Enter the bill counts on the “Apertura de Caja” form, including one Bs. 200 bill and zero for the other bill denominations.
-        # Cantidad Bs text field
-        elem = page.get_by_role("textbox", name="Cantidad Bs. 100")
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("0")
-        
-        # -> Enter the bill counts on the “Apertura de Caja” form, including one Bs. 200 bill and zero for the other bill denominations.
-        # Cantidad Bs text field
-        elem = page.get_by_role("textbox", name="Cantidad Bs. 50")
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("0")
-        
-        # -> Enter the bill counts on the “Apertura de Caja” form, including one Bs. 200 bill and zero for the other bill denominations.
-        # Cantidad Bs text field
-        elem = page.get_by_role("textbox", name="Cantidad Bs. 20", exact=True)
-        await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("0")
-        
-        # -> Click “Confirmar Apertura” to submit the displayed opening cash count.
+        # -> Click “Confirmar Apertura” and verify that the POS sales screen appears.
         # Confirmar Apertura button
         elem = page.get_by_role("button", name="Confirmar Apertura")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The POS sales screen was not reached; the cash-opening form remained displayed.
+        # --> The POS sales screen is displayed.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected the cash-opening form to disappear after the register opened.
-        await expect(page.locator("xpath=/html/body/div[2]/div/div/div/form/div[3]/button").nth(0)).not_to_be_visible(timeout=15000), "Expected the cash-opening form to disappear after the register opened."
+        # Assert: The POS sales screen is displayed.
+        await expect(page).to_have_url(re.compile("/cajero/ventas"), timeout=15000), "The POS sales screen is displayed."
         await asyncio.sleep(5)
 
     finally:

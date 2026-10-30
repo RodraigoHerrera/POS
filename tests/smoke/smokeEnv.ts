@@ -13,7 +13,7 @@ export const SMOKE = {
 } as const;
 
 /** Casos TestSprite: una sucursal aislada por caso (tc001@smash.test, admin_tc001, ...). */
-export const TESTSPRITE = { count: 30 } as const;
+export const TESTSPRITE = { count: 50 } as const;
 
 /** Id de caso en minúsculas con 3 dígitos: 1 -> "tc001". */
 export function testSpriteId(n: number): string {

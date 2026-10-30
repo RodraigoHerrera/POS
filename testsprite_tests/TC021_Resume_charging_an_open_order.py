@@ -40,16 +40,64 @@ async def run_test():
         except Exception:
             pass
         
+        # -> Sign in to Smash POS with the cashier branch credentials and verify the employee selection screen appears.
+        # email field
+        elem = page.locator("input[type=\"email\"]")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("tc021@smash.test")
+        
+        # -> Sign in to Smash POS with the cashier branch credentials and verify the employee selection screen appears.
+        # password field
+        elem = page.locator("input[type=\"password\"]")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("SmokeTest2026!")
+        
+        # -> Sign in to Smash POS with the cashier branch credentials and verify the employee selection screen appears.
+        # Iniciar Sesión button
+        elem = page.get_by_role("button", name="Iniciar Sesión")
+        await elem.click(timeout=10000)
+        
+        # -> Select the “cajero_tc021” cashier employee and inspect the PIN-entry screen.
+        # CT cajero_tc021 Cajero button
+        elem = page.get_by_role("button", name="cajero_tc021 Cajero")
+        await elem.click(timeout=10000)
+        
+        # -> Enter PIN 1234 in the cashier PIN field and continue to the cashier workspace.
+        # PIN password field
+        elem = page.get_by_role("textbox", name="PIN")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("1234")
+        
+        # -> Submit the entered cashier PIN with “Ingresar” and inspect the cashier workspace.
+        # Ingresar button
+        elem = page.get_by_role("button", name="Ingresar")
+        await elem.click(timeout=10000)
+        
+        # -> Confirm the cash-register opening and check whether the cashier workspace becomes available.
+        # Confirmar Apertura button
+        elem = page.get_by_role("button", name="Confirmar Apertura")
+        await elem.click(timeout=10000)
+        
+        # -> Record the completed cashier setup, then add “Hamburguesa Smoke” to the current order.
+        # Sin Foto Hamburguesa Smoke Bs 50.00 button
+        elem = page.get_by_role("button", name="Agregar Hamburguesa Smoke, Bs")
+        await elem.click(timeout=10000)
+        
+        # -> Command the current Hamburguesa Smoke order so it becomes an unpaid open order.
+        # Comandar button
+        elem = page.get_by_role("button", name="Comandar")
+        await elem.click(timeout=10000)
+        
+        # -> Inspect the open payment-methods page for order #6 and confirm the payment screen is displayed.
+        # Switch to tab 681A
+        page = context.pages[-1]  # switch to most recently active tab
+        
         # --> Assertions to verify final state
         
-        # --> The payment screen for the selected order should be displayed.
+        # --> The payment screen is displayed for the selected unpaid order.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected the selected order's payment screen to be displayed in the cashier flow.
-        await expect(page).to_have_url(re.compile("/cajero"), timeout=15000), "Expected the selected order's payment screen to be displayed in the cashier flow."
-        
-        # --> Test blocked by environment/access constraints during agent run
-        # Reason: TEST BLOCKED The cashier payment flow could not be tested because the test-specific branch credentials are not identifiable. The provided branch table has no entry matching this test's exact title, and it instructs using only the assigned branch account. Observations: - The browser is on the SMASH POS login page. - The login form requires a branch email and password.
-        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The cashier payment flow could not be tested because the test-specific branch credentials are not identifiable. The provided branch table has no entry matching this test's exact title, and it instructs using only the assigned branch account. Observations: - The browser is on the SMASH POS login page. - The login form requires a branch email and password." + " — the exported script cannot reproduce a PASS in this environment.")
+        # Assert: The selected order's payment screen is open.
+        await expect(page).to_have_url(re.compile("/cajero/metodos\\-pago"), timeout=15000), "The selected order's payment screen is open."
         await asyncio.sleep(5)
 
     finally:
