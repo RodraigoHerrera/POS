@@ -8,101 +8,118 @@
 - **Prepared by:** TestSprite AI Team + Claude Code
 - **Test type:** Frontend, production build (`next build` + `next start`)
 - **Target:** `http://localhost:3100` against the isolated `smash_test` database
-- **Environment:** `RATE_LIMIT_RELAXED=true` (only honored on `_test` databases), DB host `127.0.0.1` with `connect_timeout=30`, one seeded branch per test case (`tc001@smash.test` … `tc050@smash.test`)
-- **This run (run 4):** 25 cases — the 20 never-executed cases (TC031–TC050) plus 5 re-checks (TC006, TC007, TC009, TC015, TC021) after PR #29
+- **Environment:** `RATE_LIMIT_RELAXED=true` (only honored on `_test` databases), DB host `127.0.0.1` with `connect_timeout=30`, one seeded branch per test case (`tc001` … `tc070`). The seed now includes a producible preparation ("Salsa Smoke"), 28 days of sales history per branch, stock minimums and a supplier for MRP.
+- **Plan:** the 44 cases that passed in runs 1–4 were removed from the active plan (still in git history). This run covers the 6 still pending plus 20 new cases (TC051–TC070).
 
 ### Run history
-| Run | Scope | Passed | Notes |
-|---|---|---|---|
-| 1 | TC001–TC030 | 10/30 | Shared branch, default rate limits |
-| 2 | TC001–TC030 | 12/30 | Per-test branches, tests could not map their TC number |
-| 3 | TC001–TC030 | 25/30 | Explicit title → credentials table |
-| **4** | **TC031–TC050 + 5 re-checks** | **20/25** | Register opening fix (PR #29) confirmed |
+| Run | Scope | Passed |
+|---|---|---|
+| 1 | TC001–TC030 | 10/30 |
+| 2 | TC001–TC030 | 12/30 |
+| 3 | TC001–TC030 | 25/30 |
+| 4 | TC031–TC050 + 5 re-checks | 20/25 |
+| **5** | **6 pending + TC051–TC070** | **20/26** |
 
-**Combined coverage:** 45 of the 50 planned cases have passed in at least one run (TC001–TC037, TC039–TC044, TC048 plus the 5 re-checks).
+**Combined:** 64 of the 70 cases defined so far have passed in at least one run.
 
 ---
 
 ## 2️⃣ Requirement Validation Summary
 
-### Requirement: Cash register (re-check after PR #29)
+### Requirement: Previously pending cases
 | Test | Title | Status |
 |---|---|---|
-| TC006 | Open the register and start cashier operations | ✅ Passed |
-| TC007 | Open the cash register and reach the POS screen | ✅ Passed |
-| TC015 | Close the cash register and end the cashier session | ✅ Passed |
-
-**Analysis:** All three failed in run 3 with the "Ya tienes una caja abierta" loop. They pass now that a 409 continues to `/cajero/ventas`.
-
-### Requirement: Payments and order recovery
-| Test | Title | Status |
-|---|---|---|
-| TC009 | Complete payment for an open order | ✅ Passed |
-| TC021 | Resume charging an open order | ✅ Passed |
-| TC033 | View open orders and reprint a kitchen ticket | ✅ Passed |
-| TC034 | Void an open order from the recovery flow | ✅ Passed |
-| TC037 | Void an unpaid order from payment | ✅ Passed |
-| TC040 | Clear an in-progress order from the cart | ✅ Passed |
-| TC048 | Show validation when cash received is insufficient | ✅ Passed |
-
-### Requirement: Employee management
-| Test | Title | Status |
-|---|---|---|
-| TC032 | Manage employees from the administrator area | ✅ Passed |
-| TC035 | Create a new employee | ✅ Passed |
-| TC039 | Browse employee management | ✅ Passed |
-| TC043 | Deactivate and reactivate an employee | ✅ Passed |
-
-### Requirement: Inventory
-| Test | Title | Status |
-|---|---|---|
-| TC036 | Review and adjust inventory from the administrator area | ✅ Passed |
-| TC038 | Register an inventory movement | ❌ Failed |
-| TC041 | Record a stock loss | ✅ Passed |
-| TC044 | Record inventory movement and inspect stock controls | ✅ Passed |
-
-**Analysis (TC038, app bug):** `POST /api/inventarios/registrarEntrada` returned 500. Server log: `P2002 Unique constraint failed on lote_item_id_codigo_lote_key` in `prisma.lote.create()`. The "Lote" field in `EntradaModal` is optional and defaults to `""`, and lot codes are unique per item **across all branches**. The first entry without a lot code for an item succeeds; every later one (in any branch) fails with 500. TC044 had already registered a blank-code entry for the same item.
-
-### Requirement: Dashboard and reports
-| Test | Title | Status |
-|---|---|---|
-| TC031 | Review dashboard in monthly view | ✅ Passed |
-| TC042 | Inspect sales and export the report as CSV | ✅ Passed |
+| TC038 | Register an inventory movement | ✅ Passed |
 | TC045 | Download sales report CSV | BLOCKED |
+| TC046 | Run MRP planning and review replenishment results | ✅ Passed |
+| TC047 | Run a production batch from available ingredients | ✅ Passed |
+| TC049 | Run a production batch | ✅ Passed |
+| TC050 | Plan production and validate replenishment decisions | ✅ Passed |
 
-**Analysis:** TC045's branch had no sales in the selected range and "Descargar CSV" timed out in the test browser. TC042 covers the same export with data and passed. Test data, not a confirmed app bug.
+**Analysis:** TC038 confirms the automatic lot code fix (PR #31). Production and MRP pass with the enriched seed. TC045: the report was generated with data, but the browser download could not be confirmed (see the download note below).
 
-### Requirement: Production and MRP
+### Requirement: Inventory kardex
 | Test | Title | Status |
 |---|---|---|
-| TC046 | Run MRP planning and review replenishment results | ❌ Failed |
-| TC047 | Run a production batch from available ingredients | BLOCKED |
-| TC049 | Run a production batch | BLOCKED |
-| TC050 | Plan production and validate replenishment decisions | BLOCKED |
+| TC051 | Kardex shows who registered each entry | ✅ Passed |
+| TC052 | Export Kardex movements to CSV | ❌ Failed |
+| TC053 | Filter Kardex by date range | ❌ Failed |
+| TC054 | Edit an inventory entry from the Kardex | ❌ Failed |
+| TC055 | Void an inventory entry from the Kardex | ✅ Passed |
 
-**Analysis:** The test seed has no `prep` item with a recipe ("No hay preparaciones con receta"), and a fresh branch has no sales history, so MRP has nothing to forecast. Test data gap, not a confirmed app bug.
+**Analysis:**
+- TC052: download not confirmable (see note).
+- TC053: after filtering to a past range, choosing a range that includes today did not show today's entry again. **Not reproduced yet.** The filter logic looks correct on reading, so it needs a manual check.
+- TC054: the edit saved ("Entrada actualizada") but the test looked for the new reference in the table, and **the Kardex table does not show the reference column at all**. This is a UI gap, not a save failure.
+
+### Requirement: Inventory entry (lot code)
+| Test | Title | Status |
+|---|---|---|
+| TC056 | Inventory entry without lot code gets an automatic code | ✅ Passed |
+| TC057 | Duplicate lot code shows a clear error | ✅ Passed |
+
+### Requirement: Inventory catalog
+| Test | Title | Status |
+|---|---|---|
+| TC058 | Export the item catalog list to CSV | ❌ Failed |
+| TC059 | Deactivate and reactivate an item in the catalog | ✅ Passed |
+| TC060 | Download the bulk item upload template | ✅ Passed |
+
+### Requirement: Cash movements
+| Test | Title | Status |
+|---|---|---|
+| TC061 | Register a cash entry during the shift | ✅ Passed |
+| TC062 | Register a cash withdrawal during the shift | ✅ Passed |
+
+### Requirement: Recipes and menu
+| Test | Title | Status |
+|---|---|---|
+| TC063 | Browse recipes and preparations | ✅ Passed |
+| TC064 | Browse and search the product menu | ✅ Passed |
+
+### Requirement: Authentication errors and access control
+| Test | Title | Status |
+|---|---|---|
+| TC065 | Wrong branch password shows an error | ✅ Passed |
+| TC066 | Wrong PIN shows an error | ✅ Passed |
+| TC067 | Cashier cannot open the admin area | ✅ Passed |
+| TC068 | Unauthenticated user is redirected from admin | ✅ Passed |
+
+### Requirement: Branch registration and sales audit
+| Test | Title | Status |
+|---|---|---|
+| TC069 | Signup with a duplicate admin username shows a clear error | BLOCKED |
+| TC070 | Filter admin sales by date range | ✅ Passed |
+
+**Analysis:** TC069 used `tc069@smash.test`, but signup only accepts `@gmail.com` addresses (the form appends `@gmail.com`). This is test data. The duplicate-username 409 is covered by unit tests (`altaEmpleado.test.ts`).
+
+### Note on CSV downloads (TC045, TC052, TC058)
+All three exports use the same blob + `<a download>` mechanism as the bulk-upload template (TC060), which passed. The only difference is that the template shows a success toast ("Plantilla CSV descargada con éxito"), which the test browser used as evidence. The Kardex and catalog exports show no feedback at all. This is most likely a verification limit of the test browser, not a broken download. Adding a success toast to those exports would give users feedback and make the tests verifiable.
 
 ---
 
 ## 3️⃣ Coverage & Matching Metrics
 
-- **80%** of this run's tests passed (20 / 25). 0 rate-limit blocks and 0 DB-connect errors in the server log.
+- **76.9%** of this run's tests passed (20 / 26).
 
 | Requirement | Total Tests | ✅ Passed | ❌ Failed | Blocked |
 |---|---|---|---|---|
-| Cash register (re-check) | 3 | 3 | 0 | 0 |
-| Payments and order recovery | 7 | 7 | 0 | 0 |
-| Employee management | 4 | 4 | 0 | 0 |
-| Inventory | 4 | 3 | 1 | 0 |
-| Dashboard and reports | 3 | 2 | 0 | 1 |
-| Production and MRP | 4 | 0 | 1 | 3 |
-| **Total** | **25** | **20** | **2** | **3** |
+| Previously pending | 6 | 5 | 0 | 1 |
+| Inventory kardex | 5 | 2 | 3 | 0 |
+| Inventory entry (lot code) | 2 | 2 | 0 | 0 |
+| Inventory catalog | 3 | 2 | 1 | 0 |
+| Cash movements | 2 | 2 | 0 | 0 |
+| Recipes and menu | 2 | 2 | 0 | 0 |
+| Auth errors and access control | 4 | 4 | 0 | 0 |
+| Registration and sales audit | 2 | 1 | 0 | 1 |
+| **Total** | **26** | **20** | **4** | **2** |
 
 ---
 
 ## 4️⃣ Key Gaps / Risks
 
-1. **Inventory entry without a lot code fails after the first one (app bug, high impact):** blank `codigo_lote` collides on `lote_item_id_codigo_lote_key`, which is global per item across branches, and the API answers 500. In real use, a second entry of the same item without a lot code fails in any branch. Needs an auto-generated code when blank and a 409 with a clear message on real duplicates.
-2. **Production and MRP untested:** the seed needs a `prep` item with a recipe and some sales history per branch before TC046, TC047, TC049 and TC050 can run.
-3. **TC045:** re-run with sales data in range to confirm the CSV download.
-4. **Known limitations from the code summary** (not exercised): sidebar links to `/admin/gastos` and 4 Reportes pages return 404; every order is saved as "Mesa 1".
+1. **No feedback on Kardex and catalog CSV exports:** users get no confirmation; add a success toast like the template download (also unblocks TC052, TC058; TC045 already has a toast and needs a re-run).
+2. **Kardex does not show the reference:** edits to the reference are saved but invisible in the table (TC054).
+3. **Kardex date filter (TC053):** possible bug when switching from a past range back to a range that includes today. Needs a manual reproduction before changing code.
+4. **TC069:** re-run with a `@gmail.com` signup email.
+5. **Known limitations from the code summary** (not exercised): sidebar links to `/admin/gastos` and 4 Reportes pages return 404; every order is saved as "Mesa 1".

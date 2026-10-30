@@ -40,55 +40,45 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the tc012 branch email and password, then submit the sign-in form.
+        # -> Sign in to the tc066 branch using its provided email and password.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("tc012@smash.test")
+        await elem.fill("tc066@smash.test")
         
-        # -> Enter the tc012 branch email and password, then submit the sign-in form.
+        # -> Sign in to the tc066 branch using its provided email and password.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the tc012 branch email and password, then submit the sign-in form.
+        # -> Sign in to the tc066 branch using its provided email and password.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Select the visible administrator account to continue to PIN entry.
-        # AT admin_tc012 Administrador button
-        elem = page.get_by_role("button", name="admin_tc012 Administrador")
+        # -> Select the “cajero_tc066” employee card to open its PIN screen.
+        # CT cajero_tc066 Cajero button
+        elem = page.get_by_role("button", name="cajero_tc066 Cajero")
         await elem.click(timeout=10000)
         
-        # -> Enter the provided valid PIN in the PIN field and check whether the sign-in button becomes available.
+        # -> Enter the incorrect PIN 9999 in the cashier PIN field and inspect the screen before submitting.
         # PIN password field
         elem = page.get_by_role("textbox", name="PIN")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("1234")
+        await elem.fill("9999")
         
-        # -> Submit the entered PIN using “Ingresar” and verify whether the administrator dashboard and its metrics appear.
+        # -> Click “Ingresar” to submit the incorrect PIN and check whether an error appears without opening the cashier area.
         # Ingresar button
         elem = page.get_by_role("button", name="Ingresar")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The administrator dashboard is shown after PIN sign-in.
+        # --> The cashier area does not open after the incorrect PIN.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The administrator dashboard URL should be shown.
-        await expect(page).to_have_url(re.compile("/admin"), timeout=15000), "The administrator dashboard URL should be shown."
-        
-        # --> The dashboard displays its sales and order metrics.
-        await page.locator(".rounded-2xl > div").first.nth(0).scroll_into_view_if_needed()
-        # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The dashboard sales metric should be visible.
-        await expect(page.locator(".rounded-2xl > div").first.nth(0)).to_be_visible(timeout=15000), "The dashboard sales metric should be visible."
-        await page.locator(".col-span-12 > .grid > div:nth-child(2) > div").first.nth(0).scroll_into_view_if_needed()
-        # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The dashboard order metric should be visible.
-        await expect(page.locator(".col-span-12 > .grid > div:nth-child(2) > div").first.nth(0)).to_be_visible(timeout=15000), "The dashboard order metric should be visible."
+        # Assert: The PIN screen remains open instead of entering the cashier area.
+        await expect(page).to_have_url(re.compile("/usuarios/pin"), timeout=15000), "The PIN screen remains open instead of entering the cashier area."
         await asyncio.sleep(5)
 
     finally:

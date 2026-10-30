@@ -40,45 +40,50 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the tc049 branch email and provided password, then submit the “Iniciar Sesión” form.
+        # -> Sign in with the production-batch branch account and proceed to the employee selection page.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("tc049@smash.test")
         
-        # -> Enter the tc049 branch email and provided password, then submit the “Iniciar Sesión” form.
+        # -> Sign in with the production-batch branch account and proceed to the employee selection page.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the tc049 branch email and provided password, then submit the “Iniciar Sesión” form.
+        # -> Sign in with the production-batch branch account and proceed to the employee selection page.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Select the administrator employee to continue the sign-in flow.
+        # -> Select the “admin_tc049” administrator account to continue to PIN entry.
         # AT admin_tc049 Administrador button
         elem = page.get_by_role("button", name="admin_tc049 Administrador")
         await elem.click(timeout=10000)
         
-        # -> Enter the provided PIN on the administrator sign-in screen and continue.
+        # -> Enter the administrator PIN 1234 on the PIN screen, then inspect the sign-in result.
         # PIN password field
         elem = page.get_by_role("textbox", name="PIN")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1234")
         
-        # -> Submit the administrator PIN using the “Ingresar” button to reach the administrator area.
+        # -> Submit the administrator PIN by clicking “Ingresar” and check that the production interface becomes available.
         # Ingresar button
         elem = page.get_by_role("button", name="Ingresar")
         await elem.click(timeout=10000)
         
-        # -> Open “Producción” from the administrator menu to inspect the production batch workflow.
+        # -> Open the “Producción” area from the “Gestión productiva” menu and inspect its batch form.
         # Producción link
         elem = page.get_by_role("link", name="Producción")
         await elem.click(timeout=10000)
         
-        # -> Open the “Producción” section from the expanded “Gestión productiva” menu.
+        # -> Open “Producción” from the “Gestión productiva” menu and inspect the production page.
+        # Producción link
+        elem = page.get_by_role("link", name="Producción")
+        await elem.click(timeout=10000)
+        
+        # -> Open “Producción” from the admin dashboard and inspect the production batch form.
         # Producción link
         elem = page.get_by_role("link", name="Producción")
         await elem.click(timeout=10000)
@@ -88,46 +93,43 @@ async def run_test():
         elem = page.get_by_role("link", name="Producción")
         await elem.click(timeout=10000)
         
-        # -> Open the “Producción” page from the “Gestión productiva” menu.
-        # Producción link
-        elem = page.get_by_role("link", name="Producción")
-        await elem.click(timeout=10000)
+        # -> Open the production page and inspect the available preparation and batch controls.
+        await page.goto("http://localhost:3100/admin/produccion")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
         
-        # -> Expand the “Gestión productiva” menu in the sidebar to reveal its production navigation options.
-        # Gestión productiva button
-        elem = page.get_by_role("button", name="Gestión productiva")
-        await elem.click(timeout=10000)
+        # -> Select “Salsa Smoke” as the preparation and inspect the fields that become available.
+        # Seleccione una preparación Salsa Smoke dropdown
+        elem = page.locator("xpath=/html/body/div[2]/div/div/div/div[2]/div/form/div[2]/div/select").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.select_option("")
         
-        # -> Open the “Producción” page from the expanded “Gestión productiva” menu.
-        # Producción link
-        elem = page.get_by_role("link", name="Producción")
-        await elem.click(timeout=10000)
+        # -> Enter a valid production amount of 1 L and inspect the form before running the batch.
+        # Ej. 10 number field
+        elem = page.get_by_role("spinbutton", name="Cantidad (L)")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("1")
         
-        # -> Open “Ir a recetas” to check whether the required preparation and recipe can be configured through the application.
-        # Ir a recetas link
-        elem = page.get_by_role("link", name="Ir a recetas")
-        await elem.click(timeout=10000)
-        
-        # -> Return to “Producción” from Recipe Management and check whether a recipe-backed preparation is available for a batch.
-        # Producción link
-        elem = page.get_by_role("link", name="Producción")
-        await elem.click(timeout=10000)
-        
-        # -> Open “Ir a recetas” and inspect whether Recipe Management offers a way to create a production preparation.
-        # Ir a recetas link
-        elem = page.get_by_role("link", name="Ir a recetas")
+        # -> Click “Ejecutar producción” to create the 1 L Salsa Smoke batch and check the recent production history.
+        # Ejecutar producción button
+        elem = page.get_by_role("button", name="Ejecutar producción")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The production batch form is available to start a batch.
+        # --> The production batch form is shown.
+        await page.get_by_role("combobox").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected the production batch form page to be open.
-        await expect(page).to_have_url(re.compile("/admin/produccion"), timeout=15000), "Expected the production batch form page to be open."
+        # Assert: The production preparation selector is visible.
+        await expect(page.get_by_role("combobox").nth(0)).to_be_visible(timeout=15000), "The production preparation selector is visible."
         
-        # --> Test blocked by environment/access constraints during agent run
-        # Reason: TEST BLOCKED The production batch could not be started because the application has no recipe-backed preparation available in this branch. The resulting batch history therefore could not be verified. Observations: - The Production page stated “No hay preparaciones con receta.” - Recipe Management showed 0 “Preparaciones Base” and “Preparaciones (0).” - Recipe Management displayed only the sellab...
-        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The production batch could not be started because the application has no recipe-backed preparation available in this branch. The resulting batch history therefore could not be verified. Observations: - The Production page stated \u201cNo hay preparaciones con receta.\u201d - Recipe Management showed 0 \u201cPreparaciones Base\u201d and \u201cPreparaciones (0).\u201d - Recipe Management displayed only the sellab..." + " — the exported script cannot reproduce a PASS in this environment.")
+        # --> A recent Salsa Smoke production record appears in the production history.
+        await page.get_by_role("row", name="30 oct 2026 Salsa Smoke 1 L Bs 7.90 PROD-1793359373081-563 06 nov").nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: not verified — the export-time check could not be evaluated
+        # Assert: A recent production record is visible.
+        await expect(page.get_by_role("row", name="30 oct 2026 Salsa Smoke 1 L Bs 7.90 PROD-1793359373081-563 06 nov").nth(0)).to_be_visible(timeout=15000), "A recent production record is visible."
         await asyncio.sleep(5)
 
     finally:

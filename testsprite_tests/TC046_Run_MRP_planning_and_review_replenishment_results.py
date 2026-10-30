@@ -40,85 +40,77 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the tc046 branch credentials in the email and password fields, then submit “Iniciar Sesión.”
+        # -> Enter the tc046 branch email and password, then submit the “Iniciar Sesión” form.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("tc046@smash.test")
         
-        # -> Enter the tc046 branch credentials in the email and password fields, then submit “Iniciar Sesión.”
+        # -> Enter the tc046 branch email and password, then submit the “Iniciar Sesión” form.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the tc046 branch credentials in the email and password fields, then submit “Iniciar Sesión.”
+        # -> Enter the tc046 branch email and password, then submit the “Iniciar Sesión” form.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Choose the “admin_tc046” administrator account to proceed to PIN entry.
+        # -> Select the “admin_tc046” administrator account to continue the sign-in flow.
         # AT admin_tc046 Administrador button
         elem = page.get_by_role("button", name="admin_tc046 Administrador")
         await elem.click(timeout=10000)
         
-        # -> Enter the provided PIN in the administrator PIN field.
+        # -> Enter the administrator’s PIN on the PIN sign-in screen.
         # PIN password field
         elem = page.get_by_role("textbox", name="PIN")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1234")
         
-        # -> Submit the administrator PIN using “Ingresar” and verify that the administrator workspace opens.
+        # -> Submit the entered PIN with the “Ingresar” button to complete administrator sign-in.
         # Ingresar button
         elem = page.get_by_role("button", name="Ingresar")
         await elem.click(timeout=10000)
         
-        # -> Open “Planificación (MRP)” from the productive-management menu.
+        # -> Open the “Planificación (MRP)” page from the administrator navigation.
         # Planificación (MRP) link
         elem = page.get_by_role("link", name="Planificación (MRP)")
         await elem.click(timeout=10000)
         
-        # -> Open “Planificación (MRP)” from the productive-management menu.
+        # -> Open the “Planificación (MRP)” page from the administrator navigation.
         # Planificación (MRP) link
         elem = page.get_by_role("link", name="Planificación (MRP)")
         await elem.click(timeout=10000)
         
-        # -> Open the “Planificación (MRP)” page from the productive-management menu.
-        # Planificación (MRP) link
-        elem = page.get_by_role("link", name="Planificación (MRP)")
-        await elem.click(timeout=10000)
-        
-        # -> Open the visible “Planificación (MRP)” page from the productive-management menu.
-        # Planificación (MRP) link
-        elem = page.get_by_role("link", name="Planificación (MRP)")
-        await elem.click(timeout=10000)
-        
-        # -> Expand “Gestión productiva” in the sidebar and inspect its navigation options.
+        # -> Expand the “Gestión productiva” section to reveal its navigation options.
         # Gestión productiva button
         elem = page.get_by_role("button", name="Gestión productiva")
         await elem.click(timeout=10000)
         
-        # -> Open “Planificación (MRP)” from the expanded productive-management menu.
+        # -> Open “Planificación (MRP)” from the expanded “Gestión productiva” menu.
         # Planificación (MRP) link
         elem = page.get_by_role("link", name="Planificación (MRP)")
         await elem.click(timeout=10000)
         
-        # -> Run the MRP calculation using the visible “Ejecutar MRP” button.
-        # Ejecutar MRP button
-        elem = page.get_by_role("button", name="Ejecutar MRP")
-        await elem.click(timeout=10000)
-        
-        # -> Run the planning calculation with “Ejecutar MRP” and check whether the replenishment recommendations or run history update.
+        # -> Run the planning calculation using the visible “Ejecutar MRP” control.
         # Ejecutar MRP button
         elem = page.get_by_role("button", name="Ejecutar MRP")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The MRP run displays replenishment results or history instead of an empty needs state.
+        # --> The MRP planning panel is displayed.
+        await page.get_by_role("button", name="Ejecutar MRP").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected replenishment results or run history to be displayed.
-        await expect(page.locator("xpath=/html/body/div[2]/div/div/div/div[2]/div[5]/div[2]/table/tbody/tr/td").nth(0)).not_to_be_visible(timeout=15000), "Expected replenishment results or run history to be displayed."
+        # Assert: The MRP planning panel is visible.
+        await expect(page.get_by_role("button", name="Ejecutar MRP").nth(0)).to_be_visible(timeout=15000), "The MRP planning panel is visible."
+        
+        # --> MRP replenishment recommendations are displayed.
+        await page.get_by_role("row", name="Requiere compra Carne Smoke").nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: not verified — the export-time check could not be evaluated
+        # Assert: MRP replenishment recommendations are displayed.
+        await expect(page.get_by_role("row", name="Requiere compra Carne Smoke").nth(0)).to_be_visible(timeout=15000), "MRP replenishment recommendations are displayed."
         await asyncio.sleep(5)
 
     finally:

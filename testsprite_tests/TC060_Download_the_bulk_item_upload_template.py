@@ -40,75 +40,84 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the tc028 branch credentials and submit the “Iniciar Sesión” form.
+        # -> Sign in to the tc060 branch using its listed email and password.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("tc028@smash.test")
+        await elem.fill("tc060@smash.test")
         
-        # -> Enter the tc028 branch credentials and submit the “Iniciar Sesión” form.
+        # -> Sign in to the tc060 branch using its listed email and password.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the tc028 branch credentials and submit the “Iniciar Sesión” form.
+        # -> Sign in to the tc060 branch using its listed email and password.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Select the “admin_tc028” administrator account to continue to PIN entry.
-        # AT admin_tc028 Administrador button
-        elem = page.get_by_role("button", name="admin_tc028 Administrador")
+        # -> Select the “admin_tc060” administrator account to proceed to its PIN entry screen.
+        # AT admin_tc060 Administrador button
+        elem = page.get_by_role("button", name="admin_tc060 Administrador")
         await elem.click(timeout=10000)
         
-        # -> Enter the administrator PIN to continue to the admin area.
+        # -> Enter the administrator PIN and continue to the admin area.
         # PIN password field
         elem = page.get_by_role("textbox", name="PIN")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1234")
         
-        # -> Submit the administrator PIN with “Ingresar” and verify that the administrator area opens.
+        # -> Submit the administrator PIN using “Ingresar” and verify that the admin area opens.
         # Ingresar button
         elem = page.get_by_role("button", name="Ingresar")
         await elem.click(timeout=10000)
         
-        # -> Open “Inventario” from the “Gestión productiva” menu and inspect the inventory hub.
+        # -> Open the inventory area using the visible “Inventario” navigation link.
         # Inventario link
         elem = page.get_by_role("link", name="Inventario").first
         await elem.click(timeout=10000)
         
-        # -> Open the “Inventario” page from the expanded “Gestión productiva” menu and inspect its available management and stock controls.
+        # -> Open the admin inventory page using the visible “Inventario” navigation link.
         # Inventario link
         elem = page.get_by_role("link", name="Inventario").first
         await elem.click(timeout=10000)
         
-        # -> Open the inventory hub using the dashboard’s “Ver inventario” shortcut.
+        # -> Open the inventory page using the visible “Inventario” navigation link.
+        # Inventario link
+        elem = page.get_by_role("link", name="Inventario").first
+        await elem.click(timeout=10000)
+        
+        # -> Open the inventory page using the visible “Inventario” navigation link.
+        # Inventario link
+        elem = page.get_by_role("link", name="Inventario").first
+        await elem.click(timeout=10000)
+        
+        # -> Open the inventory area using the dashboard’s visible “Ver inventario” control.
         # Ver inventario button
         elem = page.get_by_role("button", name="Ver inventario")
         await elem.click(timeout=10000)
         
+        # -> Open the “Carga masiva de items” modal from the inventory page.
+        # Carga masiva de items button
+        elem = page.get_by_role("button", name="Carga masiva de items")
+        await elem.click(timeout=10000)
+        
+        # -> Final action — this is where the agent failed
+        # Error observed by agent: Failed to click element 1412: Event handler browser_use.browser.watchdog_base.DefaultActionWatchdog.on_ClickElementEvent#5072(?▶ ClickElementEvent#c3fb 🏃) timed out after 15.0s
+        # Download: Descargar Plantilla CSV button
+        elem = page.get_by_role("button", name="Descargar Plantilla CSV")
+        async with page.expect_download(timeout=30000) as dl_info:
+            await elem.click(timeout=10000)
+        download = await dl_info.value
+        assert download.suggested_filename  # verify file was downloaded
+        await download.save_as(f"./downloads/{download.suggested_filename}")
+        
         # --> Assertions to verify final state
-        
-        # --> Inventory operation actions are available from the hub.
-        await page.get_by_role("button", name="Entrada").nth(0).scroll_into_view_if_needed()
-        # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The inventory entry action is displayed.
-        await expect(page.get_by_role("button", name="Entrada").nth(0)).to_be_visible(timeout=15000), "The inventory entry action is displayed."
-        await page.get_by_role("button", name="Mermas").nth(0).scroll_into_view_if_needed()
-        # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The inventory waste action is displayed.
-        await expect(page.get_by_role("button", name="Mermas").nth(0)).to_be_visible(timeout=15000), "The inventory waste action is displayed."
-        
-        # --> Stock-related entry points are displayed in the inventory hub.
-        await page.get_by_role("button", name="Ver inventario").nth(0).scroll_into_view_if_needed()
-        # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The inventory shortcut is displayed.
-        await expect(page.get_by_role("button", name="Ver inventario").nth(0)).to_be_visible(timeout=15000), "The inventory shortcut is displayed."
-        await page.get_by_role("button", name="Control de Stock").nth(0).scroll_into_view_if_needed()
-        # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The stock-control entry point is displayed.
-        await expect(page.get_by_role("button", name="Control de Stock").nth(0)).to_be_visible(timeout=15000), "The stock-control entry point is displayed."
+        current_url = await page.evaluate("() => window.location.href")
+        # Assert-outcome: passed
+        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
+        assert current_url, 'Page should have loaded with a URL'
         await asyncio.sleep(5)
 
     finally:

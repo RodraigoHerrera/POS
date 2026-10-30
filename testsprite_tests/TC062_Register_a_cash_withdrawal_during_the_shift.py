@@ -40,56 +40,83 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the tc007 branch email and password, then sign in.
+        # -> Sign in to the tc062 branch using its branch email and password.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("tc007@smash.test")
+        await elem.fill("tc062@smash.test")
         
-        # -> Enter the tc007 branch email and password, then sign in.
+        # -> Sign in to the tc062 branch using its branch email and password.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the tc007 branch email and password, then sign in.
+        # -> Sign in to the tc062 branch using its branch email and password.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Select the cashier employee cajero_tc007 to open the PIN entry screen.
-        # CT cajero_tc007 Cajero button
-        elem = page.get_by_role("button", name="cajero_tc007 Cajero")
+        # -> Select the “cajero_tc062” cashier account to open its PIN entry screen.
+        # CT cajero_tc062 Cajero button
+        elem = page.get_by_role("button", name="cajero_tc062 Cajero")
         await elem.click(timeout=10000)
         
-        # -> Enter the cashier PIN and continue to the cash-register opening workflow.
+        # -> Enter PIN 1234 and choose “Ingresar” to access the cashier screen.
         # PIN password field
         elem = page.get_by_role("textbox", name="PIN")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1234")
         
-        # -> Submit the cashier PIN with “Ingresar” and verify that the cash-opening workflow appears.
+        # -> Submit the entered PIN with “Ingresar” to open the cashier screen.
         # Ingresar button
         elem = page.get_by_role("button", name="Ingresar")
         await elem.click(timeout=10000)
         
-        # -> Enter a count of one Bs. 200 bill and verify the cash total updates.
+        # -> Enter one Bs. 50 bill in the cash count and verify the counted total reaches at least Bs. 50.
         # Cantidad Bs text field
-        elem = page.get_by_role("textbox", name="Cantidad Bs. 200")
+        elem = page.get_by_role("textbox", name="Cantidad Bs. 50")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1")
         
-        # -> Click “Confirmar Apertura” and verify that the POS sales screen appears.
+        # -> Confirm the cash-register opening with the counted total of Bs. 50.00.
         # Confirmar Apertura button
         elem = page.get_by_role("button", name="Confirmar Apertura")
         await elem.click(timeout=10000)
         
+        # -> Open “Movimiento de caja” and inspect the cash movement form.
+        # Movimiento de caja button
+        elem = page.get_by_role("button", name="Movimiento de caja")
+        await elem.click(timeout=10000)
+        
+        # -> Select “Salida” in the cash-movement form and verify that the withdrawal option is active.
+        # Salida button
+        elem = page.get_by_role("button", name="Salida")
+        await elem.click(timeout=10000)
+        
+        # -> Enter a withdrawal amount of Bs. 10 and a short reason in the cash-movement form, then register it.
+        # 0.00 text field
+        elem = page.get_by_role("textbox", name="Monto")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("10")
+        
+        # -> Enter a withdrawal amount of Bs. 10 and a short reason in the cash-movement form, then register it.
+        # Ej. Pago a proveedor text area
+        elem = page.get_by_role("textbox", name="Razón")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("Retiro de efectivo")
+        
+        # -> Enter a withdrawal amount of Bs. 10 and a short reason in the cash-movement form, then register it.
+        # Registrar movimiento button
+        elem = page.get_by_role("button", name="Registrar movimiento")
+        await elem.click(timeout=10000)
+        
         # --> Assertions to verify final state
         
-        # --> The POS sales screen is displayed.
+        # --> The cash-movement summary reflects the Bs 10.00 withdrawal.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The POS sales screen is displayed.
-        await expect(page).to_have_url(re.compile("/cajero/ventas"), timeout=15000), "The POS sales screen is displayed."
+        # Assert: The cash-movement summary shows Salidas of Bs 10.00.
+        await expect(page.locator("body").nth(0)).to_contain_text("Salidas Bs 10.00", timeout=15000), "The cash-movement summary shows Salidas of Bs 10.00."
         await asyncio.sleep(5)
 
     finally:

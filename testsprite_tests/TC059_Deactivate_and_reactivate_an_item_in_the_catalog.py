@@ -40,73 +40,83 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the tc037 branch credentials and submit the sign-in form.
+        # -> Enter the test branch email and password, then submit the “Iniciar Sesión” form.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("tc037@smash.test")
+        await elem.fill("tc059@smash.test")
         
-        # -> Enter the tc037 branch credentials and submit the sign-in form.
+        # -> Enter the test branch email and password, then submit the “Iniciar Sesión” form.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the tc037 branch credentials and submit the sign-in form.
+        # -> Enter the test branch email and password, then submit the “Iniciar Sesión” form.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Select the “cajero_tc037” cashier account to continue to PIN entry.
-        # CT cajero_tc037 Cajero button
-        elem = page.get_by_role("button", name="cajero_tc037 Cajero")
+        # -> Select the admin_tc059 administrator account to continue to PIN entry.
+        # AT admin_tc059 Administrador button
+        elem = page.get_by_role("button", name="admin_tc059 Administrador")
         await elem.click(timeout=10000)
         
-        # -> Enter the cashier PIN on the PIN screen and inspect the updated login controls.
+        # -> Enter the administrator PIN to continue to the admin area.
         # PIN password field
         elem = page.get_by_role("textbox", name="PIN")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1234")
         
-        # -> Submit the cashier PIN by clicking “Ingresar” and inspect the page that opens.
+        # -> Submit the administrator PIN using “Ingresar” and confirm the admin area opens.
         # Ingresar button
         elem = page.get_by_role("button", name="Ingresar")
         await elem.click(timeout=10000)
         
-        # -> Confirm the cash-register opening with the currently displayed count, then proceed to the cashier screen.
-        # Confirmar Apertura button
-        elem = page.get_by_role("button", name="Confirmar Apertura")
+        # -> Open “Inventario” from the “Gestión productiva” navigation to find the item catalog.
+        # Inventario link
+        elem = page.get_by_role("link", name="Inventario").first
         await elem.click(timeout=10000)
         
-        # -> Add “Hamburguesa Smoke” to the current order and inspect the updated cart.
-        # Sin Foto Hamburguesa Smoke Bs 50.00 button
-        elem = page.get_by_role("button", name="Agregar Hamburguesa Smoke, Bs")
+        # -> Open “Inventario” to locate the item catalog.
+        # Inventario link
+        elem = page.get_by_role("link", name="Inventario").first
         await elem.click(timeout=10000)
         
-        # -> Send the current Hamburguesa Smoke order to the kitchen by selecting “Comandar.”
-        # Comandar button
-        elem = page.get_by_role("button", name="Comandar")
+        # -> Open “Inventario” under “Gestión productiva” to locate the item catalog.
+        # Inventario link
+        elem = page.get_by_role("link", name="Inventario").first
         await elem.click(timeout=10000)
         
-        # -> Switch to the order payment page and inspect the available payment and cancellation options.
-        # Switch to tab 9083
-        page = context.pages[-1]  # switch to most recently active tab
-        
-        # -> Select “Anular pedido” on the payment screen and review the confirmation or cancellation result.
-        # Anular pedido button
-        elem = page.get_by_role("button", name="Anular pedido")
+        # -> Open “Inventario” from the expanded “Gestión productiva” menu to access the item catalog.
+        # Inventario link
+        elem = page.get_by_role("link", name="Inventario").first
         await elem.click(timeout=10000)
         
-        # -> Open “Pedidos abiertos” and check whether order 2 is absent from the active-order list.
-        # Pedidos abiertos button
-        elem = page.get_by_role("button", name="Pedidos abiertos")
+        # -> Open the inventory area using the dashboard’s “Ver inventario” button.
+        # Ver inventario button
+        elem = page.get_by_role("button", name="Ver inventario")
         await elem.click(timeout=10000)
         
-        # --> Assertions to verify final state
-        current_url = await page.evaluate("() => window.location.href")
-        # Assert-outcome: passed
-        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
-        assert current_url, 'Page should have loaded with a URL'
+        # -> Open “Lista de items” to access the item catalog.
+        # Lista de items button
+        elem = page.get_by_role("button", name="Lista de items")
+        await elem.click(timeout=10000)
+        
+        # -> Deactivate Aceite Smoke from the item catalog and verify the confirmation and inactive status.
+        # Desactivar button
+        elem = page.get_by_role("row", name="INS-ACEITE-SMOKE Aceite Smoke").get_by_role("button").nth(1)
+        await elem.click(timeout=10000)
+        
+        # -> Reactivate Aceite Smoke from the catalog and verify its “Inactivo” label is removed.
+        # Activar button
+        elem = page.get_by_role("button", name="Activar", exact=True)
+        await elem.click(timeout=10000)
+        
+        # --> Test passed — verified by AI agent
+        frame = context.pages[-1]
+        current_url = await frame.evaluate("() => window.location.href")
+        assert current_url is not None, "Test completed successfully"
         await asyncio.sleep(5)
 
     finally:

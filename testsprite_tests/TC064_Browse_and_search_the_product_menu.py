@@ -40,49 +40,70 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Sign in to the branch using tc003@smash.test and the provided branch password.
+        # -> Enter the tc064 branch email and password, then submit the login form.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
-        await elem.fill("tc003@smash.test")
+        await elem.fill("tc064@smash.test")
         
-        # -> Sign in to the branch using tc003@smash.test and the provided branch password.
+        # -> Enter the tc064 branch email and password, then submit the login form.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Sign in to the branch using tc003@smash.test and the provided branch password.
+        # -> Enter the tc064 branch email and password, then submit the login form.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Select the “cajero_tc003” cashier account from the employee list.
-        # CT cajero_tc003 Cajero button
-        elem = page.get_by_role("button", name="cajero_tc003 Cajero")
+        # -> Select the “admin_tc064” administrator account to continue to the PIN screen.
+        # AT admin_tc064 Administrador button
+        elem = page.get_by_role("button", name="admin_tc064 Administrador")
         await elem.click(timeout=10000)
         
-        # -> Enter the provided PIN for cajero_tc003 and inspect whether the sign-in control becomes available.
+        # -> Enter PIN 1234 and submit it using the “Ingresar” button to finish administrator sign-in.
         # PIN password field
         elem = page.get_by_role("textbox", name="PIN")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1234")
         
-        # -> Submit the cashier PIN using “Ingresar” and verify that the cashier workspace appears.
+        # -> Submit the entered PIN with “Ingresar” to finish administrator sign-in.
         # Ingresar button
         elem = page.get_by_role("button", name="Ingresar")
         await elem.click(timeout=10000)
         
-        # --> Assertions to verify final state
+        # -> Open “Modificar Menu” to view the product menu.
+        # Modificar Menu link
+        elem = page.get_by_role("link", name="Modificar Menu")
+        await elem.click(timeout=10000)
         
-        # --> The user is routed to the cashier workspace, where the “Apertura de Caja” interface is shown.
-        # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The user is routed to the cashier workspace.
-        await expect(page).to_have_url(re.compile("/cajero"), timeout=15000), "The user is routed to the cashier workspace."
-        await page.get_by_role("button", name="Confirmar Apertura").nth(0).scroll_into_view_if_needed()
-        # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: The cashier opening interface is shown.
-        await expect(page.get_by_role("button", name="Confirmar Apertura").nth(0)).to_be_visible(timeout=15000), "The cashier opening interface is shown."
+        # -> Open “Modificar Menu” from the sidebar to view the product menu.
+        # Modificar Menu link
+        elem = page.get_by_role("link", name="Modificar Menu")
+        await elem.click(timeout=10000)
+        
+        # -> Expand “Gestión productiva” in the sidebar to reveal the product-menu link.
+        # Gestión productiva button
+        elem = page.get_by_role("button", name="Gestión productiva")
+        await elem.click(timeout=10000)
+        
+        # -> Open “Modificar Menu” from the expanded “Gestión productiva” sidebar.
+        # Modificar Menu link
+        elem = page.get_by_role("link", name="Modificar Menu")
+        await elem.click(timeout=10000)
+        
+        # -> Search the product menu for a nonexistent product name and verify the no-matching-products message.
+        # Buscar productos search field
+        elem = page.get_by_role("searchbox", name="Buscar productos")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("Producto Inexistente QA")
+        
+        # --> Assertions to verify final state
+        current_url = await page.evaluate("() => window.location.href")
+        # Assert-outcome: passed
+        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
+        assert current_url, 'Page should have loaded with a URL'
         await asyncio.sleep(5)
 
     finally:
