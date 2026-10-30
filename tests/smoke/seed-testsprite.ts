@@ -1,6 +1,6 @@
 /**
  * Seed para TestSprite: seed smoke normal + una sucursal aislada por caso
- * (TC001..TC030). Solo escribe en una BD `_test`.
+ * (TC001..TC050). Solo escribe en una BD `_test`.
  *
  * Uso: tsx --env-file=.env tests/smoke/seed-testsprite.ts
  */

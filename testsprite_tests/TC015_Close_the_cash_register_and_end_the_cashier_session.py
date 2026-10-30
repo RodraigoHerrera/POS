@@ -40,60 +40,129 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the tc015 branch email and password, then submit the sign-in form.
+        # -> Enter the tc015 branch credentials and submit the Spanish login form.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("tc015@smash.test")
         
-        # -> Enter the tc015 branch email and password, then submit the sign-in form.
+        # -> Enter the tc015 branch credentials and submit the Spanish login form.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the tc015 branch email and password, then submit the sign-in form.
+        # -> Enter the tc015 branch credentials and submit the Spanish login form.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Select the cashier employee cajero_tc015 to open the PIN entry screen.
+        # -> Select the cashier employee named “cajero_tc015” to continue to PIN entry.
         # CT cajero_tc015 Cajero button
         elem = page.get_by_role("button", name="cajero_tc015 Cajero")
         await elem.click(timeout=10000)
         
-        # -> Enter the cashier PIN and submit the “Ingresar” form.
+        # -> Enter the cashier PIN and inspect the PIN screen for the enabled “Ingresar” control.
         # PIN password field
         elem = page.get_by_role("textbox", name="PIN")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1234")
         
-        # -> Submit the entered PIN with “Ingresar” and verify that the cashier area opens.
+        # -> Submit the cashier PIN using “Ingresar” and inspect the cashier landing page.
         # Ingresar button
         elem = page.get_by_role("button", name="Ingresar")
         await elem.click(timeout=10000)
         
-        # -> Enter an opening denomination count and confirm the cash-register opening.
+        # -> Enter an opening count of one Bs. 200 bill in the cash-count form.
         # Cantidad Bs text field
-        elem = page.get_by_role("textbox", name="Cantidad Bs. 100")
+        elem = page.get_by_role("textbox", name="Cantidad Bs. 200")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1")
         
-        # -> Enter an opening denomination count and confirm the cash-register opening.
+        # -> Confirm the Bs. 200 opening cash count to open the register.
         # Confirmar Apertura button
         elem = page.get_by_role("button", name="Confirmar Apertura")
         await elem.click(timeout=10000)
         
+        # -> Open “Movimiento de caja” and inspect its fields and available actions.
+        # Movimiento de caja button
+        elem = page.get_by_role("button", name="Movimiento de caja")
+        await elem.click(timeout=10000)
+        
+        # -> Record a Bs 10 incoming cash movement with the reason “Cambio adicional”.
+        # 0.00 text field
+        elem = page.get_by_role("textbox", name="Monto")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("10")
+        
+        # -> Record a Bs 10 incoming cash movement with the reason “Cambio adicional”.
+        # Ej. Cambio adicional text area
+        elem = page.get_by_role("textbox", name="Razón")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("Cambio adicional")
+        
+        # -> Record a Bs 10 incoming cash movement with the reason “Cambio adicional”.
+        # Registrar movimiento button
+        elem = page.get_by_role("button", name="Registrar movimiento")
+        await elem.click(timeout=10000)
+        
+        # -> Open “Cerrar Caja” and inspect the closing denomination-count form.
+        # Cerrar Caja button
+        elem = page.get_by_role("button", name="Cerrar Caja")
+        await elem.click(timeout=10000)
+        
+        # -> Declare one Bs 200 bill and one Bs 10 bill, then review the updated closing summary.
+        # Cantidad Bs text field
+        elem = page.get_by_role("textbox", name="Cantidad Bs. 200")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("1")
+        
+        # -> Declare one Bs 200 bill and one Bs 10 bill, then review the updated closing summary.
+        # Cantidad Bs text field
+        elem = page.get_by_role("textbox", name="Cantidad Bs. 10", exact=True)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("1")
+        
+        # -> Confirm the register closure and verify that the closing summary appears and the cashier session has ended.
+        # Confirmar Cierre button
+        elem = page.get_by_role("button", name="Confirmar Cierre")
+        await elem.click(timeout=10000)
+        
+        # -> Enter 0 for the required card total and review the closing summary before submitting the closure again.
+        # 0.00 text field
+        elem = page.get_by_role("textbox", name="Total Tarjeta (lote POS /")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("0")
+        
+        # -> Ensure the card-total field registers 0, submit “Confirmar Cierre,” and verify the closing result and ended cashier session.
+        # 0.00 text field
+        elem = page.get_by_role("textbox", name="Total Tarjeta (lote POS /")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("0")
+        
+        # -> Ensure the card-total field registers 0, submit “Confirmar Cierre,” and verify the closing result and ended cashier session.
+        # Confirmar Cierre button
+        elem = page.get_by_role("button", name="Confirmar Cierre")
+        await elem.click(timeout=10000)
+        
+        # -> Enter 0 for the required QR total, submit “Confirmar Cierre,” and verify the closing summary and ended cashier session.
+        # 0.00 text field
+        elem = page.get_by_role("textbox", name="Total QR (comprobantes)")
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("0")
+        
+        # -> Enter 0 for the required QR total, submit “Confirmar Cierre,” and verify the closing summary and ended cashier session.
+        # Confirmar Cierre button
+        elem = page.get_by_role("button", name="Confirmar Cierre")
+        await elem.click(timeout=10000)
+        
         # --> Assertions to verify final state
         
-        # --> The closing summary should replace the opening-count form after the register is closed.
+        # --> The register closing summary is displayed.
+        await page.get_by_role("button", name="Imprimir").nth(0).scroll_into_view_if_needed()
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected the opening-count form to be gone after register closing, with the closing summary shown.
-        await expect(page.locator("xpath=/html/body/div[2]/div/div/div/form/div[2]/div/div[1]/div[2]/input").nth(0)).not_to_be_visible(timeout=15000), "Expected the opening-count form to be gone after register closing, with the closing summary shown."
-        
-        # --> Test blocked by environment/access constraints during agent run
-        # Reason: TEST BLOCKED The closing-flow test could not be completed because the cashier page remained on “Apertura de Caja” and reported that a register was already open. The register closing screen, closing summary, and ended cashier session could not be reached or verified. Observations: - The opening form displayed “Total Efectivo Contado” of Bs. 100.00. - Confirming the opening produced the alert “Ya...
-        raise AssertionError("Test blocked during agent run: " + "TEST BLOCKED The closing-flow test could not be completed because the cashier page remained on \u201cApertura de Caja\u201d and reported that a register was already open. The register closing screen, closing summary, and ended cashier session could not be reached or verified. Observations: - The opening form displayed \u201cTotal Efectivo Contado\u201d of Bs. 100.00. - Confirming the opening produced the alert \u201cYa..." + " — the exported script cannot reproduce a PASS in this environment.")
+        # Assert: The closing summary should be displayed.
+        await expect(page.get_by_role("button", name="Imprimir").nth(0)).to_be_visible(timeout=15000), "The closing summary should be displayed."
         await asyncio.sleep(5)
 
     finally:

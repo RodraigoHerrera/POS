@@ -40,56 +40,66 @@ async def run_test():
         except Exception:
             pass
         
-        # -> Enter the tc007 branch email and provided password in the login form, then select “Iniciar Sesión.”
+        # -> Enter the tc007 branch credentials on the login screen and submit the sign-in form.
         # email field
         elem = page.locator("input[type=\"email\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("tc007@smash.test")
         
-        # -> Enter the tc007 branch email and provided password in the login form, then select “Iniciar Sesión.”
+        # -> Enter the tc007 branch credentials on the login screen and submit the sign-in form.
         # password field
         elem = page.locator("input[type=\"password\"]")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("SmokeTest2026!")
         
-        # -> Enter the tc007 branch email and provided password in the login form, then select “Iniciar Sesión.”
+        # -> Enter the tc007 branch credentials on the login screen and submit the sign-in form.
         # Iniciar Sesión button
         elem = page.get_by_role("button", name="Iniciar Sesión")
         await elem.click(timeout=10000)
         
-        # -> Select the “cajero_tc007” cashier employee to continue to PIN entry.
+        # -> Choose the “cajero_tc007” cashier profile to continue to PIN entry.
         # CT cajero_tc007 Cajero button
         elem = page.get_by_role("button", name="cajero_tc007 Cajero")
         await elem.click(timeout=10000)
         
-        # -> Enter the assigned cashier PIN in the PIN field.
+        # -> Enter the cashier PIN and submit the PIN form.
         # PIN password field
         elem = page.get_by_role("textbox", name="PIN")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1234")
         
-        # -> Submit the cashier PIN using “Ingresar” and check that the cash-register opening screen appears.
+        # -> Submit the entered cashier PIN using the “Ingresar” button.
         # Ingresar button
         elem = page.get_by_role("button", name="Ingresar")
         await elem.click(timeout=10000)
         
-        # -> Enter one Bs. 200 bill in the cash count and verify the total updates.
+        # -> Enter a cash denomination on the “Apertura de Caja” screen and verify the counted total updates.
         # Cantidad Bs text field
         elem = page.get_by_role("textbox", name="Cantidad Bs. 200")
         await elem.wait_for(state="visible", timeout=10000)
         await elem.fill("1")
         
-        # -> Confirm the cash-register opening and verify that the POS workspace and order-taking controls appear.
+        # -> Confirm the cash register opening using “Confirmar Apertura.”
         # Confirmar Apertura button
         elem = page.get_by_role("button", name="Confirmar Apertura")
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
         
-        # --> The register-opening screen should be replaced by the POS workspace after the register is opened.
+        # --> The cashier is in the POS sales workspace.
         # Assert-outcome: not verified — the export-time check could not be evaluated
-        # Assert: Expected the register-opening form to disappear after opening the register.
-        await expect(page.locator("xpath=/html/body/div[2]/div/div/div/form/div[3]/button").nth(0)).not_to_be_visible(timeout=15000), "Expected the register-opening form to disappear after opening the register."
+        # Assert: The cashier is on the POS sales page.
+        await expect(page).to_have_url(re.compile("/cajero/ventas"), timeout=15000), "The cashier is on the POS sales page."
+        
+        # --> Product search and product selection controls are available for taking an order.
+        await page.get_by_role("textbox", name="Buscar producto").nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: not verified — the export-time check could not be evaluated
+        # Assert: Product search is available.
+        await expect(page.get_by_role("textbox", name="Buscar producto").nth(0)).to_be_visible(timeout=15000), "Product search is available."
+        await page.get_by_role("button", name="Agregar Hamburguesa Smoke, Bs").nth(0).scroll_into_view_if_needed()
+        # Assert-outcome: not verified — the export-time check could not be evaluated
+        # Assert: A product can be selected for an order.
+        await expect(page.get_by_role("button", name="Agregar Hamburguesa Smoke, Bs").nth(0)).to_be_visible(timeout=15000), "A product can be selected for an order."
         await asyncio.sleep(5)
 
     finally:
