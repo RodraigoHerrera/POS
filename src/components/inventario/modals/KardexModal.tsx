@@ -8,6 +8,7 @@ import DatePicker from "@/components/form/date-picker";
 import Select from "@/components/form/Select";
 import Button from "@/components/ui/button/Button";
 import TableRowSkeleton from "@/components/ui/skeleton/TableRowSkeleton";
+import Badge from "@/components/ui/badge/Badge";
 import { formatCostoUnitario } from "@/lib/costo";
 import { mensajeErrorApi } from "@/lib/respuestaApi";
 import { construirCSVKardex, nombreArchivoKardex } from "@/lib/kardexCsv";
@@ -241,7 +242,7 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
               options={itemsOptions}
               placeholder="Todos los items"
               onChange={handleSelectItem}
-              className="dark:bg-gray-800 w-full"
+              className="w-full"
             />
           </div>
           <div className="lg:col-span-2">
@@ -267,18 +268,18 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
         </div>
 
         {/* Tabla */}
-        <div className="border border-gray-200 rounded-lg dark:border-gray-700 overflow-hidden">
-          <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <div className="border border-gray-200 rounded-lg dark:border-gray-800 overflow-hidden">
+          <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
             <h5 className="font-semibold text-gray-800 dark:text-white">
               Movimientos Recientes ({movimientosFiltrados.length})
             </h5>
-            {loading && <span className="text-xs text-blue-500 animate-pulse">Actualizando...</span>}
+            {loading && <span className="text-xs text-gray-500 dark:text-gray-400 animate-pulse">Actualizando...</span>}
           </div>
           
           <div className="overflow-x-auto max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-600">
             <table className="w-full relative">
               <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10 shadow-sm">
-                <tr className="border-b border-gray-200 dark:border-gray-700">
+                <tr className="border-b border-gray-200 dark:border-gray-800">
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Fecha</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Item</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">Detalle</th>
@@ -295,7 +296,7 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
                   Array.from({ length: 6 }).map((_, i) => <TableRowSkeleton key={i} columns={9} />)
                 ) : movimientosFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={9} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                       No se encontraron movimientos registrados.
                     </td>
                   </tr>
@@ -303,7 +304,7 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
                   movimientosFiltrados.map((mov) => (
                     <tr
                       key={mov.id}
-                      className={`hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${mov.anulado ? "line-through text-gray-400 dark:text-gray-500" : ""}`}
+                      className={`hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${mov.anulado ? "line-through" : ""}`}
                     >
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
                         {new Date(mov.fecha).toLocaleDateString()} <span className="text-xs text-gray-400">{new Date(mov.fecha).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
@@ -313,16 +314,14 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
                         <div className="text-xs text-gray-400 font-normal">{mov.sku}</div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          mov.tipo === 'Entrada' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800'
-                        }`}>
+                        <Badge size="sm" color={mov.tipo === 'Entrada' ? 'success' : 'error'}>
                           {mov.tipo}
-                        </span>
-                        <div className="text-xs text-gray-500 mt-0.5">{mov.motivo}</div>
+                        </Badge>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{mov.motivo}</div>
                         {mov.anulado && (
-                          <span className="mt-1 inline-flex items-center rounded bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700 no-underline dark:bg-gray-700 dark:text-gray-200">
-                            Anulada
-                          </span>
+                          <div className="mt-1">
+                            <Badge size="sm" color="light">Anulada</Badge>
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
@@ -333,7 +332,7 @@ export default function KardexModal({ isOpen, onClose, itemsOptions = [] }: Prop
                         {mov.empleado}
                       </td>
                       <td className="px-4 py-3 text-sm text-right font-bold text-gray-700 dark:text-gray-200">
-                        {mov.tipo === 'Entrada' ? '+' : '-'}{mov.cantidad} <span className="text-xs font-normal text-gray-500">{mov.unidad}</span>
+                        {mov.tipo === 'Entrada' ? '+' : '-'}{mov.cantidad} <span className="text-xs font-normal text-gray-500 dark:text-gray-400">{mov.unidad}</span>
                       </td>
                       <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-300">
                         {formatCostoUnitario(mov.costo_unitario)}
