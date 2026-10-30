@@ -214,7 +214,7 @@ export default function EntradaModal({ isOpen, onClose, onSaved, presetItemId }:
 
                 <div className="col-span-2 lg:col-span-1">
                   <Label className="text-black">Lote</Label>
-                  <Input className="text-gray-dark" type="text" placeholder="Número de lote" onChange={handleText("lote")} />
+                  <Input className="text-gray-dark" type="text" placeholder="Opcional: se genera si lo dejas vacío" onChange={handleText("lote")} />
                 </div>
 
                 <div className="col-span-2 lg:col-span-1">
